@@ -1,0 +1,5 @@
+[
+  {"id":"skl_001","slug":"jira-project-summary","name":"Tổng hợp tiến độ Jira","description_excerpt":"Tổng hợp công việc Jira và tài liệu dự án cho báo cáo tuần.","description":"Tổng hợp công việc Jira và tài liệu Confluence cho báo cáo tuần.\n\nMCP bắt buộc: jira-mcp, confluence-mcp\n\nCài MCP theo hướng dẫn nội bộ, sau đó thử lại trong ứng dụng.","updated_at":"2026-10-12T00:00:00Z","archive":"jira-project-summary.zip"},
+  {"id":"skl_002","slug":"excel-insights","name":"Phân tích bảng tính Excel","description_excerpt":"Hỗ trợ đọc và phân tích dữ liệu bảng tính.","description":"Phân tích dữ liệu Excel và tổng hợp kết quả.\n\nMCP bắt buộc: mcp_excel_pro\n\nThiết lập mcp_excel_pro thủ công trong AIPRO trước khi sử dụng.","updated_at":"2026-10-11T00:00:00Z","archive":"excel-insights.7z"},
+  {"id":"skl_003","slug":"writing-review","name":"Rà soát tài liệu","description_excerpt":"Chuẩn hóa cấu trúc và ngôn ngữ tài liệu dự án.","description":"Rà soát cấu trúc, thuật ngữ và ngôn ngữ tài liệu.\n\nMCP bắt buộc: không", "updated_at":"2026-10-10T00:00:00Z","archive":"writing-review.zip"}
+]

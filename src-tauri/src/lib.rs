@@ -7,6 +7,7 @@ use tauri_plugin_window_state::{AppHandleExt, StateFlags, WindowExt};
 
 pub mod commands;
 pub mod core;
+pub mod company_app;
 
 /// Shared flag: when true, CloseRequested should NOT be prevented.
 pub static QUITTING: AtomicBool = AtomicBool::new(false);

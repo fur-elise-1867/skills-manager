@@ -5,10 +5,14 @@ on:
     branches: [main]
     paths:
       - 'src-tauri/**'
+      - 'fixtures/company-store/**'
+      - 'scripts/company-mock-store*'
       - '.github/workflows/test.yml'
   pull_request:
     paths:
       - 'src-tauri/**'
+      - 'fixtures/company-store/**'
+      - 'scripts/company-mock-store*'
       - '.github/workflows/test.yml'
 
 permissions:
@@ -36,6 +40,11 @@ jobs:
 
       - name: Setup Rust toolchain
         uses: dtolnay/rust-toolchain@631a55b12751854ce901bb631d5902ceb48146f7 # stable
+
+      - name: Setup Node for mock Store integration tests
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22
 
       - name: Cache Rust dependencies
         uses: swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2

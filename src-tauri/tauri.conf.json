@@ -1,8 +1,8 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "skills-manager",
+  "productName": "Company Skills Manager",
   "version": "1.41.0",
-  "identifier": "com.agentskills.desktop",
+  "identifier": "com.companyskills.manager",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://127.0.0.1:1420",
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "Skills Manager",
+        "title": "Company Skills Manager",
         "width": 1440,
         "height": 860,
         "minWidth": 1100,
@@ -22,25 +22,20 @@
         "decorations": true,
         "titleBarStyle": "Overlay",
         "hiddenTitle": true,
-        "visible": false
+        "visible": true
       }
     ],
     "security": {
-      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' asset: https://asset.localhost data: blob: https:; font-src 'self' data:; connect-src ipc: http://ipc.localhost https:"
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' asset: https://asset.localhost data: blob:; font-src 'self' data:; connect-src 'self' ipc: http://ipc.localhost"
     }
   },
-  "plugins": {
-    "updater": {
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IERBRUYwMTBDOEQ3MDdEODAKUldTQWZYQ05EQUh2Mm0wNDZtNm5VYWJpbjRaZVJQRUhrQ2tkOXc3MHBWZ2VaREo0OVd3WEU3d0oK",
-      "endpoints": [
-        "https://github.com/xingkongliang/skills-manager/releases/latest/download/latest.json"
-      ]
-    }
-  },
+  "plugins": {},
   "bundle": {
     "active": true,
-    "createUpdaterArtifacts": true,
-    "targets": "all",
+    "createUpdaterArtifacts": false,
+    "targets": [
+      "nsis"
+    ],
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -50,6 +45,9 @@
     ],
     "macOS": {
       "minimumSystemVersion": "10.15"
-    }
+    },
+    "resources": [
+      "../licenses/**/*"
+    ]
   }
 }

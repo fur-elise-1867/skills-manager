@@ -11,6 +11,9 @@ on:
       - 'package.json'
       - 'package-lock.json'
       - 'vite.config.ts'
+      - 'vitest.config.ts'
+      - 'fixtures/company-store/**'
+      - 'scripts/company-*.mjs'
       - 'tsconfig*.json'
       - 'eslint.config.js'
       - 'tailwind.config.js'
@@ -23,6 +26,9 @@ on:
       - 'package.json'
       - 'package-lock.json'
       - 'vite.config.ts'
+      - 'vitest.config.ts'
+      - 'fixtures/company-store/**'
+      - 'scripts/company-*.mjs'
       - 'tsconfig*.json'
       - 'eslint.config.js'
       - 'tailwind.config.js'
@@ -52,6 +58,11 @@ jobs:
 
       - name: Lint
         run: npm run lint
+
+      - name: Company flow UI and Store contract tests
+        run: |
+          npm run test:company
+          node --test scripts/company-mock-store.test.mjs
 
       # `tsc -b` is the real type check: the root tsconfig only holds project
       # references, so a bare `tsc --noEmit` checks no source file.
