@@ -68,20 +68,50 @@ impl CompanyService {
         self.session.current()
     }
     pub fn login(&self, username: &str, password: &str) -> CompanyResult<SessionView> {
+        self.repository.clear_catalog(&self.config.store_url)?;
         self.session.login(username, password)
     }
     pub fn logout(&self) -> CompanyResult<()> {
         self.cancel_pending();
-        self.session.logout()
+        let cache_result = self.repository.clear_catalog(&self.config.store_url);
+        let logout_result = self.session.logout();
+        cache_result.and(logout_result)
     }
     pub fn installations(&self) -> CompanyResult<Vec<Installation>> {
         self.repository.installations()
     }
     pub fn search(&self, query: &str, page: u32) -> CompanyResult<SkillPage> {
-        self.auth_result(
-            self.client
-                .search(&self.session.access_token()?, query, page),
-        )
+        let token = self.session.access_token()?;
+        let user = self
+            .session
+            .current()
+            .user
+            .ok_or_else(|| CompanyError::new("SESSION_EXPIRED", "Vui lòng đăng nhập lại."))?;
+        let result = self.auth_result(self.client.search(&token, query, page));
+        if self.session.access_token().ok().as_deref() != Some(token.as_str()) {
+            return Err(CompanyError::new(
+                "SESSION_EXPIRED",
+                "Phiên đã thay đổi. Vui lòng thử lại.",
+            ));
+        }
+        match result {
+            Ok(page_result) => {
+                self.repository.cache_catalog(
+                    &self.config.store_url,
+                    &user.id,
+                    query,
+                    page,
+                    &page_result,
+                )?;
+                Ok(page_result)
+            }
+            Err(error) if matches!(error.code.as_str(), "NETWORK_ERROR" | "STORE_UNAVAILABLE") => {
+                self.repository
+                    .cached_catalog(&self.config.store_url, &user.id, query, page)?
+                    .ok_or(error)
+            }
+            Err(error) => Err(error),
+        }
     }
     pub fn detail(&self, id: &str) -> CompanyResult<Skill> {
         self.auth_result(self.client.detail(&self.session.access_token()?, id))
@@ -95,6 +125,7 @@ impl CompanyService {
         {
             self.cancel_pending();
             self.session.clear();
+            self.repository.clear_catalog(&self.config.store_url)?;
         }
         result
     }
@@ -407,31 +438,11 @@ impl CompanyService {
         archive: &Path,
         cancelled: &AtomicBool,
     ) -> CompanyResult<()> {
-        let mut response = self
-            .client
-            .client
-            .get(self.client.endpoint(&format!(
-                "/skills/{}/package",
-                urlencoding::encode(&skill.id)
-            ))?)
-            .bearer_auth(self.session.access_token()?)
-            .header(reqwest::header::IF_MATCH, &skill.package.etag)
-            .send()
-            .map_err(|_| StoreClient::network_error())?;
-        if response.status().as_u16() != 200 {
-            return Err(StoreClient::response_error(response));
-        }
-        if response
-            .headers()
-            .get(reqwest::header::ETAG)
-            .and_then(|value| value.to_str().ok())
-            != Some(skill.package.etag.as_str())
-        {
-            return Err(CompanyError::new(
-                "PACKAGE_CHANGED",
-                "ETag gói tải không khớp thông tin đã chọn.",
-            ));
-        }
+        let mut response = self.client.package_response(
+            &self.session.access_token()?,
+            &skill.id,
+            &skill.package.etag,
+        )?;
         let mut output = File::create(archive).map_err(|_| write_error())?;
         let mut bytes = 0u64;
         let mut buffer = [0u8; 65_536];
@@ -464,29 +475,40 @@ impl CompanyService {
         }
         Ok(())
     }
+    fn recover_install(&self, journal: &InstallJournal) -> CompanyResult<bool> {
+        let target = global_target(&self.config.profile_root, &journal.installation.slug)?;
+        let stage = stage_path(&target, &journal.view.id)?;
+        let matches_target = target
+            .to_string_lossy()
+            .replace('\\', "/")
+            .eq_ignore_ascii_case(&journal.installation.target.replace('\\', "/"));
+        if journal.stage_owned
+            && matches_target
+            && target.exists()
+            && !stage.exists()
+            && content_hash(&target, false).ok().as_deref() == Some(journal.full_hash.as_str())
+        {
+            self.repository.commit(journal)?;
+            return Ok(true);
+        } else if matches_target
+            && !target.exists()
+            && (!stage.exists()
+                || (journal.stage_owned
+                    && content_hash(&stage, false).ok().as_deref()
+                        == Some(journal.full_hash.as_str())))
+        {
+            if stage.exists() {
+                package_store::reject_links(&stage)?;
+                fs::remove_dir_all(&stage).map_err(|_| write_error())?;
+            }
+            self.repository.finish(&journal.view.id, "cancelled")?;
+            return Ok(true);
+        }
+        Ok(false)
+    }
     fn recover(&self) -> CompanyResult<()> {
         for journal in self.repository.pending()? {
-            let target = global_target(&self.config.profile_root, &journal.installation.slug)?;
-            let stage = stage_path(&target, &journal.view.id)?;
-            let matches_target = target
-                .to_string_lossy()
-                .replace('\\', "/")
-                .eq_ignore_ascii_case(&journal.installation.target.replace('\\', "/"));
-            if journal.stage_owned
-                && matches_target
-                && target.exists()
-                && !stage.exists()
-                && content_hash(&target, false).ok().as_deref() == Some(journal.full_hash.as_str())
-            {
-                self.repository.commit(&journal)?;
-            } else if matches_target && !target.exists() && (!stage.exists() || journal.stage_owned)
-            {
-                if stage.exists() {
-                    package_store::reject_links(&stage)?;
-                    fs::remove_dir_all(&stage).map_err(|_| write_error())?;
-                }
-                self.repository.finish(&journal.view.id, "cancelled")?;
-            } else {
+            if !self.recover_install(&journal).unwrap_or(false) {
                 self.repository
                     .finish(&journal.view.id, "recovery_required")?;
                 let mut view = journal.view.clone();
@@ -494,8 +516,9 @@ impl CompanyService {
                 view.error = Some(CompanyError::new(
                     "RECOVERY_REQUIRED",
                     format!(
-                        "Đích thay đổi trong lúc thao tác. Giữ dữ liệu để kiểm tra: {}",
-                        view.target
+                        "Nội dung thao tác cần kiểm tra. Đã giữ dữ liệu: {} ; staging: {}",
+                        view.target,
+                        format!(".company-stage-{}", view.id)
                     ),
                 ));
                 let skill = Skill {

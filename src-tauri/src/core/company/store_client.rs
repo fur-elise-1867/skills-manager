@@ -6,8 +6,8 @@ use std::{io::Read, time::Duration};
 
 #[derive(Clone)]
 pub struct StoreClient {
-    pub(crate) client: Client,
-    pub(crate) base_url: String,
+    client: Client,
+    base_url: String,
 }
 impl StoreClient {
     pub fn new(config: &CompanyConfig) -> CompanyResult<Self> {
@@ -151,5 +151,29 @@ impl StoreClient {
             ));
         }
         Ok(detail)
+    }
+    pub fn package_response(&self, token: &str, id: &str, etag: &str) -> CompanyResult<Response> {
+        let response = self
+            .client
+            .get(self.endpoint(&format!("/skills/{}/package", urlencoding::encode(id)))?)
+            .bearer_auth(token)
+            .header(reqwest::header::IF_MATCH, etag)
+            .send()
+            .map_err(|_| Self::network_error())?;
+        if response.status().as_u16() != 200 {
+            return Err(Self::response_error(response));
+        }
+        if response
+            .headers()
+            .get(reqwest::header::ETAG)
+            .and_then(|value| value.to_str().ok())
+            != Some(etag)
+        {
+            return Err(CompanyError::new(
+                "PACKAGE_CHANGED",
+                "ETag gói tải không khớp thông tin đã chọn.",
+            ));
+        }
+        Ok(response)
     }
 }

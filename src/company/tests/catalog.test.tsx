@@ -35,3 +35,27 @@ test('expired session asks for login while local installations stay available', 
   await userEvent.click(screen.getByRole('button', { name: 'Skill đã cài' }));
   expect(await screen.findByText('Chưa có skill được cài bởi ứng dụng.')).toBeInTheDocument();
 });
+
+test('offline cached catalog shows its timestamp and disables Store installation', async () => {
+  const bridge = api();
+  bridge.storeSearch.mockResolvedValue({ ...page, cache: { fetchedAt: '2026-10-12T00:00:00Z', stale: true } });
+  render(<CompanyApp api={bridge} />);
+  expect(await screen.findByText(/Dữ liệu đã lưu lúc/)).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Xem chi tiết Tổng hợp tiến độ Jira' })).toBeDisabled();
+  expect(bridge.prepareInstallation).not.toHaveBeenCalled();
+});
+
+test('a late response from the old query cannot replace the new results', async () => {
+  const bridge = api();
+  let finishOld: (value: typeof page) => void = () => {};
+  bridge.storeSearch.mockImplementation(query => query === 'old' ? new Promise(resolve => { finishOld = resolve; }) : Promise.resolve({ ...page, items: [{ ...skill, name: query === 'new' ? 'Kết quả mới' : skill.name }] }));
+  render(<CompanyApp api={bridge} />);
+  const user = userEvent.setup();
+  const input = await screen.findByLabelText('Tìm kiếm skill');
+  await user.type(input, 'old');
+  await waitFor(() => expect(bridge.storeSearch).toHaveBeenCalledWith('old', 1));
+  await user.clear(input); await user.type(input, 'new');
+  expect(await screen.findByRole('heading', { name: 'Kết quả mới' })).toBeInTheDocument();
+  finishOld(page);
+  await waitFor(() => expect(screen.queryByRole('heading', { name: skill.name })).not.toBeInTheDocument());
+});

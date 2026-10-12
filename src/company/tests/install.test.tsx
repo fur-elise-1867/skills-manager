@@ -22,6 +22,8 @@ async function openInstall(api: ReturnType<typeof bridge>) {
   await userEvent.click(await screen.findByRole('button', { name: 'Xem chi tiết Jira Summary' }));
   await userEvent.click(await screen.findByRole('button', { name: 'Cài vào AIPRO Global' }));
   expect(await screen.findByText('Chưa có MCP trong cấu hình')).toBeInTheDocument();
+  expect(screen.getByText('MCP yêu cầu')).toBeInTheDocument();
+  expect(screen.getByText('Thiếu: jira-mcp')).toBeInTheDocument();
 }
 
 test('employee stops installation to configure missing MCP manually', async () => {
@@ -47,4 +49,52 @@ test('installation shows the fresh Store snapshot returned by prepare', async ()
   await openInstall(api);
   expect(screen.getByRole('heading', { name: 'Jira Summary mới' })).toBeInTheDocument();
   expect(screen.getByText('C:/demo/.aipro/mcp.json')).toBeInTheDocument();
+});
+
+test('session expiry during preparation returns to login and keeps local skills accessible', async () => {
+  const api = bridge();
+  api.prepareInstallation.mockRejectedValue({ code: 'SESSION_EXPIRED', message: 'Phiên đã hết hạn.' });
+  render(<CompanyApp api={api} />);
+  await userEvent.click(await screen.findByRole('button', { name: 'Xem chi tiết Jira Summary' }));
+  await userEvent.click(screen.getByRole('button', { name: 'Cài vào AIPRO Global' }));
+  expect(await screen.findByLabelText('Tài khoản')).toBeInTheDocument();
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  await userEvent.click(screen.getByRole('button', { name: 'Skill đã cài' }));
+  expect(await screen.findByText('Chưa có skill được cài bởi ứng dụng.')).toBeInTheDocument();
+});
+
+test('login after a download 401 reloads the selected skill and checks MCP with a new attempt', async () => {
+  const api = bridge();
+  const old = await api.prepareInstallation();
+  api.operationStatus.mockResolvedValue({ ...old, state: 'failed', error: { code: 'UNAUTHENTICATED', message: 'Đăng nhập lại.' } });
+  api.login.mockResolvedValue(await api.session());
+  await openInstall(api);
+  await userEvent.click(screen.getByRole('button', { name: 'Bỏ qua và cài tiếp' }));
+  await userEvent.type(await screen.findByLabelText('Tài khoản'), 'employee01');
+  await userEvent.type(screen.getByLabelText('Mật khẩu'), 'demo-password');
+  await userEvent.click(screen.getByRole('button', { name: 'Đăng nhập' }));
+  expect(await screen.findByRole('dialog', { name: 'Chi tiết skill' })).toBeInTheDocument();
+  expect(api.storeDetail).toHaveBeenCalledTimes(2);
+  api.prepareInstallation.mockResolvedValue({ ...old, id: 'op2' });
+  await userEvent.click(screen.getByRole('button', { name: 'Cài vào AIPRO Global' }));
+  expect(await screen.findByText('Chưa có MCP trong cấu hình')).toBeInTheDocument();
+  expect(api.confirmInstallation).toHaveBeenCalledTimes(1);
+  await userEvent.click(screen.getByRole('button', { name: 'Bỏ qua và cài tiếp' }));
+  expect(api.confirmInstallation).toHaveBeenLastCalledWith('op2', true);
+});
+
+test('a changed package refreshes detail and asks for a fresh MCP decision', async () => {
+  const api = bridge();
+  const old = await api.prepareInstallation();
+  api.operationStatus.mockResolvedValue({ ...old, state: 'failed', error: { code: 'PACKAGE_CHANGED', message: 'Gói đã đổi.' } });
+  await openInstall(api);
+  await userEvent.click(screen.getByRole('button', { name: 'Bỏ qua và cài tiếp' }));
+  await screen.findByText('Gói đã đổi.');
+  api.storeDetail.mockResolvedValue({ ...skill, name: 'Jira Summary phiên bản mới' });
+  api.prepareInstallation.mockResolvedValue({ ...old, id: 'op2', skill: { ...skill, name: 'Jira Summary phiên bản mới' } });
+  await userEvent.click(screen.getByRole('button', { name: 'Xem thông tin mới' }));
+  expect(await screen.findByRole('heading', { name: 'Jira Summary phiên bản mới' })).toBeInTheDocument();
+  await userEvent.click(screen.getByRole('button', { name: 'Cài vào AIPRO Global' }));
+  expect(await screen.findByRole('button', { name: 'Bỏ qua và cài tiếp' })).toBeInTheDocument();
+  expect(api.confirmInstallation).toHaveBeenCalledTimes(1);
 });

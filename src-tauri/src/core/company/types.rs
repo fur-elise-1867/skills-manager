@@ -108,6 +108,14 @@ pub struct Pagination {
 pub struct SkillPage {
     pub items: Vec<Skill>,
     pub pagination: Pagination,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cache: Option<CatalogCache>,
+}
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CatalogCache {
+    pub fetched_at: String,
+    pub stale: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

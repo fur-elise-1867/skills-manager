@@ -124,3 +124,31 @@ fn company_flow03c_recovery_does_not_adopt_foreign_target_even_when_bytes_match(
     assert!(!app.recovery_warnings().is_empty());
     assert_eq!(fs::read(target.join("SKILL.md")).unwrap(), before);
 }
+
+#[test]
+fn company_flow03c_recovery_preserves_modified_owned_staging() {
+    let (_root, config, _journal, target, stage, original) = pending_fixture(true);
+    copy_tree(&original, &stage).unwrap();
+    fs::write(stage.join("external-note.txt"), "keep this change").unwrap();
+    let app = CompanyService::new(config, Arc::new(MemoryCredentials::default())).unwrap();
+    assert!(app.installations().unwrap().is_empty());
+    assert!(!target.exists());
+    assert!(!app.recovery_warnings().is_empty());
+    assert_eq!(
+        fs::read_to_string(stage.join("external-note.txt")).unwrap(),
+        "keep this change"
+    );
+}
+
+#[cfg(windows)]
+#[test]
+fn company_flow03c_recovery_keeps_foreign_junction_and_starts_with_warning() {
+    let (_root, config, _journal, target, _stage, original) = pending_fixture(true);
+    fs::create_dir_all(target.parent().unwrap()).unwrap();
+    junction::create(&original, &target).unwrap();
+    let app = CompanyService::new(config, Arc::new(MemoryCredentials::default()))
+        .expect("unsafe target must not prevent opening local data");
+    assert!(!app.recovery_warnings().is_empty());
+    assert!(junction::exists(&target).unwrap());
+    assert!(original.join("SKILL.md").is_file());
+}

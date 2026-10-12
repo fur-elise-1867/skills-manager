@@ -21,7 +21,8 @@ impl CompanyRepository {
             CREATE TABLE IF NOT EXISTS company_packages (hash TEXT PRIMARY KEY, payload TEXT NOT NULL);
             CREATE TABLE IF NOT EXISTS company_installations (id TEXT PRIMARY KEY, target_key TEXT NOT NULL UNIQUE, payload TEXT NOT NULL);
             CREATE TABLE IF NOT EXISTS company_operations (id TEXT PRIMARY KEY, state TEXT NOT NULL, payload TEXT NOT NULL);
-            PRAGMA user_version=1;").map_err(|_| db_error())?;
+            CREATE TABLE IF NOT EXISTS company_catalog_cache (store_key TEXT NOT NULL, user_id TEXT NOT NULL, query TEXT NOT NULL, page INTEGER NOT NULL, fetched_at TEXT NOT NULL, payload TEXT NOT NULL, PRIMARY KEY(store_key,user_id,query,page));
+            PRAGMA user_version=2;").map_err(|_| db_error())?;
         Ok(Self {
             connection: Mutex::new(connection),
         })
@@ -36,6 +37,52 @@ impl CompanyRepository {
             .map_err(|_| db_error())?;
         rows.map(|row| serde_json::from_str(&row.map_err(|_| db_error())?).map_err(|_| db_error()))
             .collect()
+    }
+    pub fn cache_catalog(
+        &self,
+        store: &str,
+        user: &str,
+        query: &str,
+        page: u32,
+        result: &SkillPage,
+    ) -> CompanyResult<()> {
+        let mut connection = self.connection.lock().map_err(|_| db_error())?;
+        let transaction = connection.transaction().map_err(|_| db_error())?;
+        let fetched_at = chrono::Utc::now().to_rfc3339();
+        transaction.execute("INSERT INTO company_catalog_cache(store_key,user_id,query,page,fetched_at,payload) VALUES(?1,?2,?3,?4,?5,?6) ON CONFLICT(store_key,user_id,query,page) DO UPDATE SET fetched_at=excluded.fetched_at,payload=excluded.payload", params![store,user,query.trim(),page,fetched_at,serde_json::to_string(result).map_err(|_| db_error())?]).map_err(|_| db_error())?;
+        transaction.execute("DELETE FROM company_catalog_cache WHERE rowid IN (SELECT rowid FROM company_catalog_cache WHERE store_key=?1 AND user_id=?2 ORDER BY fetched_at DESC LIMIT -1 OFFSET 100)", params![store,user]).map_err(|_| db_error())?;
+        transaction.commit().map_err(|_| db_error())
+    }
+    pub fn cached_catalog(
+        &self,
+        store: &str,
+        user: &str,
+        query: &str,
+        page: u32,
+    ) -> CompanyResult<Option<SkillPage>> {
+        use rusqlite::OptionalExtension;
+        let connection = self.connection.lock().map_err(|_| db_error())?;
+        let row: Option<(String, String)> = connection.query_row("SELECT payload,fetched_at FROM company_catalog_cache WHERE store_key=?1 AND user_id=?2 AND query=?3 AND page=?4", params![store,user,query.trim(),page], |row| Ok((row.get(0)?, row.get(1)?))).optional().map_err(|_| db_error())?;
+        row.map(|(payload, fetched_at)| {
+            let mut result: SkillPage = serde_json::from_str(&payload).map_err(|_| db_error())?;
+            result.cache = Some(CatalogCache {
+                fetched_at,
+                stale: true,
+            });
+            Ok(result)
+        })
+        .transpose()
+    }
+    pub fn clear_catalog(&self, store: &str) -> CompanyResult<()> {
+        self.connection
+            .lock()
+            .map_err(|_| db_error())?
+            .execute(
+                "DELETE FROM company_catalog_cache WHERE store_key=?1",
+                [store],
+            )
+            .map_err(|_| db_error())?;
+        Ok(())
     }
     pub fn prepare(&self, journal: &InstallJournal) -> CompanyResult<()> {
         let payload = serde_json::to_string(journal).map_err(|_| db_error())?;

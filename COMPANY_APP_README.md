@@ -2,6 +2,8 @@
 
 App Windows dùng React/Tauri/Rust; các luồng hiện có: đăng nhập và giữ phiên trong Windows Credential Manager, tìm kiếm/phân trang Store, xem description đầy đủ, cài ZIP/7z vào AIPRO Global, cảnh báo MCP dừng/bỏ qua, bản cài độc lập và phục hồi thao tác cài dở.
 
+Catalog đã tải được lưu theo Store/tài khoản/truy vấn với thời điểm lấy. Khi mất mạng, app chỉ hiển thị dữ liệu đã lưu và không cài từ cache; đăng xuất xóa cache tài khoản. Hết phiên giữ skill đang chọn để đọc lại detail sau đăng nhập, không tự chạy lại thao tác cài.
+
 ## Chạy demo
 
 Cần Node 22.12+ (hoặc Node 24), Rust stable MSVC, Microsoft C++ Build Tools và WebView2. Cài dependencies bằng `npm ci`, sau đó:
@@ -29,7 +31,7 @@ Bản app bình thường đọc `%LOCALAPPDATA%\CompanySkillsManager\store.json
 
 Thay hostname minh họa bằng dịch vụ nội bộ thật cung cấp năm endpoint của API draft v0.1 dưới `/api/v1`. Rust thực hiện HTTP, token không đưa ra frontend. HTTPS được xác minh bằng hệ thống chứng chỉ Windows; redirect bị từ chối. Bản release không nhận override debug/mock.
 
-Các gói/description dùng hash và strong ETag theo contract. Nếu gói hoặc description thay khi đang tải, thao tác lỗi 412, user bắt đầu lần cài mới và app đọc lại detail/MCP; không tự tái dùng quyền bỏ qua cũ. Không kiểm tra kết nối/token/runtime MCP và không sửa mcp.json.
+Các gói/description dùng hash và strong ETag theo contract. Nếu gói hoặc description thay khi đang tải, thao tác lỗi 412; chọn **Xem thông tin mới** để đọc lại detail rồi quyết định MCP cho lần cài mới. Không tái dùng quyền bỏ qua cũ. App chỉ xét tên MCP trong mcp.json, không kiểm tra kết nối/token/runtime và không sửa file này.
 
 ## Kiểm chứng
 
@@ -40,8 +42,11 @@ cargo test --manifest-path src-tauri/Cargo.toml --test company_flows
 npm run lint
 npm run build
 npm run tauri:build -- --debug
+node scripts/company-native-smoke.mjs
 ```
 
 API giả lập hỗ trợ `--scenario normal`, `session-expired`, `unavailable`, `package-changed`, `corrupt-download`, `forbidden-download`. Gói hỏng/unsafe, hash/size sai, conflict đích, file khóa hoặc journal không xác định không được báo cài thành công.
+
+Native smoke mở app Windows đã build, dùng WebView2/IPC thật và profile tạm riêng; kiểm tra Credential Manager qua restart, đăng xuất, dừng/bỏ qua MCP, file ZIP/7z và dữ liệu bản cài. Recovery chỉ tự dọn staging hoàn chỉnh khớp manifest; nội dung không xác định hoặc bị sửa được giữ lại và báo đường dẫn cần kiểm tra.
 
 L4 trở đi sẽ bổ sung cài theo dự án, theo dõi tùy chỉnh, update/backup/restore và quản lý dung lượng. API thật, cách AIPRO nạp/ưu tiên skill, ký/phân phối installer do IT là phần nghiệm thu môi trường L8. Mốc L1–L3 xác nhận đặt file và quản lý bản cài, không chứng minh MCP hoặc AIPRO đã nạp/chạy skill.

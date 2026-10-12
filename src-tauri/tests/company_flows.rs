@@ -13,6 +13,55 @@ use app_lib::core::company::store_client::StoreClient;
 use app_lib::core::company::{package_store::prepare_archive, types::PackageMeta};
 
 #[test]
+fn company_flow02_offline_catalog_survives_restart_with_timestamp() {
+    let mut server = support::MockServer::start("normal");
+    let root = tempfile::tempdir().unwrap();
+    let config = CompanyConfig::for_test(
+        &server.url,
+        root.path().join("profile"),
+        root.path().join("data"),
+    )
+    .unwrap();
+    let credentials = Arc::new(MemoryCredentials::default());
+    let app = CompanyService::new(config.clone(), credentials.clone()).unwrap();
+    app.login("employee01", "demo-password").unwrap();
+    let online = app.search("jira", 1).unwrap();
+    assert_eq!(online.items.len(), 1);
+    drop(app);
+    server.stop();
+    let restarted = CompanyService::new(config, credentials).unwrap();
+    let cached = restarted
+        .search("jira", 1)
+        .expect("previous catalog is available offline");
+    assert_eq!(cached.items[0].id, online.items[0].id);
+    let dto = serde_json::to_value(cached).unwrap();
+    assert_eq!(dto["cache"]["stale"], true);
+    assert!(
+        chrono::DateTime::parse_from_rfc3339(dto["cache"]["fetchedAt"].as_str().unwrap()).is_ok()
+    );
+    assert!(restarted.prepare_install("skl_001").is_err());
+}
+
+#[test]
+fn company_flow02_another_account_never_receives_previous_catalog_cache() {
+    let mut server = support::MockServer::start("normal");
+    let root = tempfile::tempdir().unwrap();
+    let config = CompanyConfig::for_test(
+        &server.url,
+        root.path().join("profile"),
+        root.path().join("data"),
+    )
+    .unwrap();
+    let app = CompanyService::new(config, Arc::new(MemoryCredentials::default())).unwrap();
+    app.login("employee01", "demo-password").unwrap();
+    app.search("jira", 1).unwrap();
+    app.logout().unwrap();
+    app.login("employee02", "demo-password").unwrap();
+    server.stop();
+    assert_eq!(app.search("jira", 1).unwrap_err().code, "NETWORK_ERROR");
+}
+
+#[test]
 fn company_flow03c_global_install_is_independent_and_survives_restart() {
     let server = support::MockServer::start("normal");
     let root = tempfile::tempdir().unwrap();
@@ -189,6 +238,8 @@ fn company_flow03b_prepares_real_zip_and_7z_without_external_extractor() {
     for (name, slug, format) in [
         ("jira-project-summary.zip", "jira-project-summary", "zip"),
         ("excel-insights.7z", "excel-insights", "7z"),
+        ("excel-insights-copy.7z", "excel-insights", "7z"),
+        ("excel-insights-lzma.7z", "excel-insights", "7z"),
     ] {
         let root = tempfile::tempdir().unwrap();
         let path = fixture_root.join(name);
