@@ -156,6 +156,23 @@ impl CompanyService {
             )
         })?;
         let target = global_target(&self.config.profile_root, &skill.slug)?;
+        let target_key = target.to_string_lossy().replace('\\', "/");
+        if self
+            .operations
+            .lock()
+            .map_err(|_| operation_error())?
+            .values()
+            .any(|operation| {
+                operation.view.state == OperationState::RecoveryRequired
+                    && operation
+                        .view
+                        .target
+                        .replace('\\', "/")
+                        .eq_ignore_ascii_case(&target_key)
+            })
+        {
+            return Err(CompanyError::new("RECOVERY_REQUIRED", "Đích này có thao tác chưa phục hồi xong. Kiểm tra dữ liệu đã giữ trước khi cài lại."));
+        }
         if target.exists()
             || self.installations()?.iter().any(|item| {
                 item.target

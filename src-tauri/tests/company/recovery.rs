@@ -140,6 +140,26 @@ fn company_flow03c_recovery_preserves_modified_owned_staging() {
     );
 }
 
+#[test]
+fn company_flow03c_unresolved_recovery_blocks_only_its_target() {
+    let server = super::support::MockServer::start("normal");
+    let (_root, mut config, _journal, _target, stage, original) = pending_fixture(true);
+    config.store_url = server.url.clone();
+    copy_tree(&original, &stage).unwrap();
+    fs::write(stage.join("external-note.txt"), "keep this change").unwrap();
+    let app = CompanyService::new(config, Arc::new(MemoryCredentials::default())).unwrap();
+    app.login("employee01", "demo-password").unwrap();
+    assert_eq!(
+        app.prepare_install("skl_001").unwrap_err().code,
+        "RECOVERY_REQUIRED"
+    );
+    assert!(app.prepare_install("skl_003").is_ok());
+    assert_eq!(
+        fs::read_to_string(stage.join("external-note.txt")).unwrap(),
+        "keep this change"
+    );
+}
+
 #[cfg(windows)]
 #[test]
 fn company_flow03c_recovery_keeps_foreign_junction_and_starts_with_warning() {
