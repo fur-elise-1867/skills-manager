@@ -88,23 +88,30 @@ impl CompanyService {
         project_id: Option<&str>,
         slug: &str,
     ) -> CompanyResult<PathBuf> {
-        let root = match project_id {
-            None => self.config.profile_root.clone(),
-            Some(id) => PathBuf::from(
-                self.projects()?
-                    .into_iter()
-                    .find(|p| p.id == id)
-                    .ok_or_else(|| CompanyError::new("PROJECT_NOT_FOUND", "Không tìm thấy dự án."))?
-                    .path,
-            ),
-        };
-        let target = global_target(&root, slug)?;
-        if project_id.is_some() && !root.is_dir() {
+        let target = self.recorded_target(project_id, slug)?;
+        if project_id.is_some() && !self.scope_root(project_id)?.is_dir() {
             return Err(CompanyError::new(
                 "PROJECT_MISSING",
                 "Thư mục dự án không còn tồn tại. Chọn lại thư mục trước khi cài.",
             ));
         }
+        Ok(target)
+    }
+    fn scope_root(&self, project_id: Option<&str>) -> CompanyResult<PathBuf> {
+        match project_id {
+            None => Ok(self.config.profile_root.clone()),
+            Some(id) => Ok(PathBuf::from(
+                self.projects()?
+                    .into_iter()
+                    .find(|p| p.id == id)
+                    .ok_or_else(|| CompanyError::new("PROJECT_NOT_FOUND", "Không tìm thấy dự án."))?
+                    .path,
+            )),
+        }
+    }
+    fn recorded_target(&self, project_id: Option<&str>, slug: &str) -> CompanyResult<PathBuf> {
+        let root = self.scope_root(project_id)?;
+        let target = global_target(&root, slug)?;
         if overlaps(&target, &self.config.data_root) {
             return Err(CompanyError::new(
                 "TARGET_CONFLICT",
@@ -122,7 +129,7 @@ impl CompanyService {
             .ok_or_else(|| {
                 CompanyError::new("INSTALLATION_NOT_FOUND", "Không tìm thấy bản cài.")
             })?;
-        let expected = self.installation_target(item.project_id.as_deref(), &item.slug)?;
+        let expected = self.recorded_target(item.project_id.as_deref(), &item.slug)?;
         if path_key(&expected) != path_key(Path::new(&item.target)) {
             return Err(CompanyError::new(
                 "TARGET_CONFLICT",

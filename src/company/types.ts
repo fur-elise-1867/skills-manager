@@ -9,7 +9,8 @@ export interface Project { id: string; name: string; path: string }
 export type ContentState = 'original' | 'customized' | 'unknown' | 'missing';
 export type StoreState = 'current' | 'new_package' | 'unknown' | 'unavailable';
 export interface Installation { id: string; skillId: string; name: string; target: string; packageHash: string; installedAt: string; mcpBypassed: boolean; projectId?: string | null; contentState?: ContentState; storeState?: StoreState; checkedAt?: string | null; storeError?: string | null }
-export interface FileChange { path: string; kind: 'added' | 'modified' | 'deleted' }
+export interface FilePreview { kind: 'text' | 'binary' | 'directory'; sizeBytes: number }
+export interface FileChange { path: string; kind: 'added' | 'modified' | 'deleted'; current?: FilePreview | null; incoming?: FilePreview | null }
 export interface Backup { id: string; installationId: string; createdAt: string; reason: string; path: string; fullHash: string; installation: Installation }
 export interface McpReport { state: 'not_required' | 'undeclared' | 'present' | 'missing' | 'unknown'; required: string[]; present: string[]; missing: string[]; reason: string | null; checkedAt: string }
 export interface OperationView { id: string; state: 'awaiting_decision' | 'downloading' | 'validating' | 'staging' | 'committing' | 'succeeded' | 'cancelled' | 'failed' | 'recovery_required'; target: string; mcp: McpReport; mcpPath?: string; skill?: Skill; progressBytes: number; totalBytes: number; error: CompanyError | null; kind?: 'install' | 'update'; previewReady?: boolean; customized?: boolean; changes?: FileChange[] }

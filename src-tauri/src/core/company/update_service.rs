@@ -1,6 +1,29 @@
 use super::*;
 use crate::core::company::aipro_paths::{overlaps, validate_ancestors};
-use std::{collections::BTreeMap, path::PathBuf};
+use std::{collections::BTreeMap, io::Read, path::PathBuf};
+
+pub(super) struct UpdateJob {
+    pub(super) id: String,
+    pub(super) skill: Skill,
+    pub(super) old: Installation,
+    pub(super) expected_hash: String,
+    pub(super) owner: String,
+    pub(super) cancelled: Arc<AtomicBool>,
+    pub(super) bypass: bool,
+}
+impl UpdateJob {
+    fn capture(op: &Operation) -> CompanyResult<Self> {
+        Ok(Self {
+            id: op.view.id.clone(),
+            skill: op.skill.clone(),
+            old: op.old.clone().ok_or_else(operation_error)?,
+            expected_hash: op.old_full_hash.clone().ok_or_else(operation_error)?,
+            owner: op.owner.clone(),
+            cancelled: op.cancelled.clone(),
+            bypass: op.bypass,
+        })
+    }
+}
 
 fn changed() -> CompanyError {
     CompanyError::new(
@@ -8,7 +31,78 @@ fn changed() -> CompanyError {
         "Nội dung đã thay đổi sau khi xem. Giữ bản đang dùng và chuẩn bị cập nhật lại.",
     )
 }
-fn files(root: &Path) -> CompanyResult<BTreeMap<String, String>> {
+#[derive(PartialEq)]
+struct PreviewEntry {
+    hash: String,
+    info: FilePreview,
+}
+fn preview_info(path: &Path) -> CompanyResult<FilePreview> {
+    let meta = fs::metadata(path).map_err(|_| write_error())?;
+    if meta.is_dir() {
+        return Ok(FilePreview {
+            kind: PreviewKind::Directory,
+            size_bytes: 0,
+        });
+    }
+    let extension = path
+        .extension()
+        .unwrap_or_default()
+        .to_string_lossy()
+        .to_lowercase();
+    let text_extension = matches!(
+        extension.as_str(),
+        "md" | "txt"
+            | "json"
+            | "yaml"
+            | "yml"
+            | "toml"
+            | "xml"
+            | "csv"
+            | "log"
+            | "ini"
+            | "css"
+            | "ts"
+            | "tsx"
+            | "js"
+            | "jsx"
+            | "py"
+            | "rs"
+            | "sh"
+            | "ps1"
+            | "rb"
+            | "go"
+            | "java"
+            | "sql"
+            | "c"
+            | "h"
+            | "cpp"
+            | "hpp"
+    );
+    let mut sample = Vec::new();
+    if text_extension {
+        File::open(path)
+            .map_err(|_| write_error())?
+            .take(8192)
+            .read_to_end(&mut sample)
+            .map_err(|_| write_error())?;
+    }
+    let utf8 = match std::str::from_utf8(&sample) {
+        Ok(_) => true,
+        Err(e) => e.error_len().is_none(),
+    };
+    let printable = sample
+        .iter()
+        .all(|b| *b >= 32 && *b != 127 || matches!(*b, b'\n' | b'\r' | b'\t'));
+    Ok(FilePreview {
+        kind: if meta.is_file() && text_extension && utf8 && printable {
+            PreviewKind::Text
+        } else {
+            PreviewKind::Binary
+        },
+        size_bytes: meta.len(),
+    })
+}
+fn files(root: &Path) -> CompanyResult<BTreeMap<String, PreviewEntry>> {
     let mut result = BTreeMap::new();
     for entry in walkdir::WalkDir::new(root)
         .follow_links(false)
@@ -27,14 +121,26 @@ fn files(root: &Path) -> CompanyResult<BTreeMap<String, String>> {
             .to_string_lossy()
             .replace('\\', "/");
         if entry.file_type().is_file() {
-            result.insert(path, package_store::hash_file(entry.path())?);
+            result.insert(
+                path,
+                PreviewEntry {
+                    hash: package_store::hash_file(entry.path())?,
+                    info: preview_info(entry.path())?,
+                },
+            );
         } else if entry.file_type().is_dir()
             && fs::read_dir(entry.path())
                 .map_err(|_| write_error())?
                 .next()
                 .is_none()
         {
-            result.insert(path, "directory".into());
+            result.insert(
+                path,
+                PreviewEntry {
+                    hash: "directory".into(),
+                    info: preview_info(entry.path())?,
+                },
+            );
         }
     }
     Ok(result)
@@ -163,7 +269,7 @@ impl CompanyService {
         bypass: bool,
     ) -> CompanyResult<OperationView> {
         let owner = self.owner()?;
-        let (skill, old, hash, cancelled, view) = {
+        let (job, view) = {
             let mut operations = self.operations.lock().map_err(|_| operation_error())?;
             let op = operations.get_mut(id).ok_or_else(operation_error)?;
             if op.owner != owner || op.cancelled.load(Ordering::Relaxed) {
@@ -183,34 +289,23 @@ impl CompanyService {
             }
             op.view.state = OperationState::Downloading;
             op.bypass = bypass;
-            (
-                op.skill.clone(),
-                op.old.clone().ok_or_else(operation_error)?,
-                op.old_full_hash.clone().ok_or_else(operation_error)?,
-                op.cancelled.clone(),
-                op.view.clone(),
-            )
+            (UpdateJob::capture(op)?, op.view.clone())
         };
         let app = self.clone();
-        let id = id.to_string();
         std::thread::spawn(move || {
-            if let Err(error) =
-                app.prepare_preview_files(&id, &skill, &old, &hash, &owner, &cancelled)
-            {
-                app.update_failure(&id, error);
+            if let Err(error) = app.prepare_preview_files(&job) {
+                app.update_failure(&job.id, error);
             }
         });
         Ok(view)
     }
-    fn prepare_preview_files(
-        &self,
-        id: &str,
-        skill: &Skill,
-        old: &Installation,
-        old_hash: &str,
-        owner: &str,
-        cancelled: &AtomicBool,
-    ) -> CompanyResult<()> {
+    fn prepare_preview_files(&self, job: &UpdateJob) -> CompanyResult<()> {
+        let id = job.id.as_str();
+        let skill = &job.skill;
+        let old = &job.old;
+        let old_hash = job.expected_hash.as_str();
+        let owner = job.owner.as_str();
+        let cancelled = job.cancelled.as_ref();
         let _worker = self.worker.lock().map_err(|_| write_error())?;
         Self::check_cancel(cancelled)?;
         if self.owner()? != owner {
@@ -264,11 +359,12 @@ impl CompanyService {
                 changes.push(FileChange {
                     path: path.clone(),
                     kind: if after.contains_key(path) {
-                        "modified"
+                        FileChangeKind::Modified
                     } else {
-                        "deleted"
-                    }
-                    .into(),
+                        FileChangeKind::Deleted
+                    },
+                    current: Some(hash.info.clone()),
+                    incoming: after.get(path).map(|entry| entry.info.clone()),
                 });
             }
         }
@@ -276,7 +372,9 @@ impl CompanyService {
             if !before.contains_key(path) {
                 changes.push(FileChange {
                     path: path.clone(),
-                    kind: "added".into(),
+                    kind: FileChangeKind::Added,
+                    current: None,
+                    incoming: after.get(path).map(|entry| entry.info.clone()),
                 });
             }
         }
@@ -325,6 +423,12 @@ impl CompanyService {
                 "File không có ở phía đã chọn. Có thể mở thư mục để xem.",
             ));
         }
+        if path.is_file() && preview_info(&path)?.kind != PreviewKind::Text {
+            return Err(CompanyError::new(
+                "PREVIEW_UNAVAILABLE",
+                "File nhị phân hoặc thực thi chỉ xem thông tin hoặc mở thư mục.",
+            ));
+        }
         Ok(path)
     }
     pub fn apply_update(
@@ -333,7 +437,7 @@ impl CompanyService {
         replace_customized: bool,
     ) -> CompanyResult<OperationView> {
         let owner = self.owner()?;
-        let (old, package, hash, cancelled, skill, bypass, view) = {
+        let (job, package, view) = {
             let mut operations = self.operations.lock().map_err(|_| operation_error())?;
             let op = operations.get_mut(id).ok_or_else(operation_error)?;
             if op.owner != owner || op.cancelled.load(Ordering::Relaxed) {
@@ -356,29 +460,20 @@ impl CompanyService {
             }
             op.view.state = OperationState::Staging;
             (
-                op.old.clone().ok_or_else(operation_error)?,
+                UpdateJob::capture(op)?,
                 op.preview.clone().ok_or_else(operation_error)?,
-                op.old_full_hash.clone().ok_or_else(operation_error)?,
-                op.cancelled.clone(),
-                op.skill.clone(),
-                op.bypass,
                 op.view.clone(),
             )
         };
         let app = self.clone();
-        let id = id.to_string();
-        std::thread::spawn(move || {
-            match app.replace_installation(
-                &id, &old, &package, &hash, &owner, &cancelled, &skill, bypass,
-            ) {
-                Ok(()) => app.update(
-                    &id,
-                    OperationState::Succeeded,
-                    Some(skill.package.size_bytes),
-                    None,
-                ),
-                Err(error) => app.update_failure(&id, error),
-            }
+        std::thread::spawn(move || match app.replace_installation(&job, &package) {
+            Ok(()) => app.update(
+                &job.id,
+                OperationState::Succeeded,
+                Some(job.skill.package.size_bytes),
+                None,
+            ),
+            Err(error) => app.update_failure(&job.id, error),
         });
         Ok(view)
     }

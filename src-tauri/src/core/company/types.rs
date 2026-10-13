@@ -165,7 +165,31 @@ pub enum OperationKind {
 #[serde(rename_all = "camelCase")]
 pub struct FileChange {
     pub path: String,
-    pub kind: String,
+    pub kind: FileChangeKind,
+    #[serde(default)]
+    pub current: Option<FilePreview>,
+    #[serde(default)]
+    pub incoming: Option<FilePreview>,
+}
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum FileChangeKind {
+    Added,
+    Modified,
+    Deleted,
+}
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct FilePreview {
+    pub kind: PreviewKind,
+    pub size_bytes: u64,
+}
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum PreviewKind {
+    Text,
+    Binary,
+    Directory,
 }
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]

@@ -189,3 +189,45 @@ fn company_flow04_legacy_database_keeps_installation_identity_after_path_key_mig
         "Legacy managed Jira"
     );
 }
+
+#[test]
+fn company_flow04_moved_project_shows_missing_without_recreating_it() {
+    let server = MockServer::start("normal");
+    let root = tempfile::tempdir().unwrap();
+    let config = CompanyConfig::for_test(
+        &server.url,
+        root.path().join("profile"),
+        root.path().join("data"),
+    )
+    .unwrap();
+    let app =
+        Arc::new(CompanyService::new(config, Arc::new(MemoryCredentials::default())).unwrap());
+    app.login("employee01", "demo-password").unwrap();
+    let path = root.path().join("Project A");
+    fs::create_dir(&path).unwrap();
+    let project = app.add_project(&path).unwrap();
+    let op = app.prepare_project_install("skl_001", &project.id).unwrap();
+    app.confirm(&op.id, true).unwrap();
+    wait(&app, &op.id);
+    let item = app.installations().unwrap().remove(0);
+    fs::rename(&path, root.path().join("Moved Project A")).unwrap();
+    assert_eq!(
+        serde_json::to_value(app.installations().unwrap()[0].clone()).unwrap()["contentState"],
+        "missing"
+    );
+    assert_eq!(
+        serde_json::to_value(app.refresh_installation(&item.id).unwrap()).unwrap()["contentState"],
+        "missing"
+    );
+    assert_eq!(
+        app.prepare_project_install("skl_001", &project.id)
+            .unwrap_err()
+            .code,
+        "PROJECT_MISSING"
+    );
+    assert!(!path.exists());
+    assert!(root
+        .path()
+        .join("Moved Project A/.aipro/skills/jira-project-summary/SKILL.md")
+        .is_file());
+}

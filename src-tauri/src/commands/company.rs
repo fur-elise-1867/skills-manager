@@ -168,7 +168,13 @@ pub async fn company_operation_open_preview(
 ) -> CompanyResult<()> {
     blocking(state, move |app| {
         let path = app.preview_open_path(&id, &side, &path)?;
-        tauri_plugin_opener::open_path(path, None::<&str>).map_err(|_| {
+        // Text preview always uses an editor, including source scripts whose OS association may run them.
+        let editor = if path.is_file() {
+            Some("notepad.exe")
+        } else {
+            None
+        };
+        tauri_plugin_opener::open_path(path, editor).map_err(|_| {
             CompanyError::new(
                 "OPEN_FAILED",
                 "Không mở được preview. Chọn mở thư mục để xem bằng công cụ trên máy.",

@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { expect, test, vi } from 'vitest';
 import { CompanyApp } from '../CompanyApp';
@@ -44,4 +44,22 @@ test('cancelling after commit has started keeps reporting the actual result inst
   expect(api.cancelOperation).toHaveBeenCalledWith('op');
   expect(onClose).not.toHaveBeenCalled();
   expect(await screen.findByRole('button', { name: 'Hủy' })).toBeDisabled();
+});
+
+test('binary preview shows information and folder actions while text can open in an editor', async () => {
+  const op = { id: 'preview-op', state: 'awaiting_decision' as const, target: 'C:/project', mcp: { state: 'not_required' as const, required: [], present: [], missing: [], reason: null, checkedAt: '' }, progressBytes: 100, totalBytes: 100, error: null, previewReady: true,
+    changes: [
+      { path: 'tool.exe', kind: 'added' as const, incoming: { kind: 'binary' as const, sizeBytes: 4096 } },
+      { path: 'notes.txt', kind: 'added' as const, incoming: { kind: 'text' as const, sizeBytes: 20 } },
+    ] };
+  const api = { ...workspaceApi(), environment: vi.fn(), session: vi.fn(), login: vi.fn(), logout: vi.fn(), storeSearch: vi.fn(), storeDetail: vi.fn(), installationsList: vi.fn(), prepareInstallation: vi.fn(), confirmInstallation: vi.fn(), operationStatus: vi.fn(), cancelOperation: vi.fn() };
+  render(<UpdateDialog api={api} initial={op} onClose={vi.fn()} onApplied={vi.fn()} onExpired={vi.fn()} />);
+  const binaryRow = screen.getByText('tool.exe').closest('li')!;
+  expect(within(binaryRow).queryByRole('button')).not.toBeInTheDocument();
+  expect(within(binaryRow).getByText(/4096 bytes/)).toBeInTheDocument();
+  const user = userEvent.setup();
+  await user.click(within(screen.getByText('notes.txt').closest('li')!).getByRole('button', { name: 'Mở bản Store' }));
+  expect(api.openPreview).toHaveBeenCalledWith('preview-op', 'incoming', 'notes.txt');
+  await user.click(screen.getByRole('button', { name: 'Thư mục bản Store' }));
+  expect(api.openPreview).toHaveBeenCalledWith('preview-op', 'incoming', '');
 });

@@ -23,7 +23,7 @@ Tài khoản giả lập: `employee01`, mật khẩu `demo-password`. App có nh
 
 Thêm dự án chỉ ghi nhận thư mục, không tạo `.aipro` hoặc yêu cầu Git. Cài cùng skill cho Global và các dự án tạo các bản sao độc lập. Mở SKILL.md/thư mục để chỉnh sửa bằng công cụ trên máy; Làm mới nội dung phân biệt Nguyên bản, Đã tùy chỉnh, Không tìm thấy và Chưa kiểm tra được. Nếu bản cài bị chuyển/xóa và đích vẫn trống, Cài lại từ Store giữ ID quản lý cũ và kiểm tra MCP lại.
 
-Kiểm tra gói mới so SHA-256 archive với baseline riêng từng bản cài. Chọn một hoặc nhiều đích để xem cập nhật; mỗi đích có kết quả và retry riêng. Tải để xem thay đổi chưa thay file cài. Xem file thêm/sửa/xóa và mở bản sao preview; chỉnh sửa preview không được áp dụng vào bản cài. Bản tùy chỉnh yêu cầu xác nhận rõ trước Backup và cập nhật.
+Kiểm tra gói mới so SHA-256 archive với baseline riêng từng bản cài. Chọn một hoặc nhiều đích để xem cập nhật; mỗi đích có kết quả và retry riêng. Tải để xem thay đổi chưa thay file cài. Xem file thêm/sửa/xóa và mở bản sao preview; file text được mở bằng Notepad, file nhị phân/thực thi chỉ có thông tin và mở thư mục. Chỉnh sửa preview không được áp dụng vào bản cài. Bản tùy chỉnh yêu cầu xác nhận rõ trước Backup và cập nhật.
 
 App lưu đầy đủ nội dung và metadata/baseline cũ tại `data\\backups\\<installation-id>\\<backup-id>\\` trước khi đổi đích. Nút Bản lưu hiển thị vị trí và lịch sử; không tự xóa backup. Nội dung sửa sau preview, file đang khóa hoặc backup lỗi làm thao tác dừng, không tự merge. Khi crash giữa rename/DB, startup trả lại bản cũ hoặc giữ bản mới đã commit; dữ liệu không xác định được giữ và đích bị khóa để kiểm tra. Khôi phục thủ công qua UI/gỡ/dọn dung lượng là L6–L7 tiếp theo.
 

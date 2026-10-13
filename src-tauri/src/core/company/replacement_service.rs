@@ -1,3 +1,4 @@
+use super::updates::UpdateJob;
 use super::*;
 use crate::core::company::aipro_paths::{path_key, validate_ancestors};
 use std::path::PathBuf;
@@ -92,15 +93,15 @@ impl CompanyService {
     }
     pub(super) fn replace_installation(
         &self,
-        id: &str,
-        old: &Installation,
+        job: &UpdateJob,
         package: &package_store::VerifiedPackage,
-        old_hash: &str,
-        owner: &str,
-        cancelled: &AtomicBool,
-        skill: &Skill,
-        bypass: bool,
     ) -> CompanyResult<()> {
+        let id = job.id.as_str();
+        let old = &job.old;
+        let old_hash = job.expected_hash.as_str();
+        let owner = job.owner.as_str();
+        let cancelled = job.cancelled.as_ref();
+        let skill = &job.skill;
         let _worker = self.worker.lock().map_err(|_| write_error())?;
         Self::check_cancel(cancelled)?;
         if self.owner()? != owner {
@@ -126,7 +127,7 @@ impl CompanyService {
         new.name = skill.name.clone();
         new.description_snapshot = skill.description.clone().unwrap_or_default();
         new.installed_at = chrono::Utc::now().to_rfc3339();
-        new.mcp_bypassed = bypass;
+        new.mcp_bypassed = job.bypass;
         new.content_state = ContentState::Original;
         new.store_state = StoreState::Current;
         new.checked_at = Some(chrono::Utc::now().to_rfc3339());
@@ -149,6 +150,7 @@ impl CompanyService {
             ));
         }
         self.repository.record_replacement(&journal)?;
+        let mut edited_old_returned = false;
         let result = (|| {
             fs::create_dir(&stage).map_err(|_| write_error())?;
             journal.stage_owned = true;
@@ -172,6 +174,22 @@ impl CompanyService {
             journal.phase = ReplacePhase::OldMoved;
             self.repository.record_replacement(&journal)?;
             if !matches(&rollback, &journal.old_full_hash) {
+                // In this live operation we know which directory we just moved.
+                // Return late edits intact; startup recovery has no such evidence.
+                let target_absent = fs::symlink_metadata(&target)
+                    .is_err_and(|e| e.kind() == std::io::ErrorKind::NotFound);
+                if !target_absent
+                    || !rollback.is_dir()
+                    || validate_ancestors(&rollback).is_err()
+                    || !journal.stage_owned
+                    || !matches(&stage, &journal.new_full_hash)
+                {
+                    return Err(needs_recovery());
+                }
+                fs::rename(&rollback, &target).map_err(|_| needs_recovery())?;
+                fs::remove_dir_all(&stage).map_err(|_| needs_recovery())?;
+                self.repository.finish_replacement(id)?;
+                edited_old_returned = true;
                 return Err(changed());
             }
             if fs::symlink_metadata(&target).is_ok() {
@@ -191,6 +209,9 @@ impl CompanyService {
             Ok(())
         })();
         if let Err(error) = result {
+            if edited_old_returned {
+                return Err(error);
+            }
             let durable = self
                 .repository
                 .pending_replacements()?

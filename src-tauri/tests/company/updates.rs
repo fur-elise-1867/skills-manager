@@ -240,3 +240,142 @@ fn company_flow05_backup_failure_preserves_the_current_copy_and_foreign_backup_r
         item.package_hash
     );
 }
+
+#[test]
+fn company_flow05_preview_opens_text_copies_but_never_binary_or_executable_files() {
+    let root = tempfile::tempdir().unwrap();
+    let revision = root.path().join("revision");
+    fs::write(&revision, "1").unwrap();
+    let server = MockServer::start_with_revision("normal", Some(&revision));
+    let config = CompanyConfig::for_test(
+        &server.url,
+        root.path().join("profile"),
+        root.path().join("data"),
+    )
+    .unwrap();
+    let app =
+        Arc::new(CompanyService::new(config, Arc::new(MemoryCredentials::default())).unwrap());
+    app.login("employee01", "demo-password").unwrap();
+    let install = app.prepare_install("skl_001").unwrap();
+    app.confirm(&install.id, true).unwrap();
+    wait(&app, &install.id, false);
+    let item = app.installations().unwrap().remove(0);
+    let target = Path::new(&item.target);
+    fs::write(target.join("unsafe.bat"), "echo this must never execute").unwrap();
+    fs::write(target.join("binary.txt"), b"\0binary\xff").unwrap();
+    fs::write(target.join("notes.txt"), "local text note").unwrap();
+    fs::write(&revision, "2").unwrap();
+    let op = app.prepare_update(&item.id).unwrap();
+    app.confirm(&op.id, true).unwrap();
+    let preview = wait(&app, &op.id, true);
+    assert_eq!(
+        app.preview_open_path(&op.id, "current", "unsafe.bat")
+            .unwrap_err()
+            .code,
+        "PREVIEW_UNAVAILABLE"
+    );
+    assert_eq!(
+        app.preview_open_path(&op.id, "current", "binary.txt")
+            .unwrap_err()
+            .code,
+        "PREVIEW_UNAVAILABLE"
+    );
+    assert_eq!(
+        serde_json::to_value(
+            preview
+                .changes
+                .iter()
+                .find(|f| f.path == "unsafe.bat")
+                .unwrap()
+        )
+        .unwrap()["current"]["kind"],
+        "binary"
+    );
+    assert!(app
+        .preview_open_path(&op.id, "current", "notes.txt")
+        .unwrap()
+        .is_file());
+    let folder = app.preview_open_path(&op.id, "incoming", "").unwrap();
+    assert!(folder.is_dir());
+    // Recheck the copy at the opening boundary, even if it was text when prepared.
+    fs::write(folder.join("SKILL.md"), b"\0tampered binary").unwrap();
+    assert_eq!(
+        app.preview_open_path(&op.id, "incoming", "SKILL.md")
+            .unwrap_err()
+            .code,
+        "PREVIEW_UNAVAILABLE"
+    );
+}
+
+#[test]
+fn company_flow05_live_edit_after_old_rename_returns_the_edited_copy_to_its_target() {
+    use std::io::{Seek, SeekFrom, Write};
+    let root = tempfile::tempdir().unwrap();
+    let revision = root.path().join("revision");
+    fs::write(&revision, "1").unwrap();
+    let server = MockServer::start_with_revision("normal", Some(&revision));
+    let config = CompanyConfig::for_test(
+        &server.url,
+        root.path().join("profile"),
+        root.path().join("data"),
+    )
+    .unwrap();
+    let credentials = Arc::new(MemoryCredentials::default());
+    let app = Arc::new(CompanyService::new(config.clone(), credentials.clone()).unwrap());
+    app.login("employee01", "demo-password").unwrap();
+    let install = app.prepare_install("skl_001").unwrap();
+    app.confirm(&install.id, true).unwrap();
+    wait(&app, &install.id, false);
+    let item = app.installations().unwrap().remove(0);
+    let target = Path::new(&item.target);
+    // A sizeable resource keeps the post-rename verification in progress while
+    // a real filesystem writer edits the directory that was just moved.
+    let resource = target.join("resource.bin");
+    fs::write(&resource, vec![0; 32 * 1024 * 1024]).unwrap();
+    fs::write(&revision, "2").unwrap();
+    let op = app.prepare_update(&item.id).unwrap();
+    app.confirm(&op.id, true).unwrap();
+    wait(&app, &op.id, true);
+    let rollback = target
+        .parent()
+        .unwrap()
+        .join(format!(".company-rollback-{}", op.id));
+    let writer = std::thread::spawn(move || {
+        let deadline = Instant::now() + Duration::from_secs(30);
+        while !rollback.is_dir() {
+            assert!(Instant::now() < deadline, "old directory was not moved");
+            std::thread::yield_now();
+        }
+        let mut editor = fs::OpenOptions::new()
+            .write(true)
+            .open(rollback.join("resource.bin"))
+            .unwrap();
+        editor.seek(SeekFrom::End(-1)).unwrap();
+        editor.write_all(&[42]).unwrap();
+        editor.sync_all().unwrap();
+    });
+    app.apply_update(&op.id, true).unwrap();
+    let result = finished(&app, &op.id);
+    writer.join().unwrap();
+    assert_eq!(result.error.unwrap().code, "CONTENT_CHANGED");
+    assert_eq!(fs::read(&resource).unwrap().last(), Some(&42));
+    assert!(target.join("SKILL.md").is_file());
+    assert_eq!(
+        app.refresh_installation(&item.id).unwrap().package_hash,
+        item.package_hash
+    );
+    let backup = app.backups(&item.id).unwrap().remove(0);
+    assert_eq!(
+        fs::read(Path::new(&backup.path).join("resource.bin"))
+            .unwrap()
+            .last(),
+        Some(&0)
+    );
+    let restarted = CompanyService::new(config, credentials).unwrap();
+    assert!(restarted.recovery_warnings().is_empty());
+    assert_eq!(
+        serde_json::to_value(restarted.refresh_installation(&item.id).unwrap()).unwrap()
+            ["contentState"],
+        "customized"
+    );
+}

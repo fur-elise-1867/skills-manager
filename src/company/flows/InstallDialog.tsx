@@ -1,28 +1,14 @@
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import type { CompanyApi } from '../api';
 import type { OperationView, Skill } from '../types';
 import { errorMessage, isSessionError } from '../types';
+import { useCompanyOperation } from './useCompanyOperation';
 
 const labels: Record<string, string> = { downloading: 'Đang tải gói…', validating: 'Đang kiểm tra gói…', staging: 'Đang chuẩn bị bản cài…', committing: 'Đang lưu bản cài…' };
 export function InstallDialog({ api, skill, initial, onClose, onInstalled, onExpired, onRefresh, scopeLabel = 'Global' }: { api: CompanyApi; skill: Skill; initial: OperationView; onClose: () => void; onInstalled: () => void; onExpired: (message: string) => void; onRefresh: () => void; scopeLabel?: string }) {
-  const [operation, setOperation] = useState(initial);
+  const { operation, setOperation, error, setError, terminal } = useCompanyOperation(api, initial, onInstalled, onExpired);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
   const [bypassed, setBypassed] = useState(false);
-  const notified = useRef(false);
-  const terminal = ['succeeded', 'failed', 'cancelled', 'recovery_required'].includes(operation.state);
-
-  useEffect(() => {
-    if (operation.state === 'awaiting_decision' || terminal) return;
-    let active = true;
-    const timer = setTimeout(() => api.operationStatus(operation.id).then(next => { if (active) setOperation(next); }).catch(e => { if (active) setError(errorMessage(e)); }), 300);
-    return () => { active = false; clearTimeout(timer); };
-  }, [api, operation, terminal]);
-
-  useEffect(() => {
-    if (operation.state === 'succeeded' && !notified.current) { notified.current = true; onInstalled(); }
-    if (isSessionError(operation.error)) onExpired(errorMessage(operation.error));
-  }, [operation, onInstalled, onExpired]);
 
   async function proceed(bypass: boolean) {
     setBusy(true); setError(''); setBypassed(bypass);

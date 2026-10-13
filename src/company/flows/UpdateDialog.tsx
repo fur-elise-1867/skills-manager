@@ -1,27 +1,15 @@
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import type { CompanyApi } from '../api';
 import type { OperationView } from '../types';
 import { errorMessage, isSessionError } from '../types';
+import { useCompanyOperation } from './useCompanyOperation';
 
 export type UpdateResult = 'applied' | 'kept' | 'failed';
 const changeLabels = { added: 'Thêm', modified: 'Sửa', deleted: 'Xóa' };
 export function UpdateDialog({ api, initial, onClose, onApplied, onExpired }: { api: CompanyApi; initial: OperationView; onClose: (result: UpdateResult) => void; onApplied: () => void; onExpired: (message: string) => void }) {
-  const [op, setOp] = useState(initial);
+  const { operation: op, setOperation: setOp, error, setError, terminal } = useCompanyOperation(api, initial, onApplied, onExpired);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
   const [replace, setReplace] = useState(false);
-  const notified = useRef(false);
-  const terminal = ['succeeded', 'failed', 'cancelled', 'recovery_required'].includes(op.state);
-  useEffect(() => {
-    if (op.state === 'awaiting_decision' || terminal) return;
-    let active = true;
-    const timer = setTimeout(() => api.operationStatus(op.id).then(value => { if (active) setOp(value); }).catch(e => { if (active) setError(errorMessage(e)); }), 300);
-    return () => { active = false; clearTimeout(timer); };
-  }, [api, op, terminal]);
-  useEffect(() => {
-    if (op.state === 'succeeded' && !notified.current) { notified.current = true; onApplied(); }
-    if (isSessionError(op.error)) onExpired(errorMessage(op.error));
-  }, [op, onApplied, onExpired]);
   function failed(e: unknown) { if (isSessionError(e)) onExpired(errorMessage(e)); else setError(errorMessage(e)); }
   async function preview() { setBusy(true); setError(''); try { setOp(await api.confirmInstallation(op.id, op.mcp.state === 'missing' || op.mcp.state === 'unknown')); } catch (e) { failed(e); } finally { setBusy(false); } }
   async function apply() { setBusy(true); setError(''); try { setOp(await api.applyUpdate(op.id, replace)); } catch (e) { failed(e); } finally { setBusy(false); } }
@@ -35,7 +23,7 @@ export function UpdateDialog({ api, initial, onClose, onApplied, onExpired }: { 
       <div className="dialog-actions"><button className="secondary" disabled={busy} onClick={keep}>Dừng cập nhật</button><button className="primary" disabled={busy} onClick={preview}>{warning ? 'Bỏ qua và xem thay đổi' : 'Tải để xem thay đổi'}</button></div>
     </>}
     {op.state === 'awaiting_decision' && op.previewReady && <><h3>Thay đổi so với bản đang dùng</h3>
-      {op.changes?.length ? <ul className="file-changes">{op.changes.map(change => <li key={change.path}><span>{changeLabels[change.kind]}: <strong>{change.path}</strong></span><div>{change.kind !== 'added' && <button onClick={() => open('current', change.path)}>Mở bản đang dùng</button>}{change.kind !== 'deleted' && <button onClick={() => open('incoming', change.path)}>Mở bản Store</button>}</div></li>)}</ul> : <p>Gói tải thay đổi nhưng nội dung so sánh giống nhau.</p>}
+      {op.changes?.length ? <ul className="file-changes">{op.changes.map(change => <li key={change.path}><span>{changeLabels[change.kind]}: <strong>{change.path}</strong></span><div>{change.current && <span>Bản đang dùng: {change.current.kind === 'directory' ? 'Thư mục' : `${change.current.kind === 'text' ? 'Text' : 'Nhị phân'} · ${change.current.sizeBytes} bytes`}</span>}{change.incoming && <span>Bản Store: {change.incoming.kind === 'directory' ? 'Thư mục' : `${change.incoming.kind === 'text' ? 'Text' : 'Nhị phân'} · ${change.incoming.sizeBytes} bytes`}</span>}{change.current?.kind === 'text' && <button onClick={() => open('current', change.path)}>Mở bản đang dùng</button>}{change.incoming?.kind === 'text' && <button onClick={() => open('incoming', change.path)}>Mở bản Store</button>}</div></li>)}</ul> : <p>Gói tải thay đổi nhưng nội dung so sánh giống nhau.</p>}
       <div className="row-actions"><button className="secondary" onClick={() => open('current')}>Thư mục bản đang dùng</button><button className="secondary" onClick={() => open('incoming')}>Thư mục bản Store</button></div>
       <p>Bản hiện tại được lưu đầy đủ trước khi thay. Các đích khác giữ nguyên.</p><p>Các bản mở để xem là bản sao; chỉnh sửa ở đây không được áp dụng vào bản cài.</p>
       {op.customized && <label className="checkbox-label"><input type="checkbox" checked={replace} onChange={e => setReplace(e.target.checked)} />Tôi đồng ý thay bản đã tùy chỉnh bằng gói Store</label>}
