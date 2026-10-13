@@ -262,8 +262,13 @@ fn company_flow05_preview_opens_text_copies_but_never_binary_or_executable_files
     let item = app.installations().unwrap().remove(0);
     let target = Path::new(&item.target);
     fs::write(target.join("unsafe.bat"), "echo this must never execute").unwrap();
-    fs::write(target.join("binary.txt"), b"\0binary\xff").unwrap();
-    fs::write(target.join("notes.txt"), "local text note").unwrap();
+    let mut late_binary = vec![b'a'; 8192];
+    late_binary.push(0);
+    fs::write(target.join("binary.txt"), &late_binary).unwrap();
+    *late_binary.last_mut().unwrap() = 255;
+    fs::write(target.join("nonutf8.txt"), &late_binary).unwrap();
+    let text = format!("{}ệ\n", "a".repeat(8191));
+    fs::write(target.join("notes.txt"), text).unwrap();
     fs::write(&revision, "2").unwrap();
     let op = app.prepare_update(&item.id).unwrap();
     app.confirm(&op.id, true).unwrap();
@@ -276,6 +281,12 @@ fn company_flow05_preview_opens_text_copies_but_never_binary_or_executable_files
     );
     assert_eq!(
         app.preview_open_path(&op.id, "current", "binary.txt")
+            .unwrap_err()
+            .code,
+        "PREVIEW_UNAVAILABLE"
+    );
+    assert_eq!(
+        app.preview_open_path(&op.id, "current", "nonutf8.txt")
             .unwrap_err()
             .code,
         "PREVIEW_UNAVAILABLE"

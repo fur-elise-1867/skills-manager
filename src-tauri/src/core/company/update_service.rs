@@ -36,6 +36,36 @@ struct PreviewEntry {
     hash: String,
     info: FilePreview,
 }
+fn is_text_file(path: &Path) -> CompanyResult<bool> {
+    let mut file = File::open(path).map_err(|_| write_error())?;
+    let mut buffer = [0u8; 8196];
+    let mut carried = 0;
+    loop {
+        let count = file
+            .read(&mut buffer[carried..carried + 8192])
+            .map_err(|_| write_error())?;
+        if count == 0 {
+            return Ok(carried == 0);
+        }
+        let length = carried + count;
+        if buffer[..length]
+            .iter()
+            .any(|b| (*b < 32 || *b == 127) && !matches!(*b, b'\n' | b'\r' | b'\t'))
+        {
+            return Ok(false);
+        }
+        match std::str::from_utf8(&buffer[..length]) {
+            Ok(_) => carried = 0,
+            Err(e) if e.error_len().is_none() => {
+                // Carry only an incomplete UTF-8 code point across chunk boundaries.
+                let start = e.valid_up_to();
+                buffer.copy_within(start..length, 0);
+                carried = length - start;
+            }
+            Err(_) => return Ok(false),
+        }
+    }
+}
 fn preview_info(path: &Path) -> CompanyResult<FilePreview> {
     let meta = fs::metadata(path).map_err(|_| write_error())?;
     if meta.is_dir() {
@@ -78,23 +108,8 @@ fn preview_info(path: &Path) -> CompanyResult<FilePreview> {
             | "cpp"
             | "hpp"
     );
-    let mut sample = Vec::new();
-    if text_extension {
-        File::open(path)
-            .map_err(|_| write_error())?
-            .take(8192)
-            .read_to_end(&mut sample)
-            .map_err(|_| write_error())?;
-    }
-    let utf8 = match std::str::from_utf8(&sample) {
-        Ok(_) => true,
-        Err(e) => e.error_len().is_none(),
-    };
-    let printable = sample
-        .iter()
-        .all(|b| *b >= 32 && *b != 127 || matches!(*b, b'\n' | b'\r' | b'\t'));
     Ok(FilePreview {
-        kind: if meta.is_file() && text_extension && utf8 && printable {
+        kind: if meta.is_file() && text_extension && is_text_file(path)? {
             PreviewKind::Text
         } else {
             PreviewKind::Binary
