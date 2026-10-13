@@ -38,3 +38,10 @@ CLAUDE.md
 AGENTS.md
 .loop-log
 
+.ua/
+
+pnpm-lock.yaml
+.agents/skills/codebase-memory/SKILL.md
+pnpm-workspace.yaml
+scratch/generate_docs.py
+.repomixignore
