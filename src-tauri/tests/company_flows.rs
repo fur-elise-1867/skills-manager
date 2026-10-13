@@ -6,6 +6,12 @@ use app_lib::core::company::{
 use std::sync::Arc;
 #[path = "company/recovery.rs"]
 mod recovery;
+#[path = "company/projects.rs"]
+mod projects;
+#[path = "company/updates.rs"]
+mod updates;
+#[path = "company/replace_recovery.rs"]
+mod replace_recovery;
 #[path = "company/support.rs"]
 mod support;
 use app_lib::core::company::installation_service::CompanyService;

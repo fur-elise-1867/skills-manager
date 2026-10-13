@@ -60,6 +60,7 @@ fn pending_fixture(
         progress_bytes: meta.size_bytes,
         total_bytes: meta.size_bytes,
         error: None,
+        kind: OperationKind::Install, preview_ready: false, customized: false, changes: Vec::new(),
     };
     let installation = Installation {
         id,
@@ -72,6 +73,9 @@ fn pending_fixture(
         description_snapshot: "MCP bắt buộc: không".into(),
         installed_at: "2026-10-12T00:00:00Z".into(),
         mcp_bypassed: false,
+        project_id: None,
+        content_state: ContentState::Original,
+        store_state: StoreState::Unknown, checked_at: None, store_error: None,
     };
     let journal = InstallJournal {
         view,

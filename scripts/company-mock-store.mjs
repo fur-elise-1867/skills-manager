@@ -4,12 +4,15 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { readFileSync } from 'node:fs';
 import { join, basename } from 'node:path';
 
-export function createMockStore({ scenario = 'normal' } = {}) {
+export function createMockStore({ scenario = 'normal', revisionFile } = {}) {
+  let revision = 1;
   const sessions = new Map();
   let metadataChanged = false;
   const fixtureRoot = fileURLToPath(new URL('../fixtures/company-store/', import.meta.url));
   function catalog() {
     return JSON.parse(readFileSync(join(fixtureRoot, 'catalog.json'), 'utf8')).map(entry => {
+      const currentRevision = revisionFile ? Number(readFileSync(revisionFile, 'utf8').trim()) : revision;
+      if (currentRevision > 1 && entry.id === 'skl_001') entry = { ...entry, archive: 'jira-project-summary-v2.zip', updated_at: '2026-10-13T01:00:00Z' };
       const bytes = readFileSync(join(fixtureRoot, 'packages', basename(entry.archive)));
       const sha256 = createHash('sha256').update(bytes).digest('hex');
       const description = metadataChanged ? entry.description.replace(/MCP bắt buộc: [^\n]*/, 'MCP bắt buộc: github') : entry.description;
@@ -17,7 +20,7 @@ export function createMockStore({ scenario = 'normal' } = {}) {
       return { ...skill, description, package: { format: archive.endsWith('.7z') ? '7z' : 'zip', size_bytes: bytes.length, sha256, etag: `"${createHash('sha256').update(sha256 + description).digest('hex')}"` }, bytes };
     });
   }
-  return createServer(async (req, res) => {
+  const server = createServer(async (req, res) => {
     const url = new URL(req.url, 'http://127.0.0.1');
     const error = (status, code, message) => {
       res.writeHead(status, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
@@ -74,12 +77,14 @@ export function createMockStore({ scenario = 'normal' } = {}) {
     }
     return error(404, 'SKILL_NOT_FOUND', 'Không tìm thấy skill.');
   });
+  server.setRevision = value => { revision = value; };
+  return server;
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const value = name => { const i = process.argv.indexOf(name); return i >= 0 ? process.argv[i + 1] : undefined; };
   const port = Number(value('--port') || 4318);
-  const server = createMockStore({ scenario: value('--scenario') || 'normal' });
+  const server = createMockStore({ scenario: value('--scenario') || 'normal', revisionFile: value('--revision-file') });
   server.listen(port, '127.0.0.1', () => console.log(`Mock Skill Store: http://127.0.0.1:${server.address().port} (employee01 / demo-password)`));
   process.on('SIGTERM', () => server.close());
 }

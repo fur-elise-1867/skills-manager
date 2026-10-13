@@ -9,6 +9,7 @@ use tauri::Manager;
 
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_single_instance::init(|app, _, _| {
             if let Some(window) = app.get_webview_window("main") {
                 let _ = window.show();
@@ -35,7 +36,18 @@ pub fn run() {
             company_operation_prepare,
             company_operation_confirm,
             company_operation_status,
-            company_operation_cancel
+            company_operation_cancel,
+            company_projects_list,
+            company_project_add,
+            company_project_remove,
+            company_project_install_prepare,
+            company_installation_refresh,
+            company_installation_open,
+            company_updates_check,
+            company_update_prepare,
+            company_update_apply,
+            company_backups_list,
+            company_operation_open_preview
         ])
         .run(tauri::generate_context!())
         .expect("Company Skills Manager startup failed");

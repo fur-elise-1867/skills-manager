@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
 import { nativeApi } from './api';
 import type { CompanyApi } from './api';
-import type { Environment, Installation, SessionView } from './types';
+import type { Environment, Installation, Project, SessionView } from './types';
 import { errorMessage } from './types';
 import './company.css';
 import { StoreView } from './flows/StoreView';
+import { ProjectsView } from './flows/ProjectsView';
+import { InstalledView } from './flows/InstalledView';
 
 const emptySession: SessionView = { user: null, expiresAt: null, persistent: false };
 const tabs = ['Store', 'Skill đã cài', 'Dự án', 'Cài đặt'] as const;
@@ -19,6 +21,10 @@ export function CompanyApp({ api = nativeApi }: { api?: CompanyApi }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [installations, setInstallations] = useState<Installation[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [projectId, setProjectId] = useState('');
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const refreshProjects = useCallback(() => { api.projectsList().then(setProjects).catch(e => setError(errorMessage(e))); }, [api]);
   const [booting, setBooting] = useState(true);
   const [resumeSkillId, setResumeSkillId] = useState<string>();
   const expired = useCallback((message: string, skillId?: string) => { setResumeSkillId(skillId); setSession(emptySession); setError(message); }, []);
@@ -27,8 +33,8 @@ export function CompanyApp({ api = nativeApi }: { api?: CompanyApi }) {
 
   useEffect(() => {
     let active = true;
-    Promise.all([api.environment(), api.session(), api.installationsList()]).then(([env, current, local]) => {
-      if (active) { setEnvironment(env); setSession(current); setInstallations(local); }
+    Promise.all([api.environment(), api.session(), api.installationsList(), api.projectsList()]).then(([env, current, local, knownProjects]) => {
+      if (active) { setEnvironment(env); setSession(current); setInstallations(local); setProjects(knownProjects); }
     }).catch(e => { if (active) setError(errorMessage(e)); }).finally(() => { if (active) setBooting(false); });
     return () => { active = false; };
   }, [api]);
@@ -69,9 +75,9 @@ export function CompanyApp({ api = nativeApi }: { api?: CompanyApi }) {
       {environment && !environment.configured && <div role="status" className="error-banner">Chưa cấu hình địa chỉ Skill Store. Liên hệ quản trị ứng dụng.</div>}
       <div className="page-heading"><h1>{tab === 'Store' ? 'Skill Store' : tab}</h1><p>{tab === 'Store' ? 'Tìm skill phù hợp và đưa vào AIPRO của bạn.' : 'Các bản cài và dữ liệu trên máy Windows hiện tại.'}</p></div>
       {booting && <p role="status">Đang mở môi trường AIPRO…</p>}
-      {tab === 'Store' && !booting && (!session.user ? signIn : <StoreView key={session.user.id} api={api} onExpired={expired} onInstalled={refreshInstallations} resumeSkillId={resumeSkillId} onResumed={resumed} />)}
-      {tab === 'Skill đã cài' && <section className="company-card">{installations.length ? installations.map(item => <article key={item.id}><h2>{item.name}</h2><p>{item.target}</p></article>) : <p>Chưa có skill được cài bởi ứng dụng.</p>}</section>}
-      {tab === 'Dự án' && <section className="company-card"><h2>Cài theo dự án</h2><p>Phiên bản này hỗ trợ cài skill cho AIPRO Global. Quản lý theo dự án sẽ được bổ sung sau.</p></section>}
+      {tab === 'Store' && !booting && (!session.user ? signIn : <StoreView key={session.user.id} api={api} projects={projects} projectId={projectId} onProjectChange={setProjectId} onExpired={expired} onInstalled={refreshInstallations} resumeSkillId={resumeSkillId} onResumed={resumed} />)}
+      {tab === 'Skill đã cài' && <InstalledView api={api} installations={installations} projects={projects} onChanged={refreshInstallations} signedIn={!!session.user} onExpired={expired} selectedIds={selectedIds} onSelectionChange={setSelectedIds} onReinstall={item => { setProjectId(item.projectId ?? ''); setResumeSkillId(item.skillId); setTab('Store'); }} />}
+      {tab === 'Dự án' && <ProjectsView api={api} projects={projects} installations={installations} onChanged={refreshProjects} onBrowse={id => { setProjectId(id); setTab('Store'); }} />}
       {tab === 'Cài đặt' && <><section className="company-card"><h2>Môi trường AIPRO</h2><dl><dt>Thư mục Global</dt><dd>{environment?.profileRoot}\.aipro\skills</dd><dt>Cấu hình MCP</dt><dd>{environment?.profileRoot}\.aipro\mcp.json</dd><dt>Dữ liệu ứng dụng</dt><dd>{environment?.dataRoot}</dd><dt>Skill Store</dt><dd>{environment?.storeUrl || 'Chưa cấu hình'}</dd></dl></section>{!session.user ? signIn : <section className="company-card"><h2>Phiên đăng nhập</h2><p>{session.persistent ? 'Phiên được giữ trong Windows Credential Manager.' : 'Phiên chỉ được giữ trong lần mở app này.'}</p><p>Hết hạn: {session.expiresAt ? new Date(session.expiresAt).toLocaleString('vi-VN') : '—'}</p></section>}</>}
     </main>
   </div>;

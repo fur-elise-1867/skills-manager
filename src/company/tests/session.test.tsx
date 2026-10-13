@@ -1,10 +1,11 @@
+import { workspaceApi } from './workspace-api';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { expect, test, vi } from 'vitest';
 import { CompanyApp } from '../CompanyApp';
 
 test('employee can sign in and sign out without losing access to local installations', async () => {
-  const api = {
+  const api = { ...workspaceApi(),
     environment: vi.fn().mockResolvedValue({ mock: true, storeUrl: 'http://127.0.0.1:4318', profileRoot: 'C:/demo', dataRoot: 'C:/data', configured: true }),
     session: vi.fn().mockResolvedValue({ user: null, expiresAt: null, persistent: true }),
     login: vi.fn().mockResolvedValue({ user: { id: 'usr_001', username: 'employee01', displayName: 'Nhân viên 01' }, expiresAt: '2099-10-12T12:00:00Z', persistent: true }),
@@ -29,7 +30,7 @@ test('employee can sign in and sign out without losing access to local installat
 });
 
 test('invalid credentials are shown and password is cleared', async () => {
-  const api = {
+  const api = { ...workspaceApi(),
     environment: vi.fn().mockResolvedValue({ mock: false, storeUrl: 'https://store.internal', profileRoot: 'C:/demo', dataRoot: 'C:/data', configured: true }),
     session: vi.fn().mockResolvedValue({ user: null, expiresAt: null, persistent: true }),
     login: vi.fn().mockRejectedValue({ code: 'INVALID_CREDENTIALS', message: 'Tài khoản hoặc mật khẩu không đúng.' }),

@@ -9,6 +9,9 @@ pub struct MockServer {
 }
 impl MockServer {
     pub fn start(scenario: &str) -> Self {
+        Self::start_with_revision(scenario, None)
+    }
+    pub fn start_with_revision(scenario: &str, revision: Option<&std::path::Path>) -> Self {
         let script = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
             .parent()
             .unwrap()
@@ -19,6 +22,9 @@ impl MockServer {
             .args(["--port", "0", "--scenario", scenario])
             .stdout(Stdio::piped())
             .stderr(Stdio::inherit());
+        if let Some(path) = revision {
+            command.arg("--revision-file").arg(path);
+        }
         #[cfg(windows)]
         {
             use std::os::windows::process::CommandExt;

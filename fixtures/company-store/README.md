@@ -9,3 +9,7 @@ The committed ZIP archives contain a root SKILL.md; excel-insights.7z contains o
 Demo login: employee01 (or employee02), password demo-password. Sessions are in-memory on the mock server and are invalidated by logout or server restart.
 
 Production uses the native Rust HTTP client and the same five API endpoint contracts. The mock server is never launched automatically by the app, and production errors do not switch to fake data.
+
+## Gói cập nhật L5
+
+`packages/jira-project-summary-v2.zip` là ZIP thật của cùng skill Jira, gồm SKILL.md/report đã sửa và tài nguyên mới. Mock chỉ chọn gói này khi revision > 1, SHA/size/ETag được tính từ bytes thật. Dùng `--revision-file` trong integration tests hoặc `server.setRevision(2)` trong native smoke; không có endpoint admin bổ sung trong API draft.

@@ -12,6 +12,7 @@ pub const MAX_EXPANDED: u64 = 500 * 1_048_576;
 const MAX_ENTRIES: usize = 10_000;
 const MAX_DEPTH: usize = 32;
 
+#[derive(Clone)]
 pub struct VerifiedPackage {
     pub original_root: PathBuf,
     pub content_hash: String,
@@ -143,7 +144,7 @@ pub fn content_hash(root: &Path, comparison: bool) -> CompanyResult<String> {
         serde_json::to_vec(&records).map_err(|_| invalid("Không lập được manifest nội dung."))?;
     Ok(hex::encode(Sha256::digest(encoded)))
 }
-fn excluded(name: &str) -> bool {
+pub(crate) fn excluded(name: &str) -> bool {
     matches!(name, ".git" | "__pycache__" | "Thumbs.db" | "desktop.ini") || name.ends_with(".pyc")
 }
 

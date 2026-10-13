@@ -145,6 +145,27 @@ pub struct OperationView {
     pub progress_bytes: u64,
     pub total_bytes: u64,
     pub error: Option<CompanyError>,
+    #[serde(default)]
+    pub kind: OperationKind,
+    #[serde(default)]
+    pub preview_ready: bool,
+    #[serde(default)]
+    pub customized: bool,
+    #[serde(default)]
+    pub changes: Vec<FileChange>,
+}
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum OperationKind {
+    #[default]
+    Install,
+    Update,
+}
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FileChange {
+    pub path: String,
+    pub kind: String,
 }
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -159,6 +180,72 @@ pub struct Installation {
     pub description_snapshot: String,
     pub installed_at: String,
     pub mcp_bypassed: bool,
+    #[serde(default)]
+    pub project_id: Option<String>,
+    #[serde(default)]
+    pub content_state: ContentState,
+    #[serde(default)]
+    pub store_state: StoreState,
+    #[serde(default)]
+    pub checked_at: Option<String>,
+    #[serde(default)]
+    pub store_error: Option<String>,
+}
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum StoreState {
+    Current,
+    NewPackage,
+    #[default]
+    Unknown,
+    Unavailable,
+}
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum ContentState {
+    Original,
+    Customized,
+    #[default]
+    Unknown,
+    Missing,
+}
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Project {
+    pub id: String,
+    pub name: String,
+    pub path: String,
+}
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Backup {
+    pub id: String,
+    pub installation_id: String,
+    pub created_at: String,
+    pub reason: String,
+    pub path: String,
+    pub full_hash: String,
+    pub installation: Installation,
+}
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum ReplacePhase {
+    Prepared,
+    OldMoved,
+    NewMoved,
+    Committed,
+}
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ReplaceJournal {
+    pub view: OperationView,
+    pub old: Installation,
+    pub new: Installation,
+    pub old_full_hash: String,
+    pub new_full_hash: String,
+    pub backup_id: String,
+    pub phase: ReplacePhase,
+    pub stage_owned: bool,
 }
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct InstallJournal {

@@ -1,3 +1,4 @@
+import { workspaceApi } from './workspace-api';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { expect, test, vi } from 'vitest';
@@ -6,7 +7,7 @@ import { CompanyApp } from '../CompanyApp';
 const skill = { id: 'skl_001', slug: 'jira-project-summary', name: 'Jira Summary', updatedAt: '2026-10-12T00:00:00Z', description: 'MCP bắt buộc: jira-mcp', package: { format: 'zip' as const, sizeBytes: 100, sha256: 'a'.repeat(64), etag: '"r1"' } };
 function bridge() {
   const op = { id: 'op1', state: 'awaiting_decision', target: 'C:/demo/.aipro/skills/jira-project-summary', mcp: { state: 'missing', required: ['jira-mcp'], present: [], missing: ['jira-mcp'], checkedAt: '2026-10-12T00:00:00Z', reason: null }, progressBytes: 0, totalBytes: 100, error: null };
-  return {
+  return { ...workspaceApi(),
     environment: vi.fn().mockResolvedValue({ mock: true, storeUrl: 'http://127.0.0.1:4318', profileRoot: 'C:/demo', dataRoot: 'C:/data', configured: true }),
     session: vi.fn().mockResolvedValue({ user: { id: 'u1', username: 'employee01', displayName: 'Nhân viên' }, expiresAt: '2099-01-01T00:00:00Z', persistent: true }),
     login: vi.fn(), logout: vi.fn(), storeSearch: vi.fn().mockResolvedValue({ items: [skill], pagination: { page: 1, pageSize: 20, total: 1, totalPages: 1 } }),

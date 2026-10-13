@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import type { CompanyApi } from '../api';
-import type { CompanyError, OperationView, Skill, SkillPage } from '../types';
+import type { CompanyError, OperationView, Project, Skill, SkillPage } from '../types';
 import { errorMessage, isSessionError } from '../types';
 import { InstallDialog } from './InstallDialog';
 
-export function StoreView({ api, onExpired, onInstalled, resumeSkillId, onResumed }: { api: CompanyApi; onExpired: (message: string, skillId?: string) => void; onInstalled: () => void; resumeSkillId?: string; onResumed: () => void }) {
+export function StoreView({ api, onExpired, onInstalled, resumeSkillId, onResumed, projects = [], projectId = '', onProjectChange }: { api: CompanyApi; onExpired: (message: string, skillId?: string) => void; onInstalled: () => void; resumeSkillId?: string; onResumed: () => void; projects?: Project[]; projectId?: string; onProjectChange?: (id: string) => void }) {
   const [query, setQuery] = useState('');
   const [pageNumber, setPageNumber] = useState(1);
   const [page, setPage] = useState<SkillPage>();
@@ -62,7 +62,7 @@ export function StoreView({ api, onExpired, onInstalled, resumeSkillId, onResume
   async function prepare() {
     if (!detail) return;
     setPreparing(true); setError('');
-    try { const prepared = await api.prepareInstallation(detail.id); if (prepared.skill) setDetail(prepared.skill); setOperation(prepared); }
+    try { const prepared = await (projectId ? api.prepareProjectInstallation(detail.id, projectId) : api.prepareInstallation(detail.id)); if (prepared.skill) setDetail(prepared.skill); setOperation(prepared); }
     catch (e) { handleError(e); }
     finally { setPreparing(false); }
   }
@@ -80,8 +80,9 @@ export function StoreView({ api, onExpired, onInstalled, resumeSkillId, onResume
     {page && page.pagination.totalPages > 1 && <div className="pagination"><button disabled={pageNumber <= 1 || loading || retryUntil > 0} onClick={() => setPageNumber(n => n - 1)}>Trang trước</button><span>{pageNumber} / {page.pagination.totalPages}</span><button disabled={pageNumber >= page.pagination.totalPages || loading || retryUntil > 0} onClick={() => setPageNumber(n => n + 1)}>Trang sau</button></div>}
     {detail && !operation && <div className="modal-overlay"><section role="dialog" aria-label="Chi tiết skill" aria-modal="true" className="company-modal"><button className="close-modal" onClick={() => { setDetail(undefined); selectedId.current = undefined; }} aria-label="Đóng chi tiết">×</button><div className="eyebrow">SKILL STORE / AIPRO</div><h2>{detail.name}</h2>
       <div className="skill-description"><ReactMarkdown skipHtml components={{ img: () => null, a: ({ children }) => <span>{children}</span> }}>{detail.description}</ReactMarkdown></div><div className="package-line">{detail.package.format.toUpperCase()} · {(detail.package.sizeBytes / 1024).toFixed(1)} KiB</div>
-      <div className="dialog-actions"><button className="primary" disabled={preparing || !!error || page?.cache?.stale} onClick={prepare}>{preparing ? 'Đang kiểm tra…' : 'Cài vào AIPRO Global'}</button></div>
+      <label>Phạm vi cài<select aria-label="Phạm vi cài" value={projectId} onChange={e => onProjectChange?.(e.target.value)} disabled={preparing}><option value="">AIPRO Global</option>{projects.map(p => <option key={p.id} value={p.id}>Dự án: {p.name}</option>)}</select></label>
+      <div className="dialog-actions"><button className="primary" disabled={preparing || !!error || page?.cache?.stale} onClick={prepare}>{preparing ? 'Đang kiểm tra…' : projectId ? 'Cài vào AIPRO Dự án' : 'Cài vào AIPRO Global'}</button></div>
     </section></div>}
-    {operation && detail && <InstallDialog api={api} skill={detail} initial={operation} onClose={() => { setOperation(undefined); setDetail(undefined); selectedId.current = undefined; }} onRefresh={refreshChanged} onExpired={message => onExpired(message, detail.id)} onInstalled={onInstalled} />}
+    {operation && detail && <InstallDialog api={api} skill={detail} initial={operation} scopeLabel={projectId ? 'Dự án' : 'Global'} onClose={() => { setOperation(undefined); setDetail(undefined); selectedId.current = undefined; }} onRefresh={refreshChanged} onExpired={message => onExpired(message, detail.id)} onInstalled={onInstalled} />}
   </>;
 }

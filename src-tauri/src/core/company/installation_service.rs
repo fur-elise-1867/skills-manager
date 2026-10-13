@@ -25,7 +25,18 @@ struct Operation {
     skill: Skill,
     owner: String,
     cancelled: Arc<AtomicBool>,
+    project_id: Option<String>,
+    old: Option<Installation>,
+    old_full_hash: Option<String>,
+    preview: Option<package_store::VerifiedPackage>,
+    bypass: bool,
 }
+#[path = "project_service.rs"]
+mod projects;
+#[path = "replacement_service.rs"]
+mod replacements;
+#[path = "update_service.rs"]
+mod updates;
 pub struct CompanyService {
     pub config: CompanyConfig,
     session: SessionService,
@@ -62,6 +73,7 @@ impl CompanyService {
             worker: Mutex::new(()),
         };
         app.recover()?;
+        app.recover_replacements()?;
         Ok(app)
     }
     pub fn current_session(&self) -> SessionView {
@@ -78,7 +90,12 @@ impl CompanyService {
         cache_result.and(logout_result)
     }
     pub fn installations(&self) -> CompanyResult<Vec<Installation>> {
-        self.repository.installations()
+        Ok(self
+            .repository
+            .installations()?
+            .into_iter()
+            .map(|item| self.refreshed(item))
+            .collect())
     }
     pub fn search(&self, query: &str, page: u32) -> CompanyResult<SkillPage> {
         let token = self.session.access_token()?;
@@ -147,6 +164,20 @@ impl CompanyService {
         )))
     }
     pub fn prepare_install(&self, id: &str) -> CompanyResult<OperationView> {
+        self.prepare_scoped_install(id, None)
+    }
+    pub fn prepare_project_install(
+        &self,
+        id: &str,
+        project_id: &str,
+    ) -> CompanyResult<OperationView> {
+        self.prepare_scoped_install(id, Some(project_id))
+    }
+    fn prepare_scoped_install(
+        &self,
+        id: &str,
+        project_id: Option<&str>,
+    ) -> CompanyResult<OperationView> {
         let owner = self.owner()?;
         let skill = self.detail(id)?;
         let description = skill.description.as_ref().ok_or_else(|| {
@@ -155,8 +186,7 @@ impl CompanyService {
                 "Detail của Store thiếu description đầy đủ.",
             )
         })?;
-        let target = global_target(&self.config.profile_root, &skill.slug)?;
-        let target_key = target.to_string_lossy().replace('\\', "/");
+        let target = self.installation_target(project_id, &skill.slug)?;
         if self
             .operations
             .lock()
@@ -164,20 +194,25 @@ impl CompanyService {
             .values()
             .any(|operation| {
                 operation.view.state == OperationState::RecoveryRequired
-                    && operation
-                        .view
-                        .target
-                        .replace('\\', "/")
-                        .eq_ignore_ascii_case(&target_key)
+                    && super::aipro_paths::overlaps(Path::new(&operation.view.target), &target)
             })
         {
             return Err(CompanyError::new("RECOVERY_REQUIRED", "Đích này có thao tác chưa phục hồi xong. Kiểm tra dữ liệu đã giữ trước khi cài lại."));
         }
+        let existing = self.repository.installations()?;
+        let reinstall = existing
+            .iter()
+            .find(|item| {
+                super::aipro_paths::path_key(Path::new(&item.target))
+                    == super::aipro_paths::path_key(&target)
+                    && item.skill_id == skill.id
+                    && item.project_id.as_deref() == project_id
+            })
+            .cloned();
         if target.exists()
-            || self.installations()?.iter().any(|item| {
-                item.target
-                    .replace('\\', "/")
-                    .eq_ignore_ascii_case(&target.to_string_lossy().replace('\\', "/"))
+            || existing.iter().any(|item| {
+                super::aipro_paths::overlaps(Path::new(&item.target), &target)
+                    && reinstall.as_ref().map(|old| old.id.as_str()) != Some(item.id.as_str())
             })
         {
             return Err(CompanyError::new(
@@ -211,6 +246,10 @@ impl CompanyService {
             progress_bytes: 0,
             total_bytes: skill.package.size_bytes,
             error: None,
+            kind: OperationKind::Install,
+            preview_ready: false,
+            customized: false,
+            changes: Vec::new(),
         };
         self.operations
             .lock()
@@ -222,6 +261,11 @@ impl CompanyService {
                     skill,
                     owner,
                     cancelled: Arc::new(AtomicBool::new(false)),
+                    project_id: project_id.map(str::to_string),
+                    old: reinstall,
+                    old_full_hash: None,
+                    preview: None,
+                    bypass: false,
                 },
             );
         Ok(view)
@@ -249,8 +293,11 @@ impl CompanyService {
         Ok(operation.view.clone())
     }
     pub fn confirm(self: &Arc<Self>, id: &str, bypass_mcp: bool) -> CompanyResult<OperationView> {
+        if self.status(id)?.kind == OperationKind::Update {
+            return self.confirm_preview(id, bypass_mcp);
+        }
         let owner = self.owner()?;
-        let (skill, cancelled, view) = {
+        let (skill, cancelled, view, project_id, installation_id) = {
             let mut operations = self.operations.lock().map_err(|_| operation_error())?;
             let operation = operations.get_mut(id).ok_or_else(operation_error)?;
             if operation.cancelled.load(Ordering::Relaxed) {
@@ -283,12 +330,22 @@ impl CompanyService {
                 operation.skill.clone(),
                 operation.cancelled.clone(),
                 operation.view.clone(),
+                operation.project_id.clone(),
+                operation.old.as_ref().map(|item| item.id.clone()),
             )
         };
         let app = Arc::clone(self);
         let id = id.to_string();
         std::thread::spawn(move || {
-            let result = app.install(&id, &skill, &owner, &cancelled, bypass_mcp);
+            let result = app.install(
+                &id,
+                &skill,
+                &owner,
+                &cancelled,
+                bypass_mcp,
+                project_id.as_deref(),
+                installation_id.as_deref(),
+            );
             if let Err(error) = result {
                 app.auth_result::<()>(Err(error.clone())).ok();
                 let state = if error.code == "CANCELLED" {
@@ -334,6 +391,13 @@ impl CompanyService {
             Ok(())
         }
     }
+    fn enter_commit(&self, id: &str) -> CompanyResult<()> {
+        let mut operations = self.operations.lock().map_err(|_| operation_error())?;
+        let operation = operations.get_mut(id).ok_or_else(operation_error)?;
+        Self::check_cancel(&operation.cancelled)?;
+        operation.view.state = OperationState::Committing;
+        Ok(())
+    }
     fn install(
         &self,
         id: &str,
@@ -341,6 +405,8 @@ impl CompanyService {
         owner: &str,
         cancelled: &AtomicBool,
         bypass: bool,
+        project_id: Option<&str>,
+        installation_id: Option<&str>,
     ) -> CompanyResult<()> {
         let _worker = self.worker.lock().map_err(|_| write_error())?;
         Self::check_cancel(cancelled)?;
@@ -367,7 +433,7 @@ impl CompanyService {
         self.repository
             .save_package(&skill.package, &package.content_hash, &package.full_hash)?;
         Self::check_cancel(cancelled)?;
-        let target = global_target(&self.config.profile_root, &skill.slug)?;
+        let target = self.installation_target(project_id, &skill.slug)?;
         if target.exists() {
             return Err(CompanyError::new(
                 "TARGET_CONFLICT",
@@ -376,10 +442,10 @@ impl CompanyService {
         }
         let stage = stage_path(&target, id)?;
         fs::create_dir_all(target.parent().ok_or_else(write_error)?).map_err(|_| write_error())?;
-        global_target(&self.config.profile_root, &skill.slug)?;
+        self.installation_target(project_id, &skill.slug)?;
         let view = self.status(id)?;
         let installation = Installation {
-            id: id.into(),
+            id: installation_id.unwrap_or(id).into(),
             skill_id: skill.id.clone(),
             slug: skill.slug.clone(),
             name: skill.name.clone(),
@@ -389,6 +455,11 @@ impl CompanyService {
             description_snapshot: skill.description.clone().unwrap_or_default(),
             installed_at: chrono::Utc::now().to_rfc3339(),
             mcp_bypassed: bypass,
+            project_id: project_id.map(str::to_string),
+            content_state: ContentState::Original,
+            store_state: StoreState::Current,
+            checked_at: Some(chrono::Utc::now().to_rfc3339()),
+            store_error: None,
         };
         let mut journal = InstallJournal {
             view,
@@ -424,14 +495,14 @@ impl CompanyService {
                     "Phiên đã thay đổi; chuẩn bị cài lại.",
                 ));
             }
-            global_target(&self.config.profile_root, &skill.slug)?;
+            self.installation_target(project_id, &skill.slug)?;
             if target.exists() {
                 return Err(CompanyError::new(
                     "TARGET_CONFLICT",
                     "Đích đã có nội dung. Không ghi đè.",
                 ));
             }
-            self.update(id, OperationState::Committing, None, None);
+            self.enter_commit(id)?;
             fs::rename(&stage, &target).map_err(|_| write_error())
         })();
         if let Err(error) = before_rename {
@@ -493,7 +564,10 @@ impl CompanyService {
         Ok(())
     }
     fn recover_install(&self, journal: &InstallJournal) -> CompanyResult<bool> {
-        let target = global_target(&self.config.profile_root, &journal.installation.slug)?;
+        let target = self.installation_target(
+            journal.installation.project_id.as_deref(),
+            &journal.installation.slug,
+        )?;
         let stage = stage_path(&target, &journal.view.id)?;
         let matches_target = target
             .to_string_lossy()
@@ -562,6 +636,11 @@ impl CompanyService {
                             skill,
                             owner: String::new(),
                             cancelled: Arc::new(AtomicBool::new(true)),
+                            project_id: journal.installation.project_id,
+                            old: None,
+                            old_full_hash: None,
+                            preview: None,
+                            bypass: false,
                         },
                     );
             }
