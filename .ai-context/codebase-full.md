@@ -28,7 +28,7 @@ The content is organized as follows:
 ## Notes
 - Some files may have been excluded based on .gitignore rules and Repomix's configuration
 - Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
-- Only files matching these patterns are included: src/**, src-tauri/src/**, src-tauri/tests/**, src-tauri/capabilities/**, src-tauri/*.json, src-tauri/*.toml, src-tauri/*.lock, package.json, package-lock.json, scripts/**, .github/workflows/**, README*, COMPANY_APP_README.md, LICENSE, vite.config.ts, vitest.config.ts, tsconfig*.json, skills/**, fixtures/company-store/**, licenses/**
+- Only files matching these patterns are included: src/**, src-tauri/src/**, src-tauri/tests/**, src-tauri/capabilities/**, src-tauri/*.json, src-tauri/*.toml, src-tauri/*.lock, package.json, package-lock.json, scripts/**, .github/workflows/**, README*, COMPANY_APP_README.md, LICENSE, licenses/**, vite.config.ts, vitest.config.ts, tsconfig*.json, skills/**, fixtures/company-store/**
 - Files matching patterns in .gitignore are excluded
 - Files matching default ignore patterns are excluded
 - Files are sorted by Git change count (files with more changes are at the bottom)
@@ -48,6 +48,7 @@ fixtures/
       excel-insights-copy.7z
       excel-insights-lzma.7z
       excel-insights.7z
+      jira-project-summary-v2.zip
       jira-project-summary.zip
       writing-review.zip
     sources/
@@ -76,6 +77,7 @@ scripts/
   company-mock-store.mjs
   company-mock-store.test.mjs
   company-native-smoke.mjs
+  company-native-workspace-smoke.mjs
   gen-star-history.py
   prepare-release.mjs
   run-rust-cli.mjs
@@ -89,12 +91,19 @@ src/
   company/
     flows/
       InstallDialog.tsx
+      InstalledView.tsx
+      ProjectsView.tsx
       StoreView.tsx
+      UpdateDialog.tsx
+      useCompanyOperation.ts
     tests/
       catalog.test.tsx
       install.test.tsx
+      projects.test.tsx
       session.test.tsx
       setup.ts
+      updates.test.tsx
+      workspace-api.ts
     api.ts
     company.css
     CompanyApp.tsx
@@ -203,9 +212,12 @@ src-tauri/
         mcp_check.rs
         mod.rs
         package_store.rs
+        project_service.rs
+        replacement_service.rs
         session.rs
         store_client.rs
         types.rs
+        update_service.rs
       merge/
         apply.rs
         decision.rs
@@ -259,8 +271,11 @@ src-tauri/
     main.rs
   tests/
     company/
+      projects.rs
       recovery.rs
+      replace_recovery.rs
       support.rs
+      updates.rs
     company_flows.rs
   Cargo.toml
   tauri.conf.json
@@ -17469,95 +17484,6 @@ server.listen(4318, '127.0.0.1', () => {
 });
 ````
 
-## File: scripts/company-mock-store.mjs
-````javascript
-import { createServer } from 'node:http';
-import { createHash, randomUUID } from 'node:crypto';
-import { fileURLToPath, pathToFileURL } from 'node:url';
-import { readFileSync } from 'node:fs';
-import { join, basename } from 'node:path';
-
-export function createMockStore({ scenario = 'normal' } = {}) {
-  const sessions = new Map();
-  let metadataChanged = false;
-  const fixtureRoot = fileURLToPath(new URL('../fixtures/company-store/', import.meta.url));
-  function catalog() {
-    return JSON.parse(readFileSync(join(fixtureRoot, 'catalog.json'), 'utf8')).map(entry => {
-      const bytes = readFileSync(join(fixtureRoot, 'packages', basename(entry.archive)));
-      const sha256 = createHash('sha256').update(bytes).digest('hex');
-      const description = metadataChanged ? entry.description.replace(/MCP bắt buộc: [^\n]*/, 'MCP bắt buộc: github') : entry.description;
-      const { archive, ...skill } = entry;
-      return { ...skill, description, package: { format: archive.endsWith('.7z') ? '7z' : 'zip', size_bytes: bytes.length, sha256, etag: `"${createHash('sha256').update(sha256 + description).digest('hex')}"` }, bytes };
-    });
-  }
-  return createServer(async (req, res) => {
-    const url = new URL(req.url, 'http://127.0.0.1');
-    const error = (status, code, message) => {
-      res.writeHead(status, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
-      res.end(JSON.stringify({ error: { code, message, request_id: randomUUID() } }));
-    };
-    const ok = data => {
-      res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
-      res.end(JSON.stringify({ data }));
-    };
-    if (scenario === 'unavailable') return error(503, 'STORE_UNAVAILABLE', 'Skill Store chưa khả dụng.');
-    if (req.method === 'POST' && url.pathname === '/api/v1/auth/login') {
-      try {
-        let body = '';
-        for await (const chunk of req) { body += chunk; if (body.length > 16384) return error(400, 'VALIDATION_ERROR', 'Request quá lớn.'); }
-        const input = JSON.parse(body);
-        if (!['employee01', 'employee02'].includes(input.username) || input.password !== 'demo-password') return error(401, 'INVALID_CREDENTIALS', 'Tài khoản hoặc mật khẩu không đúng.');
-        const user = { id: input.username === 'employee01' ? 'usr_001' : 'usr_002', username: input.username, display_name: input.username === 'employee01' ? 'Nhân viên 01' : 'Nhân viên 02' };
-        const token = randomUUID();
-        const expires_at = new Date(Date.now() + 12 * 3600 * 1000).toISOString();
-        sessions.set(token, { user, expires_at });
-        return ok({ access_token: token, token_type: 'Bearer', expires_at, user });
-      } catch { return error(400, 'VALIDATION_ERROR', 'JSON không hợp lệ.'); }
-    }
-    const token = req.headers.authorization?.match(/^Bearer (\S+)$/)?.[1];
-    if (req.method === 'POST' && url.pathname === '/api/v1/auth/logout') {
-      if (!token) return error(401, 'UNAUTHENTICATED', 'Thiếu Bearer token.');
-      sessions.delete(token); res.writeHead(204); return res.end();
-    }
-    if (!token || !sessions.has(token)) return error(401, 'UNAUTHENTICATED', 'Cần đăng nhập Skill Store.');
-    if (scenario === 'session-expired' || Date.parse(sessions.get(token).expires_at) <= Date.now()) return error(401, 'SESSION_EXPIRED', 'Phiên đăng nhập đã hết hạn.');
-    if (req.method === 'GET' && url.pathname === '/api/v1/skills') {
-      const query = (url.searchParams.get('q') || '').trim();
-      const page = Number(url.searchParams.get('page') || 1);
-      const pageSize = Number(url.searchParams.get('page_size') || 20);
-      if (query.length > 200 || !Number.isInteger(page) || page < 1 || !Number.isInteger(pageSize) || pageSize < 1 || pageSize > 100) return error(400, 'VALIDATION_ERROR', 'Phân trang hoặc từ khóa không hợp lệ.');
-      const matches = catalog().filter(item => (item.name + item.description).toLocaleLowerCase().includes(query.toLocaleLowerCase())).sort((a, b) => b.updated_at.localeCompare(a.updated_at) || a.id.localeCompare(b.id));
-      const items = matches.slice((page - 1) * pageSize, page * pageSize).map(({ bytes: _bytes, description: _description, ...item }) => item);
-      return ok({ items, pagination: { page, page_size: pageSize, total: matches.length, total_pages: Math.ceil(matches.length / pageSize) } });
-    }
-    const match = url.pathname.match(/^\/api\/v1\/skills\/([^/]+)(\/package)?$/);
-    if (req.method === 'GET' && match) {
-      if (match[2] && scenario === 'package-changed' && !metadataChanged) metadataChanged = true;
-      const item = catalog().find(entry => entry.id === decodeURIComponent(match[1]));
-      if (!item) return error(404, 'SKILL_NOT_FOUND', 'Không tìm thấy skill.');
-      const { bytes, ...detail } = item;
-      if (!match[2]) return ok(detail);
-      if (scenario === 'forbidden-download') return error(403, 'FORBIDDEN', 'Tài khoản không được phép tải gói.');
-      if (!req.headers['if-match'] || req.headers['if-match'] === '*' || req.headers['if-match'].startsWith('W/')) return error(400, 'VALIDATION_ERROR', 'Cần strong ETag từ detail.');
-      if (req.headers['if-match'] !== item.package.etag) return error(412, 'PACKAGE_CHANGED', 'Thông tin hoặc gói skill đã thay đổi. Vui lòng lấy lại chi tiết.');
-      const payload = Buffer.from(bytes);
-      if (scenario === 'corrupt-download') payload[payload.length - 1] ^= 1;
-      res.writeHead(200, { 'Content-Type': item.package.format === 'zip' ? 'application/zip' : 'application/x-7z-compressed', 'Content-Length': payload.length, 'Content-Disposition': `attachment; filename="${item.slug}.${item.package.format}"`, ETag: item.package.etag, 'Cache-Control': 'private, no-store, no-transform' });
-      return res.end(payload);
-    }
-    return error(404, 'SKILL_NOT_FOUND', 'Không tìm thấy skill.');
-  });
-}
-
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  const value = name => { const i = process.argv.indexOf(name); return i >= 0 ? process.argv[i + 1] : undefined; };
-  const port = Number(value('--port') || 4318);
-  const server = createMockStore({ scenario: value('--scenario') || 'normal' });
-  server.listen(port, '127.0.0.1', () => console.log(`Mock Skill Store: http://127.0.0.1:${server.address().port} (employee01 / demo-password)`));
-  process.on('SIGTERM', () => server.close());
-}
-````
-
 ## File: scripts/company-mock-store.test.mjs
 ````javascript
 import { test } from 'node:test';
@@ -17701,6 +17627,121 @@ try {
   if (!absolute.startsWith(resolve(tmpdir()) + '\\') && !absolute.startsWith(resolve(tmpdir()) + '/')) throw new Error('Unsafe cleanup root');
   if (!basename(absolute).startsWith('company-native-l1-l3-')) throw new Error('Unexpected cleanup directory');
   await rm(absolute, { recursive: true, force: true });
+}
+````
+
+## File: scripts/company-native-workspace-smoke.mjs
+````javascript
+import { chromium } from 'playwright-core';
+import { createMockStore } from './company-mock-store.mjs';
+import { spawn } from 'node:child_process';
+import { createServer } from 'node:net';
+import { mkdtemp, mkdir, readFile, writeFile, readdir, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { basename, dirname, join, resolve } from 'node:path';
+import assert from 'node:assert/strict';
+
+const root = await mkdtemp(join(tmpdir(), 'company-native-l4-l5-'));
+const profile = join(root, 'profile'); const data = join(root, 'data');
+const projectA = join(root, 'Project A'); const projectB = join(root, 'Project B');
+await Promise.all([mkdir(join(profile, '.aipro'), { recursive: true }), mkdir(projectA), mkdir(projectB)]);
+const mcp = join(profile, '.aipro', 'mcp.json'); await writeFile(mcp, '{"mcpServers":{}}');
+const mcpBefore = await readFile(mcp, 'utf8');
+const server = createMockStore(); await new Promise(done => server.listen(0, '127.0.0.1', done));
+const portListener = createServer(); await new Promise(done => portListener.listen(0, '127.0.0.1', done));
+const port = portListener.address().port; await new Promise(done => portListener.close(done));
+const env = { ...process.env, COMPANY_STORE_MODE: 'mock', COMPANY_STORE_BASE_URL: `http://127.0.0.1:${server.address().port}`, COMPANY_PROFILE_ROOT: profile, COMPANY_DATA_ROOT: data, WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: `--remote-debugging-port=${port}` };
+let child; let browser; let page;
+async function start() {
+  child = spawn(resolve('src-tauri/target/debug/skills-manager.exe'), [], { env, windowsHide: true, stdio: 'ignore' });
+  for (let i = 0; i < 100; i++) {
+    assert(child.exitCode === null, 'Owned app exited; another Company app instance may already be running');
+    try { browser = await chromium.connectOverCDP(`http://127.0.0.1:${port}`); break; }
+    catch { await new Promise(done => setTimeout(done, 200)); }
+  }
+  assert(browser, 'Native WebView2 unavailable');
+  for (let i = 0; i < 50; i++) {
+    page = browser.contexts().flatMap(c => c.pages()).find(p => !p.url().startsWith('devtools:'));
+    if (page) break; await new Promise(done => setTimeout(done, 100));
+  }
+  assert(page, 'Native app page missing'); page.setDefaultTimeout(20_000);
+  await page.getByText('Dữ liệu giả lập', { exact: true }).waitFor();
+}
+async function stop() {
+  if (browser) { await browser.close().catch(() => {}); browser = undefined; }
+  if (child && child.exitCode === null) { const exited = new Promise(done => child.once('exit', done)); child.kill(); await exited; }
+  child = undefined; page = undefined;
+}
+async function install(projectName) {
+  await page.getByRole('button', { name: 'Store', exact: true }).click();
+  await page.getByPlaceholder('Tìm theo tên hoặc công dụng skill…').fill('jira');
+  await page.getByRole('button', { name: 'Xem chi tiết Tổng hợp tiến độ Jira', exact: true }).click();
+  await page.getByLabel('Phạm vi cài', { exact: true }).selectOption({ label: projectName ? `Dự án: ${projectName}` : 'AIPRO Global' });
+  await page.getByRole('button', { name: projectName ? 'Cài vào AIPRO Dự án' : 'Cài vào AIPRO Global', exact: true }).click();
+  await page.getByRole('button', { name: 'Bỏ qua và cài tiếp', exact: true }).click();
+  await page.getByText('Cài xong; đã bỏ qua cảnh báo MCP của lần này.', { exact: true }).waitFor();
+  await page.getByRole('button', { name: 'Hoàn tất', exact: true }).click();
+}
+try {
+  await start();
+  await page.getByLabel('Tài khoản', { exact: true }).fill('employee01');
+  await page.getByLabel('Mật khẩu', { exact: true }).fill('demo-password');
+  await page.getByRole('button', { name: 'Đăng nhập', exact: true }).click();
+  await page.getByText('Nhân viên 01', { exact: true }).waitFor();
+  await page.getByRole('button', { name: 'Dự án', exact: true }).click();
+  for (const path of [projectA, projectB]) {
+    await page.getByLabel('Thư mục dự án', { exact: true }).fill(path);
+    await page.getByRole('button', { name: 'Thêm dự án', exact: true }).click();
+    await page.getByRole('heading', { name: basename(path), exact: true }).waitFor();
+    await assert.rejects(readFile(join(path, '.aipro/skills/jira-project-summary/SKILL.md')));
+  }
+  await install(); await install('Project A'); await install('Project B');
+  const globalTarget = join(profile, '.aipro/skills/jira-project-summary');
+  const aTarget = join(projectA, '.aipro/skills/jira-project-summary');
+  const bTarget = join(projectB, '.aipro/skills/jira-project-summary');
+  const originalGlobal = await readFile(join(globalTarget, 'SKILL.md'));
+  const originalB = await readFile(join(bTarget, 'SKILL.md'));
+  await writeFile(join(aTarget, 'SKILL.md'), 'Native project customization');
+  server.setRevision(2);
+  await page.getByRole('button', { name: 'Skill đã cài', exact: true }).click();
+  await page.getByRole('button', { name: 'Làm mới nội dung', exact: true }).click();
+  await page.getByText('Đã tùy chỉnh', { exact: true }).waitFor();
+  await page.getByRole('button', { name: 'Kiểm tra gói mới', exact: true }).click();
+  await page.getByText('Có gói mới', { exact: true }).first().waitFor();
+  await page.getByLabel('Chọn Tổng hợp tiến độ Jira tại Dự án: Project A', { exact: true }).check();
+  await page.getByRole('button', { name: 'Xem cập nhật các đích đã chọn (1)', exact: true }).click();
+  await page.getByRole('button', { name: 'Bỏ qua và xem thay đổi', exact: true }).click();
+  await page.getByText('SKILL.md', { exact: true }).waitFor();
+  assert.equal(await readFile(join(aTarget, 'SKILL.md'), 'utf8'), 'Native project customization');
+  assert.equal(await page.getByRole('button', { name: 'Backup và cập nhật', exact: true }).isEnabled(), false);
+  await page.getByLabel('Tôi đồng ý thay bản đã tùy chỉnh bằng gói Store', { exact: true }).check();
+  await page.getByRole('button', { name: 'Backup và cập nhật', exact: true }).click();
+  await page.getByText('Đã cập nhật đích này; bản trước đã được lưu.', { exact: true }).waitFor();
+  await page.getByRole('button', { name: 'Hoàn tất', exact: true }).click();
+  assert.match(await readFile(join(aTarget, 'SKILL.md'), 'utf8'), /Jira project summary v2/);
+  assert.deepEqual(await readFile(join(globalTarget, 'SKILL.md')), originalGlobal);
+  assert.deepEqual(await readFile(join(bTarget, 'SKILL.md')), originalB);
+  const installationDirs = await readdir(join(data, 'backups')); assert.equal(installationDirs.length, 1);
+  const backupDirs = await readdir(join(data, 'backups', installationDirs[0])); assert.equal(backupDirs.length, 1);
+  const backup = JSON.parse(await readFile(join(data, 'backups', installationDirs[0], backupDirs[0], 'metadata.json'), 'utf8'));
+  assert.equal(await readFile(join(backup.path, 'SKILL.md'), 'utf8'), 'Native project customization');
+  assert.equal(await readFile(mcp, 'utf8'), mcpBefore);
+  await stop(); await start();
+  await page.getByText('Nhân viên 01', { exact: true }).waitFor();
+  await page.getByRole('button', { name: 'Dự án', exact: true }).click();
+  await page.getByRole('heading', { name: 'Project A', exact: true }).waitFor();
+  await page.getByRole('heading', { name: 'Project B', exact: true }).waitFor();
+  await page.getByRole('button', { name: 'Skill đã cài', exact: true }).click();
+  assert.equal(await page.getByRole('heading', { name: 'Tổng hợp tiến độ Jira', exact: true }).count(), 3);
+  const screenshot = process.env.COMPANY_SMOKE_SCREENSHOT;
+  if (screenshot) { await mkdir(dirname(resolve(screenshot)), { recursive: true }); await page.screenshot({ path: screenshot, fullPage: true }); }
+  await page.getByRole('button', { name: 'Đăng xuất', exact: true }).click();
+  console.log('PASS native L4/L5: projects, independent copies, customization, update preview/backup/apply, restart and unchanged MCP');
+} finally {
+  if (page) await page.evaluate(async () => { try { await window.__TAURI_INTERNALS__.invoke('company_logout', {}); } catch { /* owned mock credentials only */ } }).catch(() => {});
+  await stop(); await new Promise(done => server.close(done));
+  assert.equal(dirname(resolve(root)), resolve(tmpdir())); assert(basename(root).startsWith('company-native-l4-l5-'));
+  await rm(root, { recursive: true, force: true });
 }
 ````
 
@@ -17908,53 +17949,164 @@ function main() {
 main();
 ````
 
-## File: src/company/tests/session.test.tsx
+## File: src/company/flows/InstalledView.tsx
+````typescript
+import { useState } from 'react';
+import type { CompanyApi } from '../api';
+import type { Backup, Installation, OperationView, Project } from '../types';
+import { displayPath, errorMessage, isSessionError } from '../types';
+import { UpdateDialog } from './UpdateDialog';
+import type { UpdateResult } from './UpdateDialog';
+
+const contentLabels = { original: 'Nguyên bản', customized: 'Đã tùy chỉnh', missing: 'Không tìm thấy bản cài', unknown: 'Chưa kiểm tra được nội dung' };
+const storeLabels = { current: 'Gói hiện tại trên Store', new_package: 'Có gói mới', unknown: 'Chưa kiểm tra được Store', unavailable: 'Skill không còn khả dụng trên Store' };
+export function InstalledView({ api, installations, projects, onChanged, signedIn = true, onExpired, selectedIds, onSelectionChange, onReinstall }: { api: CompanyApi; installations: Installation[]; projects: Project[]; onChanged: () => void; signedIn?: boolean; onExpired?: (message: string) => void; selectedIds?: string[]; onSelectionChange?: (ids: string[]) => void; onReinstall?: (item: Installation) => void }) {
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [localSelected, setLocalSelected] = useState<string[]>([]);
+  const [operation, setOperation] = useState<OperationView>();
+  const [currentId, setCurrentId] = useState('');
+  const [queue, setQueue] = useState<string[]>([]);
+  const [results, setResults] = useState<Record<string, { status: UpdateResult; message: string }>>({});
+  const [backups, setBackups] = useState<Backup[]>();
+  const selected = selectedIds ?? localSelected;
+  function toggle(id: string) { const ids = selected.includes(id) ? selected.filter(i => i !== id) : [...selected, id]; setLocalSelected(ids); onSelectionChange?.(ids); }
+  function failure(e: unknown) { setError(errorMessage(e)); if (isSessionError(e)) { setOperation(undefined); setQueue([]); onExpired?.(errorMessage(e)); } }
+  async function open(id: string, kind: 'skill_file' | 'folder') { setError(''); try { await api.openInstallation(id, kind); } catch (e) { setError(errorMessage(e)); } }
+  async function check() { setBusy(true); setError(''); try { await api.checkUpdates(selected.length ? selected : installations.map(i => i.id)); onChanged(); } catch (e) { failure(e); } finally { setBusy(false); } }
+  async function prepare(id: string) {
+    setBusy(true); setError(''); setCurrentId(id); setBackups(undefined);
+    try { setOperation(await api.prepareUpdate(id)); }
+    catch (e) { setResults(r => ({ ...r, [id]: { status: 'failed', message: errorMessage(e) } })); failure(e); }
+    finally { setBusy(false); }
+  }
+  async function start(ids: string[]) { if (!ids.length) return; setQueue(ids.slice(1)); await prepare(ids[0]); }
+  async function next(result: UpdateResult) {
+    setResults(r => ({ ...r, [currentId]: { status: result, message: result === 'applied' ? 'Đã cập nhật' : result === 'kept' ? 'Giữ bản đang dùng' : 'Chưa hoàn tất' } }));
+    setOperation(undefined); onChanged();
+    if (queue.length) { const [id, ...rest] = queue; setQueue(rest); await prepare(id); }
+  }
+  async function showBackups(id: string) { setError(''); try { setBackups(await api.backupsList(id)); } catch (e) { failure(e); } }
+  return <>
+    <div className="row-actions"><button className="secondary" onClick={onChanged} disabled={busy}>Làm mới nội dung</button><button className="secondary" onClick={check} disabled={busy || !signedIn || !installations.length}>Kiểm tra gói mới</button><button className="primary" onClick={() => start(selected)} disabled={busy || !signedIn || !selected.length}>Xem cập nhật các đích đã chọn ({selected.length})</button></div>
+    {!signedIn && <p>Đăng nhập Store để kiểm tra hoặc cập nhật; vẫn có thể mở các bản cài trên máy.</p>}
+    {error && <div className="error-banner" role="alert">{error}</div>}
+    {!operation && queue.length > 0 && <button className="secondary" onClick={() => { const [id, ...rest] = queue; setQueue(rest); prepare(id); }}>Tiếp tục với đích còn lại</button>}
+    {installations.length === 0 && <section className="company-card"><p>Chưa có skill được cài bởi ứng dụng.</p></section>}
+    {installations.map(item => { const scope = item.projectId ? `Dự án: ${projects.find(p => p.id === item.projectId)?.name ?? item.projectId}` : 'AIPRO Global'; return <article className="company-card installation-card" key={item.id}>
+      <label className="checkbox-label"><input type="checkbox" checked={selected.includes(item.id)} onChange={() => toggle(item.id)} />Chọn {item.name} tại {scope}</label><h2>{item.name}</h2><span className="status-tag">{scope}</span><span className={`status-tag ${item.contentState ?? 'unknown'}`}>{contentLabels[item.contentState ?? 'unknown']}</span><span className="status-tag">{storeLabels[item.storeState ?? 'unknown']}</span><p className="target-path">{displayPath(item.target)}</p>{item.checkedAt && <p>Store kiểm tra lúc {new Date(item.checkedAt).toLocaleString('vi-VN')}</p>}{item.storeError && <p>{item.storeError}</p>}
+      <div className="row-actions"><button className="secondary" onClick={() => open(item.id, 'skill_file')}>Mở SKILL.md</button><button className="secondary" onClick={() => open(item.id, 'folder')}>Mở thư mục</button><button className="primary" onClick={() => start([item.id])} disabled={busy || !signedIn || item.contentState === 'missing' || item.contentState === 'unknown'}>Xem cập nhật</button><button className="secondary" onClick={() => showBackups(item.id)}>Bản lưu</button></div>
+      {item.contentState === 'missing' && onReinstall && <button className="secondary" disabled={!signedIn || busy} onClick={() => onReinstall(item)}>Cài lại từ Store</button>}
+      {results[item.id] && <p role="status">{results[item.id].message}{results[item.id].status === 'failed' && <button className="secondary" disabled={busy || !signedIn} onClick={() => start([item.id])}>Thử lại đích này</button>}</p>}
+    </article>; })}
+    {backups && <section className="company-card"><h2>Bản lưu cập nhật ({backups.length})</h2>{backups.length === 0 && <p>Chưa có bản lưu cho đích này.</p>}{backups.map(b => <article key={b.id}><p>{new Date(b.createdAt).toLocaleString('vi-VN')} · {b.installation.name}</p><p className="target-path">{b.path}</p><p>Nguồn trước cập nhật: {b.installation.packageHash.slice(0, 12)}</p></article>)}</section>}
+    {operation && <UpdateDialog key={operation.id} api={api} initial={operation} onClose={next} onApplied={onChanged} onExpired={message => failure({ code: 'SESSION_EXPIRED', message })} />}
+  </>;
+}
+````
+
+## File: src/company/flows/ProjectsView.tsx
+````typescript
+import { useState } from 'react';
+import type { CompanyApi } from '../api';
+import type { Installation, Project } from '../types';
+import { displayPath, errorMessage } from '../types';
+
+export function ProjectsView({ api, projects, installations, onChanged, onBrowse }: { api: CompanyApi; projects: Project[]; installations: Installation[]; onChanged: () => void; onBrowse: (projectId: string) => void }) {
+  const [path, setPath] = useState('');
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+  async function add(event: React.FormEvent) {
+    event.preventDefault(); setBusy(true); setError('');
+    try { await api.addProject(path.trim()); setPath(''); onChanged(); }
+    catch (e) { setError(errorMessage(e)); }
+    finally { setBusy(false); }
+  }
+  async function choose() {
+    try { const selected = await api.chooseProjectFolder(); if (selected) setPath(selected); }
+    catch (e) { setError(errorMessage(e)); }
+  }
+  async function remove(id: string) {
+    setBusy(true); setError('');
+    try { await api.removeProject(id); onChanged(); }
+    catch (e) { setError(errorMessage(e)); }
+    finally { setBusy(false); }
+  }
+  return <>
+    <section className="company-card"><h2>Thêm thư mục công việc</h2><p>Dự án không cần Git. Thư mục AIPRO được tạo khi bạn cài skill.</p>
+      <form onSubmit={add} className="project-form"><label>Thư mục dự án<input value={path} onChange={e => setPath(e.target.value)} required placeholder={'D:\\Projects\\My Project'} /></label><button type="button" className="secondary" onClick={choose} disabled={busy}>Chọn thư mục…</button><button className="primary" disabled={busy || !path.trim()}>Thêm dự án</button></form>
+    </section>
+    {error && <div role="alert" className="error-banner">{error}</div>}
+    {projects.length === 0 && <p>Chưa có dự án được đăng ký.</p>}
+    {projects.map(project => { const count = installations.filter(i => i.projectId === project.id).length; return <article className="company-card" key={project.id}><h2>{project.name}</h2><p className="target-path">{displayPath(project.path)}</p><p>{count} bản cài được quản lý</p><div className="row-actions"><button className="primary" onClick={() => onBrowse(project.id)}>Cài skill vào {project.name}</button><button className="secondary" disabled={busy || count > 0} title={count ? 'Dự án còn bản cài được quản lý' : undefined} onClick={() => remove(project.id)}>Bỏ khỏi danh sách</button></div></article>; })}
+  </>;
+}
+````
+
+## File: src/company/flows/useCompanyOperation.ts
+````typescript
+import { useEffect, useRef, useState } from 'react';
+import type { CompanyApi } from '../api';
+import type { OperationView } from '../types';
+import { errorMessage, isSessionError } from '../types';
+
+export function useCompanyOperation(api: CompanyApi, initial: OperationView, onSucceeded: () => void, onExpired: (message: string) => void) {
+  const [operation, setOperation] = useState(initial);
+  const [error, setError] = useState('');
+  const notified = useRef(false);
+  const terminal = ['succeeded', 'failed', 'cancelled', 'recovery_required'].includes(operation.state);
+
+  useEffect(() => {
+    if (operation.state === 'awaiting_decision' || terminal) return;
+    let active = true;
+    const timer = setTimeout(() => api.operationStatus(operation.id).then(next => { if (active) setOperation(next); }).catch(e => { if (active) setError(errorMessage(e)); }), 300);
+    return () => { active = false; clearTimeout(timer); };
+  }, [api, operation, terminal]);
+
+  useEffect(() => {
+    if (operation.state === 'succeeded' && !notified.current) { notified.current = true; onSucceeded(); }
+    if (isSessionError(operation.error)) onExpired(errorMessage(operation.error));
+  }, [operation, onSucceeded, onExpired]);
+
+  return { operation, setOperation, error, setError, terminal };
+}
+````
+
+## File: src/company/tests/projects.test.tsx
 ````typescript
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { expect, test, vi } from 'vitest';
 import { CompanyApp } from '../CompanyApp';
+import { workspaceApi } from './workspace-api';
 
-test('employee can sign in and sign out without losing access to local installations', async () => {
+test('employee adds a project without creating skills and sees customized copies separately', async () => {
+  const project = { id: 'project-a', name: 'Project A', path: 'C:/work/Project A' };
   const api = {
-    environment: vi.fn().mockResolvedValue({ mock: true, storeUrl: 'http://127.0.0.1:4318', profileRoot: 'C:/demo', dataRoot: 'C:/data', configured: true }),
-    session: vi.fn().mockResolvedValue({ user: null, expiresAt: null, persistent: true }),
-    login: vi.fn().mockResolvedValue({ user: { id: 'usr_001', username: 'employee01', displayName: 'Nhân viên 01' }, expiresAt: '2099-10-12T12:00:00Z', persistent: true }),
-    logout: vi.fn().mockResolvedValue(null),
+    ...workspaceApi(),
+    environment: vi.fn().mockResolvedValue({ mock: true, configured: true, profileRoot: 'C:/profile', dataRoot: 'C:/data', storeUrl: 'http://127.0.0.1' }),
+    session: vi.fn().mockResolvedValue({ user: { id: 'usr_001', displayName: 'Employee', username: 'employee01' }, persistent: true, expiresAt: '2099-01-01T00:00:00Z' }),
+    login: vi.fn(), logout: vi.fn(),
     storeSearch: vi.fn().mockResolvedValue({ items: [], pagination: { page: 1, pageSize: 20, total: 0, totalPages: 0 } }),
-    installationsList: vi.fn().mockResolvedValue([]),
-    storeDetail: vi.fn(),
-    prepareInstallation: vi.fn(), confirmInstallation: vi.fn(), operationStatus: vi.fn(), cancelOperation: vi.fn(),
+    storeDetail: vi.fn(), prepareInstallation: vi.fn(), confirmInstallation: vi.fn(), operationStatus: vi.fn(), cancelOperation: vi.fn(),
+    installationsList: vi.fn().mockResolvedValue([
+      { id: 'global', skillId: 'skl_001', name: 'Jira skill', target: 'C:/profile/.aipro/skills/jira', packageHash: 'a', installedAt: '', mcpBypassed: false, contentState: 'original' },
+      { id: 'project-copy', skillId: 'skl_001', name: 'Jira skill', target: 'C:/work/Project A/.aipro/skills/jira', projectId: 'project-a', packageHash: 'a', installedAt: '', mcpBypassed: false, contentState: 'customized' },
+    ]),
   };
-  render(<CompanyApp api={api} />);
+  api.addProject.mockImplementation(async () => { api.projectsList.mockResolvedValue([project]); return project; });
   const user = userEvent.setup();
-  await user.type(await screen.findByLabelText('Tài khoản'), 'employee01');
-  await user.type(screen.getByLabelText('Mật khẩu'), 'demo-password');
-  await user.click(screen.getByRole('button', { name: 'Đăng nhập' }));
-  expect(await screen.findByText('Nhân viên 01')).toBeInTheDocument();
-  expect(screen.queryByLabelText('Mật khẩu')).not.toBeInTheDocument();
-  await user.click(screen.getByRole('button', { name: 'Đăng xuất' }));
-  await waitFor(() => expect(screen.queryByText('Nhân viên 01')).not.toBeInTheDocument());
+  render(<CompanyApp api={api} />);
+  await user.click(await screen.findByRole('button', { name: 'Dự án' }));
+  await user.type(screen.getByLabelText('Thư mục dự án'), 'C:/work/Project A');
+  await user.click(screen.getByRole('button', { name: 'Thêm dự án' }));
+  expect(await screen.findByText('Project A', { exact: true })).toBeInTheDocument();
+  expect(api.addProject).toHaveBeenCalledWith('C:/work/Project A');
   await user.click(screen.getByRole('button', { name: 'Skill đã cài' }));
-  expect(await screen.findByText('Chưa có skill được cài bởi ứng dụng.')).toBeInTheDocument();
-  expect(screen.getByText('Dữ liệu giả lập')).toBeInTheDocument();
-});
-
-test('invalid credentials are shown and password is cleared', async () => {
-  const api = {
-    environment: vi.fn().mockResolvedValue({ mock: false, storeUrl: 'https://store.internal', profileRoot: 'C:/demo', dataRoot: 'C:/data', configured: true }),
-    session: vi.fn().mockResolvedValue({ user: null, expiresAt: null, persistent: true }),
-    login: vi.fn().mockRejectedValue({ code: 'INVALID_CREDENTIALS', message: 'Tài khoản hoặc mật khẩu không đúng.' }),
-    logout: vi.fn(), storeSearch: vi.fn(), storeDetail: vi.fn(), installationsList: vi.fn().mockResolvedValue([]),
-    prepareInstallation: vi.fn(), confirmInstallation: vi.fn(), operationStatus: vi.fn(), cancelOperation: vi.fn(),
-  };
-  render(<CompanyApp api={api} />);
-  const user = userEvent.setup();
-  await user.type(await screen.findByLabelText('Tài khoản'), 'bad');
-  await user.type(screen.getByLabelText('Mật khẩu'), 'secret');
-  await user.click(screen.getByRole('button', { name: 'Đăng nhập' }));
-  expect(await screen.findByRole('alert')).toHaveTextContent('Tài khoản hoặc mật khẩu không đúng.');
-  expect(screen.getByLabelText('Mật khẩu')).toHaveValue('');
+  expect(await screen.findByText('Đã tùy chỉnh')).toBeInTheDocument();
+  expect(screen.getByText('Nguyên bản')).toBeInTheDocument();
+  await user.click(screen.getAllByRole('button', { name: 'Mở SKILL.md' })[1]);
+  await waitFor(() => expect(api.openInstallation).toHaveBeenCalledWith('project-copy', 'skill_file'));
 });
 ````
 
@@ -17967,54 +18119,21 @@ import { afterEach } from 'vitest';
 afterEach(cleanup);
 ````
 
-## File: src/company/api.ts
+## File: src/company/tests/workspace-api.ts
 ````typescript
-import { invoke } from '@tauri-apps/api/core';
-import type { Environment, Installation, OperationView, SessionView, Skill, SkillPage } from './types';
+import { vi } from 'vitest';
 
-export interface CompanyApi {
-  environment(): Promise<Environment>;
-  session(): Promise<SessionView>;
-  login(username: string, password: string): Promise<SessionView>;
-  logout(): Promise<null>;
-  storeSearch(query: string, page: number): Promise<SkillPage>;
-  storeDetail(id: string): Promise<Skill>;
-  installationsList(): Promise<Installation[]>;
-  prepareInstallation(id: string): Promise<OperationView>;
-  confirmInstallation(id: string, bypassMcp: boolean): Promise<OperationView>;
-  operationStatus(id: string): Promise<OperationView>;
-  cancelOperation(id: string): Promise<OperationView>;
+export function workspaceApi() {
+  return {
+    projectsList: vi.fn().mockResolvedValue([]),
+    addProject: vi.fn(), removeProject: vi.fn(),
+    chooseProjectFolder: vi.fn().mockResolvedValue(null),
+    prepareProjectInstallation: vi.fn(),
+    refreshInstallation: vi.fn(), openInstallation: vi.fn(),
+    checkUpdates: vi.fn(), prepareUpdate: vi.fn(), applyUpdate: vi.fn(),
+    backupsList: vi.fn().mockResolvedValue([]), openPreview: vi.fn(),
+  };
 }
-
-export const nativeApi: CompanyApi = {
-  environment: () => invoke('company_environment'),
-  session: () => invoke('company_session'),
-  login: (username, password) => invoke('company_login', { username, password }),
-  logout: () => invoke('company_logout'),
-  storeSearch: (query, page) => invoke('company_store_search', { query, page }),
-  storeDetail: id => invoke('company_store_detail', { id }),
-  installationsList: () => invoke('company_installations_list'),
-  prepareInstallation: id => invoke('company_operation_prepare', { id }),
-  confirmInstallation: (id, bypassMcp) => invoke('company_operation_confirm', { id, bypassMcp }),
-  operationStatus: id => invoke('company_operation_status', { id }),
-  cancelOperation: id => invoke('company_operation_cancel', { id }),
-};
-````
-
-## File: src/company/company.css
-````css
-.company-app { display:flex; height:100vh; font-family:Inter,"Segoe UI",sans-serif; color:#17253b; background:#f5f7fb; }
-.company-sidebar { width:238px; flex-shrink:0; background:#fff; border-right:1px solid #e1e7ef; padding:28px 18px; display:flex; flex-direction:column; }
-.company-brand { display:flex; gap:12px; align-items:center; font-weight:700; font-size:17px; padding:0 12px 36px; }.company-brand span:not(.brand-icon){display:block;font-size:13px;font-weight:500;color:#718096;margin-top:2px;}
-.brand-icon {display:grid;place-items:center;background:#2860d4;color:white;width:40px;height:40px;border-radius:12px;font-size:23px;}
-.company-sidebar nav {display:grid;gap:7px;}.company-sidebar nav button{text-align:left;padding:13px 16px;border-radius:9px;color:#657186;font-weight:600;}.company-sidebar nav button:hover{background:#f4f6fa;}.company-sidebar nav button.selected{background:#eaf0ff;color:#2255c7;}
-.sidebar-footer {margin-top:auto;padding:20px 10px 0;font-size:13px;font-weight:600;}.sidebar-footer>span:last-child{display:block;color:#8893a5;font-size:11px;font-weight:400;margin-top:7px;}.aipro-dot{display:inline-block;width:7px;height:7px;background:#2db88d;border-radius:50%;margin-right:7px;}
-.company-main {flex:1;padding:0 40px 40px;overflow:auto;min-width:0;}.company-header{height:86px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #e0e6ef;margin-bottom:28px;}.eyebrow{font-size:11px;font-weight:700;letter-spacing:1.7px;color:#8090a9;}.account{display:flex;align-items:center;gap:16px;font-size:13px;}.account button {border:1px solid #dbe2ee;background:#fff;padding:7px 12px;border-radius:7px;}
-.page-heading {margin:28px 0;}.page-heading h1{font-size:29px;letter-spacing:-.7px;margin:0 0 8px;font-weight:700;}.page-heading p,.company-card p{font-size:14px;color:#718096;line-height:1.7;}.company-card{background:white;border:1px solid #e0e6ef;border-radius:13px;padding:26px;margin-bottom:20px;}.company-card h2{font-size:18px;font-weight:650;margin:8px 0 12px;}
-.sign-in{max-width:470px;}.sign-in form{display:grid;gap:18px;margin-top:26px;}.company-app label{display:grid;gap:8px;font-size:13px;font-weight:600;}.company-app input{border:1px solid #d5deec;border-radius:8px;padding:11px 13px;font-size:14px;background:white;color:#17253b;}.company-app input:focus{outline:2px solid #b8cdfd;border-color:#709aee;}.company-app button{cursor:pointer;}.company-app button:disabled{opacity:.55;cursor:default;}.company-app button.primary{background:#2860d4;color:#fff;border-radius:8px;padding:11px 18px;font-weight:600;border:none;}.company-app button.primary:hover:not(:disabled){background:#1d4fb9;}
-.mock-banner{background:#fff7de;border:1px solid #f1deb0;color:#8c6718;padding:9px 14px;border-radius:8px;font-size:12px;}.error-banner{background:#fff1f0;color:#a4362d;border:1px solid #f4d0cc;border-radius:8px;padding:12px 16px;margin:12px 0;font-size:14px;}.company-app dl{display:grid;grid-template-columns:160px 1fr;gap:15px;font-size:13px;}.company-app dt{color:#8090a9;}.company-app dd{margin:0;overflow-wrap:anywhere;}
-.store-toolbar{display:flex;align-items:center;gap:20px;margin-bottom:24px;}.store-toolbar input{flex:1;max-width:550px;}.store-toolbar span{font-size:13px;color:#8794aa;}.skill-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(265px,1fr));gap:18px;}.skill-card{position:relative;padding:24px;}.skill-icon{display:grid;place-items:center;width:40px;height:40px;background:#eaf0ff;color:#3965c6;border-radius:10px;font-size:24px;margin-bottom:22px;}.format-tag{position:absolute;right:22px;top:25px;font-size:10px;border:1px solid #e0e6ef;padding:4px 8px;border-radius:6px;color:#8794aa;}.company-app button.secondary{border:1px solid #dbe3ef;border-radius:7px;padding:9px 14px;background:white;font-size:13px;font-weight:600;color:#3b5e9e;}.pagination{display:flex;gap:20px;justify-content:center;align-items:center;margin:20px;}.pagination button{padding:8px;border:1px solid #e0e6ef;border-radius:6px;font-size:13px;}.modal-overlay{position:fixed;inset:0;background:#10224066;display:flex;align-items:center;justify-content:center;z-index:20;padding:40px;}.company-modal{background:white;border-radius:16px;width:640px;max-height:85vh;overflow:auto;padding:32px;position:relative;box-shadow:0 24px 80px #11224433;}.company-modal h2{font-size:23px;font-weight:700;margin:16px 0 24px;}.close-modal{position:absolute;right:18px;top:12px;font-size:28px;color:#8794aa;}.skill-description{font-size:14px;line-height:1.8;color:#53657e;}.skill-description p{margin-bottom:14px;}.package-line{margin-top:24px;padding-top:16px;border-top:1px solid #e0e6ef;font-size:12px;color:#8794aa;}
-.dialog-actions{display:flex;gap:12px;justify-content:flex-end;margin-top:24px;}.target-path{padding:12px;background:#f4f7fc;border-radius:7px;font-size:12px;overflow-wrap:anywhere;margin-bottom:24px;}.company-modal h3{font-size:16px;font-weight:650;margin-bottom:12px;}.company-modal li{margin:5px 20px;font-size:14px;list-style:disc;}.company-modal>p{font-size:14px;line-height:1.8;color:#718096;}.company-modal progress{width:100%;margin:15px 0;height:9px;accent-color:#2860d4;}.success-banner{padding:16px;background:#e6f8ef;color:#187451;border-radius:9px;font-size:14px;}
 ````
 
 ## File: src/components/AddSkillsSheet.tsx
@@ -22772,110 +22891,6 @@ export function compactHomePath(path: string) {
 }
 ````
 
-## File: src-tauri/capabilities/default.json
-````json
-{
-  "$schema": "../gen/schemas/desktop-schema.json",
-  "identifier": "default",
-  "description": "enables the default permissions",
-  "windows": [
-    "main"
-  ],
-  "permissions": [
-    "core:default",
-    "core:window:allow-start-dragging"
-  ]
-}
-````
-
-## File: src-tauri/src/commands/company.rs
-````rust
-use crate::core::company::{config::Environment, installation_service::CompanyService, types::*};
-use std::sync::Arc;
-use tauri::State;
-
-type AppState<'a> = State<'a, Arc<CompanyService>>;
-async fn blocking<T: Send + 'static>(
-    state: AppState<'_>,
-    action: impl FnOnce(Arc<CompanyService>) -> CompanyResult<T> + Send + 'static,
-) -> CompanyResult<T> {
-    let app = state.inner().clone();
-    tauri::async_runtime::spawn_blocking(move || action(app))
-        .await
-        .map_err(|_| CompanyError::new("INTERNAL_ERROR", "Không hoàn tất được thao tác native."))?
-}
-#[tauri::command]
-pub async fn company_environment(state: AppState<'_>) -> CompanyResult<Environment> {
-    blocking(state, |app| {
-        let mut env = app.config.environment();
-        env.recovery_warnings = app.recovery_warnings();
-        Ok(env)
-    })
-    .await
-}
-#[tauri::command]
-pub async fn company_session(state: AppState<'_>) -> CompanyResult<SessionView> {
-    blocking(state, |app| Ok(app.current_session())).await
-}
-#[tauri::command]
-pub async fn company_login(
-    state: AppState<'_>,
-    username: String,
-    password: String,
-) -> CompanyResult<SessionView> {
-    blocking(state, move |app| app.login(&username, &password)).await
-}
-#[tauri::command]
-pub async fn company_logout(state: AppState<'_>) -> CompanyResult<()> {
-    blocking(state, |app| app.logout()).await
-}
-#[tauri::command]
-pub async fn company_store_search(
-    state: AppState<'_>,
-    query: String,
-    page: u32,
-) -> CompanyResult<SkillPage> {
-    blocking(state, move |app| app.search(&query, page)).await
-}
-#[tauri::command]
-pub async fn company_store_detail(state: AppState<'_>, id: String) -> CompanyResult<Skill> {
-    blocking(state, move |app| app.detail(&id)).await
-}
-#[tauri::command]
-pub async fn company_installations_list(state: AppState<'_>) -> CompanyResult<Vec<Installation>> {
-    blocking(state, |app| app.installations()).await
-}
-#[tauri::command]
-pub async fn company_operation_prepare(
-    state: AppState<'_>,
-    id: String,
-) -> CompanyResult<OperationView> {
-    blocking(state, move |app| app.prepare_install(&id)).await
-}
-#[tauri::command]
-pub async fn company_operation_confirm(
-    state: AppState<'_>,
-    id: String,
-    bypass_mcp: bool,
-) -> CompanyResult<OperationView> {
-    blocking(state, move |app| app.confirm(&id, bypass_mcp)).await
-}
-#[tauri::command]
-pub async fn company_operation_status(
-    state: AppState<'_>,
-    id: String,
-) -> CompanyResult<OperationView> {
-    blocking(state, move |app| app.status(&id)).await
-}
-#[tauri::command]
-pub async fn company_operation_cancel(
-    state: AppState<'_>,
-    id: String,
-) -> CompanyResult<OperationView> {
-    blocking(state, move |app| app.cancel(&id)).await
-}
-````
-
 ## File: src-tauri/src/commands/mod.rs
 ````rust
 pub mod agent_workspace;
@@ -23687,34 +23702,6 @@ mod tests {
 }
 ````
 
-## File: src-tauri/src/core/company/aipro_paths.rs
-````rust
-use super::{
-    package_store::{reject_links, validate_slug},
-    types::*,
-};
-use std::path::{Path, PathBuf};
-
-pub fn global_target(profile: &Path, slug: &str) -> CompanyResult<PathBuf> {
-    validate_slug(slug)?;
-    let target = profile.join(".aipro").join("skills").join(slug);
-    for ancestor in target.ancestors() {
-        if std::fs::symlink_metadata(ancestor).is_ok() {
-            reject_links(ancestor)?;
-        }
-    }
-    Ok(target)
-}
-pub fn stage_path(target: &Path, id: &str) -> CompanyResult<PathBuf> {
-    uuid::Uuid::parse_str(id)
-        .map_err(|_| CompanyError::new("WRITE_FAILED", "Operation ID không hợp lệ."))?;
-    Ok(target
-        .parent()
-        .ok_or_else(|| CompanyError::new("WRITE_FAILED", "Đích cài không hợp lệ."))?
-        .join(format!(".company-stage-{id}")))
-}
-````
-
 ## File: src-tauri/src/core/company/config.rs
 ````rust
 use super::types::{CompanyError, CompanyResult};
@@ -23988,402 +23975,6 @@ pub mod package_store;
 pub mod session;
 pub mod store_client;
 pub mod types;
-````
-
-## File: src-tauri/src/core/company/package_store.rs
-````rust
-use super::types::{CompanyError, CompanyResult, PackageMeta};
-use sha2::{Digest, Sha256};
-use std::{
-    collections::HashMap,
-    fs::{self, File},
-    io::{Read, Write},
-    path::{Path, PathBuf},
-};
-
-pub const MAX_ARCHIVE: u64 = 100 * 1_048_576;
-pub const MAX_EXPANDED: u64 = 500 * 1_048_576;
-const MAX_ENTRIES: usize = 10_000;
-const MAX_DEPTH: usize = 32;
-
-pub struct VerifiedPackage {
-    pub original_root: PathBuf,
-    pub content_hash: String,
-    pub full_hash: String,
-    pub archive_hash: String,
-}
-fn invalid(message: &str) -> CompanyError {
-    CompanyError::new("INVALID_PACKAGE", message)
-}
-fn io_error() -> CompanyError {
-    CompanyError::new("WRITE_FAILED", "Không đọc/ghi được dữ liệu gói trên máy.")
-}
-
-pub fn validate_slug(slug: &str) -> CompanyResult<()> {
-    if slug.is_empty()
-        || slug.len() > 64
-        || !slug.as_bytes()[0].is_ascii_alphanumeric()
-        || !slug
-            .bytes()
-            .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == b'-' || c == b'_')
-        || reserved(slug)
-    {
-        return Err(invalid("Tên thư mục skill không hợp lệ trên Windows."));
-    }
-    Ok(())
-}
-fn reserved(name: &str) -> bool {
-    let base = name
-        .split('.')
-        .next()
-        .unwrap_or_default()
-        .to_ascii_uppercase();
-    matches!(base.as_str(), "CON" | "PRN" | "AUX" | "NUL")
-        || (base.len() == 4
-            && (base.starts_with("COM") || base.starts_with("LPT"))
-            && matches!(base.as_bytes()[3], b'1'..=b'9'))
-}
-pub fn checked_entry(name: &str) -> CompanyResult<PathBuf> {
-    let normalized = name.replace('\\', "/");
-    let text = normalized.trim_end_matches('/');
-    if text.is_empty() || normalized.starts_with('/') {
-        return Err(invalid("Gói có đường dẫn tuyệt đối hoặc rỗng."));
-    }
-    let parts: Vec<_> = text.split('/').collect();
-    if parts.len() > MAX_DEPTH {
-        return Err(invalid("Gói vượt giới hạn độ sâu thư mục."));
-    }
-    for part in &parts {
-        if part.is_empty()
-            || matches!(*part, "." | "..")
-            || part.ends_with('.')
-            || part.ends_with(' ')
-            || reserved(part)
-            || part
-                .chars()
-                .any(|c| c.is_control() || "<>:\"|?*".contains(c))
-        {
-            return Err(invalid(
-                "Gói có đường dẫn không an toàn hoặc tên file không hợp lệ.",
-            ));
-        }
-    }
-    Ok(parts.iter().collect())
-}
-pub fn reject_links(path: &Path) -> CompanyResult<()> {
-    let metadata = fs::symlink_metadata(path).map_err(|_| io_error())?;
-    let mut link = metadata.file_type().is_symlink();
-    #[cfg(windows)]
-    {
-        use std::os::windows::fs::MetadataExt;
-        link |= metadata.file_attributes() & 0x400 != 0;
-    }
-    if link {
-        Err(invalid("Không chấp nhận symlink hoặc junction."))
-    } else {
-        Ok(())
-    }
-}
-pub fn hash_file(path: &Path) -> CompanyResult<String> {
-    let mut file = File::open(path).map_err(|_| io_error())?;
-    let mut hash = Sha256::new();
-    let mut buffer = [0u8; 65_536];
-    loop {
-        let count = file.read(&mut buffer).map_err(|_| io_error())?;
-        if count == 0 {
-            break;
-        }
-        hash.update(&buffer[..count]);
-    }
-    Ok(hex::encode(hash.finalize()))
-}
-pub fn content_hash(root: &Path, comparison: bool) -> CompanyResult<String> {
-    let mut records = Vec::new();
-    for entry in walkdir::WalkDir::new(root)
-        .follow_links(false)
-        .into_iter()
-        .filter_entry(|entry| {
-            !comparison || !excluded(entry.file_name().to_string_lossy().as_ref())
-        })
-    {
-        let entry = entry.map_err(|_| io_error())?;
-        reject_links(entry.path())?;
-        if entry.path() == root {
-            continue;
-        }
-        let relative = entry
-            .path()
-            .strip_prefix(root)
-            .map_err(|_| invalid("Đường dẫn nội dung không hợp lệ."))?
-            .to_str()
-            .ok_or_else(|| invalid("Tên file không đọc được."))?
-            .replace('\\', "/");
-        if entry.file_type().is_file() {
-            records.push((relative, "file", Some(hash_file(entry.path())?)));
-        } else if entry.file_type().is_dir() {
-            let empty = fs::read_dir(entry.path())
-                .map_err(|_| io_error())?
-                .next()
-                .is_none();
-            if !comparison || empty {
-                records.push((relative, "directory", None));
-            }
-        } else {
-            return Err(invalid("Nội dung có loại file không hỗ trợ."));
-        }
-    }
-    records.sort_by(|a, b| a.0.cmp(&b.0));
-    let encoded =
-        serde_json::to_vec(&records).map_err(|_| invalid("Không lập được manifest nội dung."))?;
-    Ok(hex::encode(Sha256::digest(encoded)))
-}
-fn excluded(name: &str) -> bool {
-    matches!(name, ".git" | "__pycache__" | "Thumbs.db" | "desktop.ini") || name.ends_with(".pyc")
-}
-
-struct EntryPolicy {
-    entries: usize,
-    expanded: u64,
-    names: HashMap<String, String>,
-}
-impl EntryPolicy {
-    fn check(&mut self, name: &str, size: u64) -> CompanyResult<PathBuf> {
-        let relative = checked_entry(name)?;
-        self.entries += 1;
-        self.expanded = self
-            .expanded
-            .checked_add(size)
-            .ok_or_else(|| invalid("Kích thước gói không hợp lệ."))?;
-        if self.entries > MAX_ENTRIES || self.expanded > MAX_EXPANDED {
-            return Err(invalid(
-                "Gói vượt giới hạn số file hoặc dung lượng giải nén.",
-            ));
-        }
-        let spelling = relative.to_string_lossy().replace('\\', "/");
-        if self
-            .names
-            .insert(spelling.to_lowercase(), spelling)
-            .is_some()
-        {
-            return Err(invalid("Gói có entries trùng trên Windows."));
-        }
-        Ok(relative)
-    }
-}
-fn write_entry(
-    input: &mut dyn Read,
-    path: &Path,
-    directory: bool,
-    remaining: &mut u64,
-) -> CompanyResult<()> {
-    if directory {
-        fs::create_dir_all(path).map_err(|_| io_error())?;
-        return Ok(());
-    }
-    if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent).map_err(|_| io_error())?;
-    }
-    let mut output = File::create(path).map_err(|_| io_error())?;
-    let mut buffer = [0u8; 65_536];
-    loop {
-        let count = input
-            .read(&mut buffer)
-            .map_err(|_| invalid("Không giải nén được nội dung gói."))?;
-        if count == 0 {
-            break;
-        }
-        if count as u64 > *remaining {
-            return Err(invalid("Dữ liệu thực tế vượt giới hạn giải nén."));
-        }
-        *remaining -= count as u64;
-        output.write_all(&buffer[..count]).map_err(|_| io_error())?;
-    }
-    output.sync_all().map_err(|_| io_error())
-}
-
-pub fn prepare_archive(
-    archive: &Path,
-    meta: &PackageMeta,
-    slug: &str,
-    packages: &Path,
-) -> CompanyResult<VerifiedPackage> {
-    validate_slug(slug)?;
-    let length = fs::metadata(archive).map_err(|_| io_error())?.len();
-    if length > MAX_ARCHIVE
-        || meta.size_bytes != length
-        || meta.sha256.len() != 64
-        || hash_file(archive)? != meta.sha256
-    {
-        return Err(CompanyError::new(
-            "PACKAGE_INTEGRITY_FAILED",
-            "Gói tải không đúng kích thước hoặc SHA-256 đã chọn.",
-        ));
-    }
-    fs::create_dir_all(packages).map_err(|_| io_error())?;
-    reject_links(packages)?;
-    let scratch = tempfile::tempdir_in(packages).map_err(|_| io_error())?;
-    let extract = scratch.path().join("extracted");
-    fs::create_dir(&extract).map_err(|_| io_error())?;
-    let mut policy = EntryPolicy {
-        entries: 0,
-        expanded: 0,
-        names: HashMap::new(),
-    };
-    let mut remaining = MAX_EXPANDED;
-    match meta.format.as_str() {
-        "zip" => {
-            let mut zip = zip::ZipArchive::new(File::open(archive).map_err(|_| io_error())?)
-                .map_err(|_| invalid("ZIP không hợp lệ."))?;
-            if zip.len() > MAX_ENTRIES {
-                return Err(invalid("Gói vượt giới hạn số entries."));
-            }
-            for index in 0..zip.len() {
-                let mut entry = zip
-                    .by_index(index)
-                    .map_err(|_| invalid("Không đọc được ZIP entry."))?;
-                let mode = entry.unix_mode().unwrap_or(0) & 0o170000;
-                if entry.encrypted() || !matches!(mode, 0 | 0o100000 | 0o040000) {
-                    return Err(invalid("ZIP có mã hóa hoặc link/file không hỗ trợ."));
-                }
-                let relative = policy.check(entry.name(), entry.size())?;
-                let directory = entry.is_dir();
-                write_entry(
-                    &mut entry,
-                    &extract.join(relative),
-                    directory,
-                    &mut remaining,
-                )?;
-            }
-        }
-        "7z" => {
-            let mut reader =
-                sevenz_rust::SevenZReader::open(archive, sevenz_rust::Password::empty())
-                    .map_err(|_| invalid("7z không hợp lệ hoặc đã mã hóa."))?;
-            for folder in &reader.archive().folders {
-                for coder in &folder.coders {
-                    let properties = &coder.properties;
-                    let dictionary = match coder.decompression_method_id() {
-                        [0x21] if properties.len() == 1 && properties[0] < 40 => {
-                            (2u64 | (properties[0] as u64 & 1)) << (properties[0] as u64 / 2 + 11)
-                        }
-                        [0x03, 0x01, 0x01] if properties.len() >= 5 => {
-                            u32::from_le_bytes(properties[1..5].try_into().unwrap()) as u64
-                        }
-                        [0x21] => u64::MAX,
-                        _ => 0,
-                    };
-                    if dictionary > MAX_EXPANDED {
-                        return Err(invalid("7z yêu cầu quá nhiều bộ nhớ giải nén."));
-                    }
-                }
-            }
-            for entry in &reader.archive().files {
-                if entry.is_anti_item
-                    || entry.windows_attributes & 0x400 != 0
-                    || (entry.windows_attributes >> 16) & 0o170000 == 0o120000
-                {
-                    return Err(invalid("7z có link hoặc anti-item không hỗ trợ."));
-                }
-                policy.check(&entry.name, entry.size)?;
-            }
-            reader
-                .for_each_entries(|entry, input| {
-                    let path = checked_entry(&entry.name)
-                        .map_err(|_| sevenz_rust::Error::other("unsafe path"))?;
-                    write_entry(
-                        input,
-                        &extract.join(path),
-                        entry.is_directory,
-                        &mut remaining,
-                    )
-                    .map_err(|_| sevenz_rust::Error::other("invalid or oversized entry"))?;
-                    Ok(true)
-                })
-                .map_err(|_| invalid("Không giải nén được 7z hoặc gói vượt giới hạn."))?;
-        }
-        _ => return Err(invalid("Định dạng gói phải là ZIP hoặc 7z.")),
-    }
-    let skill_root = if extract.join("SKILL.md").is_file() {
-        extract.clone()
-    } else {
-        let entries: Vec<_> = fs::read_dir(&extract)
-            .map_err(|_| io_error())?
-            .collect::<Result<_, _>>()
-            .map_err(|_| io_error())?;
-        let wrapped = extract.join(slug);
-        if entries.len() != 1 || !wrapped.join("SKILL.md").is_file() {
-            return Err(invalid(
-                "Gói phải có một SKILL.md ở root hoặc wrapper khớp slug.",
-            ));
-        }
-        wrapped
-    };
-    let marker = fs::read_to_string(skill_root.join("SKILL.md"))
-        .map_err(|_| invalid("SKILL.md phải là UTF-8 đọc được."))?;
-    if marker.trim().is_empty() {
-        return Err(invalid("SKILL.md không được rỗng."));
-    }
-    let full = content_hash(&skill_root, false)?;
-    let comparison = content_hash(&skill_root, true)?;
-    let destination = packages.join(&meta.sha256);
-    if destination.exists() {
-        reject_links(&destination)?;
-        if content_hash(&destination.join("original"), false)? != full {
-            return Err(invalid(
-                "Bản gốc trong cache đã thay đổi. Kiểm tra dữ liệu app trước khi thử lại.",
-            ));
-        }
-    } else {
-        let prepared = scratch.path().join("package");
-        fs::create_dir(&prepared).map_err(|_| io_error())?;
-        fs::rename(&skill_root, prepared.join("original")).map_err(|_| io_error())?;
-        fs::copy(archive, prepared.join(format!("archive.{}", meta.format)))
-            .map_err(|_| io_error())?;
-        fs::write(
-            prepared.join("manifest.json"),
-            serde_json::json!({"contentHash":comparison,"fullHash":full,"algorithm":"content-v1"})
-                .to_string(),
-        )
-        .map_err(|_| io_error())?;
-        fs::rename(prepared, &destination).map_err(|_| io_error())?;
-    }
-    Ok(VerifiedPackage {
-        original_root: destination.join("original"),
-        content_hash: comparison,
-        full_hash: full,
-        archive_hash: meta.sha256.clone(),
-    })
-}
-
-pub fn copy_tree(source: &Path, target: &Path) -> CompanyResult<()> {
-    fs::create_dir_all(target).map_err(|_| io_error())?;
-    for entry in walkdir::WalkDir::new(source).follow_links(false) {
-        let entry = entry.map_err(|_| io_error())?;
-        reject_links(entry.path())?;
-        if entry.path() == source {
-            continue;
-        }
-        let relative = entry.path().strip_prefix(source).map_err(|_| io_error())?;
-        let path = target.join(relative);
-        if entry.file_type().is_dir() {
-            fs::create_dir_all(path).map_err(|_| io_error())?;
-        } else if entry.file_type().is_file() {
-            if let Some(parent) = path.parent() {
-                fs::create_dir_all(parent).map_err(|_| io_error())?;
-            }
-            fs::copy(entry.path(), &path).map_err(|_| io_error())?;
-            File::options()
-                .write(true)
-                .open(path)
-                .map_err(|_| io_error())?
-                .sync_all()
-                .map_err(|_| io_error())?;
-        } else {
-            return Err(invalid("Không sao chép loại file không hỗ trợ."));
-        }
-    }
-    Ok(())
-}
 ````
 
 ## File: src-tauri/src/core/company/session.rs
@@ -28378,52 +27969,6 @@ mod tests {
 }
 ````
 
-## File: src-tauri/src/company_app.rs
-````rust
-use crate::{
-    commands::company::*,
-    core::company::{
-        config::CompanyConfig, installation_service::CompanyService, session::WindowsCredentials,
-    },
-};
-use std::sync::Arc;
-use tauri::Manager;
-
-pub fn run() {
-    tauri::Builder::default()
-        .plugin(tauri_plugin_single_instance::init(|app, _, _| {
-            if let Some(window) = app.get_webview_window("main") {
-                let _ = window.show();
-                let _ = window.set_focus();
-            }
-        }))
-        .setup(|app| {
-            let config = CompanyConfig::from_environment()?;
-            let credentials = Arc::new(WindowsCredentials::new(&config));
-            app.manage(Arc::new(CompanyService::new(config, credentials)?));
-            if let Some(window) = app.get_webview_window("main") {
-                window.show()?;
-            }
-            Ok(())
-        })
-        .invoke_handler(tauri::generate_handler![
-            company_environment,
-            company_session,
-            company_login,
-            company_logout,
-            company_store_search,
-            company_store_detail,
-            company_installations_list,
-            company_operation_prepare,
-            company_operation_confirm,
-            company_operation_status,
-            company_operation_cancel
-        ])
-        .run(tauri::generate_context!())
-        .expect("Company Skills Manager startup failed");
-}
-````
-
 ## File: src-tauri/src/main.rs
 ````rust
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
@@ -28434,59 +27979,245 @@ fn main() {
 }
 ````
 
-## File: src-tauri/tests/company/support.rs
+## File: src-tauri/tests/company/replace_recovery.rs
 ````rust
+use super::support::MockServer;
+use app_lib::core::company::{
+    config::CompanyConfig,
+    installation_repository::CompanyRepository,
+    installation_service::CompanyService,
+    package_store::{content_hash, copy_tree},
+    session::MemoryCredentials,
+    types::*,
+};
 use std::{
-    io::{BufRead, BufReader},
-    process::{Child, Command, Stdio},
+    fs,
+    path::PathBuf,
+    sync::Arc,
+    time::{Duration, Instant},
 };
 
-pub struct MockServer {
-    child: Child,
-    pub url: String,
-}
-impl MockServer {
-    pub fn start(scenario: &str) -> Self {
-        let script = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-            .parent()
-            .unwrap()
-            .join("scripts/company-mock-store.mjs");
-        let mut command = Command::new("node");
-        command
-            .arg(script)
-            .args(["--port", "0", "--scenario", scenario])
-            .stdout(Stdio::piped())
-            .stderr(Stdio::inherit());
-        #[cfg(windows)]
-        {
-            use std::os::windows::process::CommandExt;
-            command.creation_flags(0x08000000);
+fn wait(app: &CompanyService, id: &str, preview: bool) -> OperationView {
+    let end = Instant::now() + Duration::from_secs(30);
+    loop {
+        let view = app.status(id).unwrap();
+        if (preview && view.preview_ready) || view.state == OperationState::Succeeded {
+            return view;
         }
-        let mut child = command.spawn().expect("start mock HTTP Store");
-        let mut line = String::new();
-        BufReader::new(child.stdout.take().unwrap())
-            .read_line(&mut line)
-            .unwrap();
-        let url = format!(
-            "http://{}",
-            line.split("http://")
-                .nth(1)
-                .unwrap()
-                .split_whitespace()
-                .next()
-                .unwrap()
+        assert!(
+            !matches!(
+                view.state,
+                OperationState::Failed | OperationState::RecoveryRequired
+            ),
+            "{:?}",
+            view.error
         );
-        Self { child, url }
-    }
-    pub fn stop(&mut self) {
-        let _ = self.child.kill();
-        let _ = self.child.wait();
+        assert!(Instant::now() < end);
+        std::thread::sleep(Duration::from_millis(20));
     }
 }
-impl Drop for MockServer {
-    fn drop(&mut self) {
-        self.stop();
+struct Fixture {
+    _root: tempfile::TempDir,
+    _server: MockServer,
+    config: CompanyConfig,
+    credentials: Arc<MemoryCredentials>,
+    journal: ReplaceJournal,
+    old_bytes: Vec<u8>,
+    target: PathBuf,
+    stage: PathBuf,
+    rollback: PathBuf,
+}
+fn fixture() -> Fixture {
+    let root = tempfile::tempdir().unwrap();
+    let revision = root.path().join("revision");
+    fs::write(&revision, "1").unwrap();
+    let server = MockServer::start_with_revision("normal", Some(&revision));
+    let config = CompanyConfig::for_test(
+        &server.url,
+        root.path().join("profile"),
+        root.path().join("data"),
+    )
+    .unwrap();
+    let credentials = Arc::new(MemoryCredentials::default());
+    let app = Arc::new(CompanyService::new(config.clone(), credentials.clone()).unwrap());
+    app.login("employee01", "demo-password").unwrap();
+    let install = app.prepare_install("skl_001").unwrap();
+    app.confirm(&install.id, true).unwrap();
+    wait(&app, &install.id, false);
+    let old = app.installations().unwrap().remove(0);
+    fs::write(&revision, "2").unwrap();
+    let update = app.prepare_update(&old.id).unwrap();
+    app.confirm(&update.id, true).unwrap();
+    let view = wait(&app, &update.id, true);
+    let incoming = config
+        .data_root
+        .join("packages")
+        .join(&view.skill.as_ref().unwrap().package.sha256)
+        .join("original");
+    let target = PathBuf::from(&old.target);
+    let old_bytes = fs::read(target.join("SKILL.md")).unwrap();
+    let old_hash = content_hash(&target, false).unwrap();
+    let backup_id = uuid::Uuid::new_v4().to_string();
+    let backup_path = config
+        .data_root
+        .join("backups")
+        .join(&old.id)
+        .join(&backup_id)
+        .join("content");
+    copy_tree(&target, &backup_path).unwrap();
+    let backup = Backup {
+        id: backup_id.clone(),
+        installation_id: old.id.clone(),
+        created_at: "2026-10-13T00:00:00Z".into(),
+        reason: "update".into(),
+        path: backup_path.display().to_string(),
+        full_hash: old_hash.clone(),
+        installation: old.clone(),
+    };
+    let mut new = old.clone();
+    new.package_hash = view.skill.as_ref().unwrap().package.sha256.clone();
+    new.content_hash = content_hash(&incoming, true).unwrap();
+    let stage = app_lib::core::company::aipro_paths::stage_path(&target, &view.id).unwrap();
+    let rollback = target
+        .parent()
+        .unwrap()
+        .join(format!(".company-rollback-{}", view.id));
+    assert!(stage.starts_with(root.path()) && rollback.starts_with(root.path()));
+    copy_tree(&incoming, &stage).unwrap();
+    let journal = ReplaceJournal {
+        view,
+        old,
+        new,
+        old_full_hash: old_hash,
+        new_full_hash: content_hash(&incoming, false).unwrap(),
+        backup_id,
+        phase: ReplacePhase::Prepared,
+        stage_owned: true,
+    };
+    let repo = CompanyRepository::open(&config.data_root.join("manager.db")).unwrap();
+    repo.save_backup(&backup).unwrap();
+    repo.record_replacement(&journal).unwrap();
+    Fixture {
+        _root: root,
+        _server: server,
+        config,
+        credentials,
+        journal,
+        old_bytes,
+        target,
+        stage,
+        rollback,
     }
+}
+
+#[test]
+fn company_flow05_recovery_handles_crash_between_rename_and_journal_and_preserves_committed_updates(
+) {
+    // 0: prepared; 1: old renamed but phase not saved; 2: old_moved;
+    // 3: new renamed but phase not saved; 4: new_moved; 5: DB committed, cleanup pending.
+    for checkpoint in 0..6 {
+        let mut f = fixture();
+        let repo = CompanyRepository::open(&f.config.data_root.join("manager.db")).unwrap();
+        if checkpoint >= 1 {
+            fs::rename(&f.target, &f.rollback).unwrap();
+        }
+        if checkpoint >= 2 {
+            f.journal.phase = ReplacePhase::OldMoved;
+            repo.record_replacement(&f.journal).unwrap();
+        }
+        if checkpoint >= 3 {
+            fs::rename(&f.stage, &f.target).unwrap();
+        }
+        if checkpoint >= 4 {
+            f.journal.phase = ReplacePhase::NewMoved;
+            repo.record_replacement(&f.journal).unwrap();
+        }
+        if checkpoint >= 5 {
+            f.journal.phase = ReplacePhase::Committed;
+            repo.commit_replacement(&f.journal).unwrap();
+        }
+        drop(repo);
+        let app = CompanyService::new(f.config.clone(), f.credentials.clone()).unwrap();
+        assert!(
+            app.recovery_warnings().is_empty(),
+            "checkpoint {checkpoint}: {:?}",
+            app.recovery_warnings()
+        );
+        let restored = app.refresh_installation(&f.journal.old.id).unwrap();
+        if checkpoint == 5 {
+            assert_eq!(restored.package_hash, f.journal.new.package_hash);
+            assert!(fs::read_to_string(f.target.join("SKILL.md"))
+                .unwrap()
+                .contains("Jira project summary v2"));
+        } else {
+            assert_eq!(restored.package_hash, f.journal.old.package_hash);
+            assert_eq!(fs::read(f.target.join("SKILL.md")).unwrap(), f.old_bytes);
+        }
+        assert!(!f.stage.exists());
+        assert!(!f.rollback.exists());
+        assert_eq!(app.backups(&restored.id).unwrap().len(), 1);
+    }
+}
+
+#[test]
+fn company_flow05_uncertain_rollback_is_retained_and_blocks_only_its_target() {
+    let f = fixture();
+    fs::rename(&f.target, &f.rollback).unwrap();
+    fs::rename(&f.stage, &f.target).unwrap();
+    fs::write(
+        f.rollback.join("SKILL.md"),
+        "Edits in rollback must survive",
+    )
+    .unwrap();
+    let app = CompanyService::new(f.config, f.credentials).unwrap();
+    assert!(!app.recovery_warnings().is_empty());
+    assert_eq!(
+        fs::read_to_string(f.rollback.join("SKILL.md")).unwrap(),
+        "Edits in rollback must survive"
+    );
+    assert!(fs::read_to_string(f.target.join("SKILL.md"))
+        .unwrap()
+        .contains("Jira project summary v2"));
+    assert_eq!(
+        app.prepare_update(&f.journal.old.id).unwrap_err().code,
+        "RECOVERY_REQUIRED"
+    );
+    assert!(app.prepare_install("skl_002").is_ok());
+}
+
+#[cfg(windows)]
+#[test]
+fn company_flow05_windows_locked_content_is_never_overwritten() {
+    use std::os::windows::fs::OpenOptionsExt;
+    let f = fixture();
+    let app = Arc::new(CompanyService::new(f.config.clone(), f.credentials.clone()).unwrap());
+    // The fixture has a pending journal, which recovery cancels safely before this attempt.
+    let op = app.prepare_update(&f.journal.old.id).unwrap();
+    app.confirm(&op.id, true).unwrap();
+    wait(&app, &op.id, true);
+    let locked = fs::OpenOptions::new()
+        .read(true)
+        .share_mode(0)
+        .open(f.target.join("SKILL.md"))
+        .unwrap();
+    app.apply_update(&op.id, false).unwrap();
+    let end = Instant::now() + Duration::from_secs(30);
+    loop {
+        let view = app.status(&op.id).unwrap();
+        if view.state == OperationState::Failed {
+            break;
+        }
+        assert!(Instant::now() < end);
+        std::thread::sleep(Duration::from_millis(20));
+    }
+    drop(locked);
+    assert_eq!(fs::read(f.target.join("SKILL.md")).unwrap(), f.old_bytes);
+    assert_eq!(
+        app.refresh_installation(&f.journal.old.id)
+            .unwrap()
+            .package_hash,
+        f.journal.old.package_hash
+    );
 }
 ````
 
@@ -28591,19 +28322,98 @@ jobs:
         run: npm run build
 ````
 
-## File: fixtures/company-store/README.md
-````markdown
-# Store fixtures
+## File: scripts/company-mock-store.mjs
+````javascript
+import { createServer } from 'node:http';
+import { createHash, randomUUID } from 'node:crypto';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+import { readFileSync } from 'node:fs';
+import { join, basename } from 'node:path';
 
-Synthetic development data only. No employee credentials or real MCP tokens.
+export function createMockStore({ scenario = 'normal', revisionFile } = {}) {
+  let revision = 1;
+  const sessions = new Map();
+  let metadataChanged = false;
+  const fixtureRoot = fileURLToPath(new URL('../fixtures/company-store/', import.meta.url));
+  function catalog() {
+    return JSON.parse(readFileSync(join(fixtureRoot, 'catalog.json'), 'utf8')).map(entry => {
+      const currentRevision = revisionFile ? Number(readFileSync(revisionFile, 'utf8').trim()) : revision;
+      if (currentRevision > 1 && entry.id === 'skl_001') entry = { ...entry, archive: 'jira-project-summary-v2.zip', updated_at: '2026-10-13T01:00:00Z' };
+      const bytes = readFileSync(join(fixtureRoot, 'packages', basename(entry.archive)));
+      const sha256 = createHash('sha256').update(bytes).digest('hex');
+      const description = metadataChanged ? entry.description.replace(/MCP bắt buộc: [^\n]*/, 'MCP bắt buộc: github') : entry.description;
+      const { archive, ...skill } = entry;
+      return { ...skill, description, package: { format: archive.endsWith('.7z') ? '7z' : 'zip', size_bytes: bytes.length, sha256, etag: `"${createHash('sha256').update(sha256 + description).digest('hex')}"` }, bytes };
+    });
+  }
+  const server = createServer(async (req, res) => {
+    const url = new URL(req.url, 'http://127.0.0.1');
+    const error = (status, code, message) => {
+      res.writeHead(status, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+      res.end(JSON.stringify({ error: { code, message, request_id: randomUUID() } }));
+    };
+    const ok = data => {
+      res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+      res.end(JSON.stringify({ data }));
+    };
+    if (scenario === 'unavailable') return error(503, 'STORE_UNAVAILABLE', 'Skill Store chưa khả dụng.');
+    if (req.method === 'POST' && url.pathname === '/api/v1/auth/login') {
+      try {
+        let body = '';
+        for await (const chunk of req) { body += chunk; if (body.length > 16384) return error(400, 'VALIDATION_ERROR', 'Request quá lớn.'); }
+        const input = JSON.parse(body);
+        if (!['employee01', 'employee02'].includes(input.username) || input.password !== 'demo-password') return error(401, 'INVALID_CREDENTIALS', 'Tài khoản hoặc mật khẩu không đúng.');
+        const user = { id: input.username === 'employee01' ? 'usr_001' : 'usr_002', username: input.username, display_name: input.username === 'employee01' ? 'Nhân viên 01' : 'Nhân viên 02' };
+        const token = randomUUID();
+        const expires_at = new Date(Date.now() + 12 * 3600 * 1000).toISOString();
+        sessions.set(token, { user, expires_at });
+        return ok({ access_token: token, token_type: 'Bearer', expires_at, user });
+      } catch { return error(400, 'VALIDATION_ERROR', 'JSON không hợp lệ.'); }
+    }
+    const token = req.headers.authorization?.match(/^Bearer (\S+)$/)?.[1];
+    if (req.method === 'POST' && url.pathname === '/api/v1/auth/logout') {
+      if (!token) return error(401, 'UNAUTHENTICATED', 'Thiếu Bearer token.');
+      sessions.delete(token); res.writeHead(204); return res.end();
+    }
+    if (!token || !sessions.has(token)) return error(401, 'UNAUTHENTICATED', 'Cần đăng nhập Skill Store.');
+    if (scenario === 'session-expired' || Date.parse(sessions.get(token).expires_at) <= Date.now()) return error(401, 'SESSION_EXPIRED', 'Phiên đăng nhập đã hết hạn.');
+    if (req.method === 'GET' && url.pathname === '/api/v1/skills') {
+      const query = (url.searchParams.get('q') || '').trim();
+      const page = Number(url.searchParams.get('page') || 1);
+      const pageSize = Number(url.searchParams.get('page_size') || 20);
+      if (query.length > 200 || !Number.isInteger(page) || page < 1 || !Number.isInteger(pageSize) || pageSize < 1 || pageSize > 100) return error(400, 'VALIDATION_ERROR', 'Phân trang hoặc từ khóa không hợp lệ.');
+      const matches = catalog().filter(item => (item.name + item.description).toLocaleLowerCase().includes(query.toLocaleLowerCase())).sort((a, b) => b.updated_at.localeCompare(a.updated_at) || a.id.localeCompare(b.id));
+      const items = matches.slice((page - 1) * pageSize, page * pageSize).map(({ bytes: _bytes, description: _description, ...item }) => item);
+      return ok({ items, pagination: { page, page_size: pageSize, total: matches.length, total_pages: Math.ceil(matches.length / pageSize) } });
+    }
+    const match = url.pathname.match(/^\/api\/v1\/skills\/([^/]+)(\/package)?$/);
+    if (req.method === 'GET' && match) {
+      if (match[2] && scenario === 'package-changed' && !metadataChanged) metadataChanged = true;
+      const item = catalog().find(entry => entry.id === decodeURIComponent(match[1]));
+      if (!item) return error(404, 'SKILL_NOT_FOUND', 'Không tìm thấy skill.');
+      const { bytes, ...detail } = item;
+      if (!match[2]) return ok(detail);
+      if (scenario === 'forbidden-download') return error(403, 'FORBIDDEN', 'Tài khoản không được phép tải gói.');
+      if (!req.headers['if-match'] || req.headers['if-match'] === '*' || req.headers['if-match'].startsWith('W/')) return error(400, 'VALIDATION_ERROR', 'Cần strong ETag từ detail.');
+      if (req.headers['if-match'] !== item.package.etag) return error(412, 'PACKAGE_CHANGED', 'Thông tin hoặc gói skill đã thay đổi. Vui lòng lấy lại chi tiết.');
+      const payload = Buffer.from(bytes);
+      if (scenario === 'corrupt-download') payload[payload.length - 1] ^= 1;
+      res.writeHead(200, { 'Content-Type': item.package.format === 'zip' ? 'application/zip' : 'application/x-7z-compressed', 'Content-Length': payload.length, 'Content-Disposition': `attachment; filename="${item.slug}.${item.package.format}"`, ETag: item.package.etag, 'Cache-Control': 'private, no-store, no-transform' });
+      return res.end(payload);
+    }
+    return error(404, 'SKILL_NOT_FOUND', 'Không tìm thấy skill.');
+  });
+  server.setRevision = value => { revision = value; };
+  return server;
+}
 
-The committed ZIP archives contain a root SKILL.md; excel-insights.7z contains one matching wrapper. Source text is in sources/. The mock server computes archive SHA-256 and size from the actual committed bytes, and computes an opaque strong ETag from the archive hash and full description. No sample hash is treated as a verified archive hash.
-
-7z decoder fixtures use COPY (`excel-insights-copy.7z`), LZMA (`excel-insights-lzma.7z`) and LZMA2 (`excel-insights.7z`). The compressed fixtures contain SKILL.md plus a resource in one solid block. These were created with 7-Zip 19.00 for tests; native installation uses the bundled Rust decoder.
-
-Demo login: employee01 (or employee02), password demo-password. Sessions are in-memory on the mock server and are invalidated by logout or server restart.
-
-Production uses the native Rust HTTP client and the same five API endpoint contracts. The mock server is never launched automatically by the app, and production errors do not switch to fake data.
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  const value = name => { const i = process.argv.indexOf(name); return i >= 0 ? process.argv[i + 1] : undefined; };
+  const port = Number(value('--port') || 4318);
+  const server = createMockStore({ scenario: value('--scenario') || 'normal', revisionFile: value('--revision-file') });
+  server.listen(port, '127.0.0.1', () => console.log(`Mock Skill Store: http://127.0.0.1:${server.address().port} (employee01 / demo-password)`));
+  process.on('SIGTERM', () => server.close());
+}
 ````
 
 ## File: skills/manage-skills/SKILL.md
@@ -28964,429 +28774,242 @@ Report which skills actually refreshed (`refreshed: true` in the JSON) vs which 
 - Use `--dry-run` before bulk remove, tag delete, preset delete, deploy, or undeploy operations. Use `check` before `update`.
 ````
 
-## File: src/company/flows/InstallDialog.tsx
+## File: src/company/flows/UpdateDialog.tsx
 ````typescript
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import type { CompanyApi } from '../api';
-import type { OperationView, Skill } from '../types';
+import type { OperationView } from '../types';
 import { errorMessage, isSessionError } from '../types';
+import { useCompanyOperation } from './useCompanyOperation';
 
-const labels: Record<string, string> = { downloading: 'Đang tải gói…', validating: 'Đang kiểm tra gói…', staging: 'Đang chuẩn bị bản cài…', committing: 'Đang lưu bản cài…' };
-export function InstallDialog({ api, skill, initial, onClose, onInstalled, onExpired, onRefresh }: { api: CompanyApi; skill: Skill; initial: OperationView; onClose: () => void; onInstalled: () => void; onExpired: (message: string) => void; onRefresh: () => void }) {
-  const [operation, setOperation] = useState(initial);
+export type UpdateResult = 'applied' | 'kept' | 'failed';
+const changeLabels = { added: 'Thêm', modified: 'Sửa', deleted: 'Xóa' };
+export function UpdateDialog({ api, initial, onClose, onApplied, onExpired }: { api: CompanyApi; initial: OperationView; onClose: (result: UpdateResult) => void; onApplied: () => void; onExpired: (message: string) => void }) {
+  const { operation: op, setOperation: setOp, error, setError, terminal } = useCompanyOperation(api, initial, onApplied, onExpired);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
-  const [bypassed, setBypassed] = useState(false);
-  const notified = useRef(false);
-  const terminal = ['succeeded', 'failed', 'cancelled', 'recovery_required'].includes(operation.state);
-
-  useEffect(() => {
-    if (operation.state === 'awaiting_decision' || terminal) return;
-    let active = true;
-    const timer = setTimeout(() => api.operationStatus(operation.id).then(next => { if (active) setOperation(next); }).catch(e => { if (active) setError(errorMessage(e)); }), 300);
-    return () => { active = false; clearTimeout(timer); };
-  }, [api, operation, terminal]);
-
-  useEffect(() => {
-    if (operation.state === 'succeeded' && !notified.current) { notified.current = true; onInstalled(); }
-    if (isSessionError(operation.error)) onExpired(errorMessage(operation.error));
-  }, [operation, onInstalled, onExpired]);
-
-  async function proceed(bypass: boolean) {
-    setBusy(true); setError(''); setBypassed(bypass);
-    try { setOperation(await api.confirmInstallation(operation.id, bypass)); }
-    catch (e) {
-      if (isSessionError(e)) onExpired(errorMessage(e));
-      else setError(errorMessage(e));
-    } finally { setBusy(false); }
-  }
-  async function stop() {
-    setBusy(true);
-    try { await api.cancelOperation(operation.id); onClose(); }
-    catch (e) { setError(errorMessage(e)); }
-    finally { setBusy(false); }
-  }
-  const warning = operation.mcp.state === 'missing' || operation.mcp.state === 'unknown';
-  return <div className="modal-overlay"><section role="dialog" aria-label="Cài skill" aria-modal="true" className="company-modal">
-    <div className="eyebrow">CÀI ĐẶT / AIPRO GLOBAL</div><h2>{skill.name}</h2><p className="target-path">{operation.target}</p>
-    {operation.state === 'awaiting_decision' && <><h3>{operation.mcp.state === 'missing' ? 'Chưa có MCP trong cấu hình' : operation.mcp.state === 'unknown' ? 'Chưa kiểm tra được MCP' : operation.mcp.state === 'undeclared' ? 'Skill chưa khai báo yêu cầu MCP' : operation.mcp.state === 'not_required' ? 'Không yêu cầu MCP' : 'Đã có MCP trong cấu hình'}</h3>
-      {operation.mcp.required.length > 0 && <><h4>MCP yêu cầu</h4><ul>{operation.mcp.required.map(name => <li key={name}>{name}</li>)}</ul><p>Đã có: {operation.mcp.present.join(', ') || 'Chưa xác nhận được tên nào'}</p><p>Thiếu: {operation.mcp.missing.join(', ') || (operation.mcp.state === 'unknown' ? 'Chưa kiểm tra được' : 'Không có')}</p></>}{operation.mcp.reason && <p>{operation.mcp.reason}</p>}
-      {operation.mcpPath && <p className="target-path">{operation.mcpPath}</p>}
-      {warning && <p>Bạn có thể cài MCP thủ công, sau đó thử cài skill lại; hoặc bỏ qua cảnh báo cho lần cài này.</p>}
-      <div className="dialog-actions"><button className="secondary" onClick={stop} disabled={busy}>Dừng cài đặt</button><button className="primary" onClick={() => proceed(warning)} disabled={busy}>{warning ? 'Bỏ qua và cài tiếp' : 'Cài skill'}</button></div></>}
-    {!terminal && operation.state !== 'awaiting_decision' && <><p role="status">{labels[operation.state] || 'Đang cài…'}</p><progress max={Math.max(operation.totalBytes, 1)} value={operation.progressBytes} /><button className="secondary" onClick={stop} disabled={operation.state === 'committing'}>Hủy</button></>}
-    {operation.state === 'succeeded' && <><div className="success-banner">{bypassed ? 'Cài xong; đã bỏ qua cảnh báo MCP của lần này.' : 'Đã cài skill vào AIPRO Global.'}</div><p>Bản cài được quản lý tại đường dẫn trên.</p><button className="primary" onClick={onClose}>Hoàn tất</button></>}
-    {(error || operation.error) && <div role="alert" className="error-banner">{error || operation.error?.message}</div>}
-    {operation.state === 'failed' && <>{operation.error?.code === 'PACKAGE_CHANGED' ? <><p>Thông tin skill đã thay đổi. Xem bản mới rồi kiểm tra MCP cho lần cài mới.</p><button className="primary" onClick={onRefresh}>Xem thông tin mới</button></> : <p>Thao tác chưa hoàn tất. Đóng hộp thoại rồi bấm cài lại để kiểm tra thông tin và MCP mới.</p>}<button className="secondary" onClick={onClose}>Đóng</button></>}
-    {operation.state === 'recovery_required' && <><p>Dữ liệu thao tác đã được giữ để khôi phục. Kiểm tra đường dẫn đích và thử mở lại ứng dụng.</p><button className="secondary" onClick={onClose}>Đóng</button></>}
+  const [replace, setReplace] = useState(false);
+  function failed(e: unknown) { if (isSessionError(e)) onExpired(errorMessage(e)); else setError(errorMessage(e)); }
+  async function preview() { setBusy(true); setError(''); try { setOp(await api.confirmInstallation(op.id, op.mcp.state === 'missing' || op.mcp.state === 'unknown')); } catch (e) { failed(e); } finally { setBusy(false); } }
+  async function apply() { setBusy(true); setError(''); try { setOp(await api.applyUpdate(op.id, replace)); } catch (e) { failed(e); } finally { setBusy(false); } }
+  async function keep() { setBusy(true); try { const next = await api.cancelOperation(op.id); if (next.state === 'cancelled') onClose('kept'); else setOp(next); } catch (e) { failed(e); } finally { setBusy(false); } }
+  async function open(side: 'current' | 'incoming', path = '') { try { await api.openPreview(op.id, side, path); } catch (e) { failed(e); } }
+  const warning = op.mcp.state === 'missing' || op.mcp.state === 'unknown';
+  return <div className="modal-overlay"><section className="company-modal" role="dialog" aria-modal="true" aria-label="Cập nhật skill"><div className="eyebrow">CẬP NHẬT MỘT ĐÍCH / AIPRO</div><h2>{op.skill?.name || 'Cập nhật skill'}</h2><p className="target-path">{op.target}</p>
+    {op.state === 'awaiting_decision' && !op.previewReady && <>
+      <h3>{warning ? 'Cần xử lý cảnh báo MCP' : 'Kiểm tra MCP trước khi xem thay đổi'}</h3><p>MCP yêu cầu: {op.mcp.required.join(', ') || (op.mcp.state === 'not_required' ? 'Không yêu cầu' : 'Chưa khai báo')}</p><p>Đã có trong cấu hình: {op.mcp.present.join(', ') || 'Chưa có tên nào'}</p>{op.mcp.missing.length > 0 && <p>Thiếu: {op.mcp.missing.join(', ')}</p>}{op.mcp.reason && <p>{op.mcp.reason}</p>}
+      {warning && <p>Bổ sung MCP thủ công rồi thử lại, hoặc bỏ qua cho lần cập nhật này.</p>}
+      <div className="dialog-actions"><button className="secondary" disabled={busy} onClick={keep}>Dừng cập nhật</button><button className="primary" disabled={busy} onClick={preview}>{warning ? 'Bỏ qua và xem thay đổi' : 'Tải để xem thay đổi'}</button></div>
+    </>}
+    {op.state === 'awaiting_decision' && op.previewReady && <><h3>Thay đổi so với bản đang dùng</h3>
+      {op.changes?.length ? <ul className="file-changes">{op.changes.map(change => <li key={change.path}><span>{changeLabels[change.kind]}: <strong>{change.path}</strong></span><div>{change.current && <span>Bản đang dùng: {change.current.kind === 'directory' ? 'Thư mục' : `${change.current.kind === 'text' ? 'Text' : 'Nhị phân'} · ${change.current.sizeBytes} bytes`}</span>}{change.incoming && <span>Bản Store: {change.incoming.kind === 'directory' ? 'Thư mục' : `${change.incoming.kind === 'text' ? 'Text' : 'Nhị phân'} · ${change.incoming.sizeBytes} bytes`}</span>}{change.current?.kind === 'text' && <button onClick={() => open('current', change.path)}>Mở bản đang dùng</button>}{change.incoming?.kind === 'text' && <button onClick={() => open('incoming', change.path)}>Mở bản Store</button>}</div></li>)}</ul> : <p>Gói tải thay đổi nhưng nội dung so sánh giống nhau.</p>}
+      <div className="row-actions"><button className="secondary" onClick={() => open('current')}>Thư mục bản đang dùng</button><button className="secondary" onClick={() => open('incoming')}>Thư mục bản Store</button></div>
+      <p>Bản hiện tại được lưu đầy đủ trước khi thay. Các đích khác giữ nguyên.</p><p>Các bản mở để xem là bản sao; chỉnh sửa ở đây không được áp dụng vào bản cài.</p>
+      {op.customized && <label className="checkbox-label"><input type="checkbox" checked={replace} onChange={e => setReplace(e.target.checked)} />Tôi đồng ý thay bản đã tùy chỉnh bằng gói Store</label>}
+      <div className="dialog-actions"><button className="secondary" disabled={busy} onClick={keep}>Giữ bản đang dùng</button><button className="primary" disabled={busy || (!!op.customized && !replace)} onClick={apply}>Backup và cập nhật</button></div>
+    </>}
+    {!terminal && op.state !== 'awaiting_decision' && <><p role="status">{op.state === 'committing' ? 'Đang thay bản cài…' : op.state === 'staging' ? 'Đang lưu bản trước và chuẩn bị cập nhật…' : 'Đang tải và kiểm tra gói…'}</p><progress value={op.progressBytes} max={Math.max(op.totalBytes, 1)} /><button className="secondary" disabled={busy || op.state === 'committing'} onClick={keep}>Hủy</button></>}
+    {op.state === 'succeeded' && <><div className="success-banner">Đã cập nhật đích này; bản trước đã được lưu.</div><p>Kết quả cài file không xác nhận AIPRO hoặc MCP đã chạy.</p><button className="primary" onClick={() => onClose('applied')}>Hoàn tất</button></>}
+    {(error || op.error) && <div className="error-banner" role="alert">{error || op.error?.message}</div>}
+    {['failed', 'cancelled', 'recovery_required'].includes(op.state) && <><p>{op.state === 'recovery_required' ? 'Dữ liệu đã được giữ để kiểm tra. Mở lại app để phục hồi.' : op.state === 'cancelled' ? 'Đã hủy trước khi thay bản cài.' : 'Giữ dữ liệu hiện tại. Thử lại sẽ lấy detail và kiểm tra MCP mới.'}</p><button className="secondary" onClick={() => onClose(op.state === 'cancelled' ? 'kept' : 'failed')}>Đóng</button></>}
   </section></div>;
 }
 ````
 
-## File: src/company/flows/StoreView.tsx
+## File: src/company/tests/session.test.tsx
 ````typescript
-import { useCallback, useEffect, useRef, useState } from 'react';
-import ReactMarkdown from 'react-markdown';
-import type { CompanyApi } from '../api';
-import type { CompanyError, OperationView, Skill, SkillPage } from '../types';
-import { errorMessage, isSessionError } from '../types';
-import { InstallDialog } from './InstallDialog';
-
-export function StoreView({ api, onExpired, onInstalled, resumeSkillId, onResumed }: { api: CompanyApi; onExpired: (message: string, skillId?: string) => void; onInstalled: () => void; resumeSkillId?: string; onResumed: () => void }) {
-  const [query, setQuery] = useState('');
-  const [pageNumber, setPageNumber] = useState(1);
-  const [page, setPage] = useState<SkillPage>();
-  const [detail, setDetail] = useState<Skill>();
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [operation, setOperation] = useState<OperationView>();
-  const [preparing, setPreparing] = useState(false);
-  const [revision, setRevision] = useState(0);
-  const [retryUntil, setRetryUntil] = useState(0);
-  const selectedId = useRef<string | undefined>(undefined);
-  const handleError = useCallback((error: unknown) => {
-    if (isSessionError(error)) { onExpired(errorMessage(error), selectedId.current); return; }
-    setError(errorMessage(error));
-    const failure = error as CompanyError;
-    if (failure?.code === 'RATE_LIMITED' && failure.retryAfterSeconds) setRetryUntil(Date.now() + failure.retryAfterSeconds * 1000);
-  }, [onExpired]);
-  useEffect(() => {
-    if (!resumeSkillId) return;
-    let active = true;
-    selectedId.current = resumeSkillId;
-    api.storeDetail(resumeSkillId).then(value => { if (active) { setDetail(value); onResumed(); } }).catch(e => { if (active) handleError(e); });
-    return () => { active = false; };
-  }, [api, resumeSkillId, onResumed, handleError]);
-  useEffect(() => {
-    if (!retryUntil) return;
-    const timer = setTimeout(() => setRetryUntil(0), Math.max(0, retryUntil - Date.now()));
-    return () => clearTimeout(timer);
-  }, [retryUntil]);
-
-  useEffect(() => {
-    let active = true;
-    const timer = setTimeout(() => {
-      setLoading(true); setError('');
-      api.storeSearch(query, pageNumber).then(value => { if (active) setPage(value); }).catch(e => {
-        if (!active) return;
-        handleError(e);
-      }).finally(() => { if (active) setLoading(false); });
-    }, 300);
-    return () => { active = false; clearTimeout(timer); };
-  }, [api, query, pageNumber, handleError, revision]);
-
-  async function openDetail(id: string) {
-    selectedId.current = id;
-    setError('');
-    try { setDetail(await api.storeDetail(id)); }
-    catch (e) { handleError(e); }
-  }
-  async function refreshChanged() {
-    if (!detail) return;
-    setOperation(undefined); setDetail(undefined);
-    await openDetail(detail.id);
-  }
-  async function prepare() {
-    if (!detail) return;
-    setPreparing(true); setError('');
-    try { const prepared = await api.prepareInstallation(detail.id); if (prepared.skill) setDetail(prepared.skill); setOperation(prepared); }
-    catch (e) { handleError(e); }
-    finally { setPreparing(false); }
-  }
-
-  return <>
-    <div className="store-toolbar"><input aria-label="Tìm kiếm skill" placeholder="Tìm theo tên hoặc công dụng skill…" disabled={retryUntil > 0} value={query} onChange={e => { setQuery(e.target.value); setPageNumber(1); setDetail(undefined); }} /><span>{page?.pagination.total ?? 0} skill</span></div>
-    {error && <div role="alert" className="error-banner">{error}{page && ' · Đang hiển thị dữ liệu lần tải trước.'}{retryUntil > 0 && ' Vui lòng chờ trước khi thử lại.'}<button disabled={retryUntil > 0} onClick={() => setRevision(value => value + 1)}>Thử lại</button></div>}
-    {page?.cache?.stale && <div role="status" className="mock-banner">Dữ liệu đã lưu lúc {new Date(page.cache.fetchedAt).toLocaleString('vi-VN')}. Chưa kết nối được Store; kết nối lại để cài skill.<button onClick={() => setRevision(value => value + 1)}>Thử lại</button></div>}
-    {loading && <p role="status">Đang tìm skill…</p>}
-    {!loading && page?.items.length === 0 && <section className="company-card"><h2>Không tìm thấy skill</h2><p>Thử một từ khóa khác để tìm skill phù hợp.</p></section>}
-    <div className="skill-grid">{page?.items.map(skill => <article className="company-card skill-card" key={skill.id}>
-      <div className="skill-icon">↗</div><span className="format-tag">{skill.package.format.toUpperCase()}</span><h2>{skill.name}</h2><p>{skill.descriptionExcerpt}</p>
-      <button aria-label={`Xem chi tiết ${skill.name}`} className="secondary" onClick={() => openDetail(skill.id)} disabled={loading || !!error || page.cache?.stale}>Xem chi tiết →</button>
-    </article>)}</div>
-    {page && page.pagination.totalPages > 1 && <div className="pagination"><button disabled={pageNumber <= 1 || loading || retryUntil > 0} onClick={() => setPageNumber(n => n - 1)}>Trang trước</button><span>{pageNumber} / {page.pagination.totalPages}</span><button disabled={pageNumber >= page.pagination.totalPages || loading || retryUntil > 0} onClick={() => setPageNumber(n => n + 1)}>Trang sau</button></div>}
-    {detail && !operation && <div className="modal-overlay"><section role="dialog" aria-label="Chi tiết skill" aria-modal="true" className="company-modal"><button className="close-modal" onClick={() => { setDetail(undefined); selectedId.current = undefined; }} aria-label="Đóng chi tiết">×</button><div className="eyebrow">SKILL STORE / AIPRO</div><h2>{detail.name}</h2>
-      <div className="skill-description"><ReactMarkdown skipHtml components={{ img: () => null, a: ({ children }) => <span>{children}</span> }}>{detail.description}</ReactMarkdown></div><div className="package-line">{detail.package.format.toUpperCase()} · {(detail.package.sizeBytes / 1024).toFixed(1)} KiB</div>
-      <div className="dialog-actions"><button className="primary" disabled={preparing || !!error || page?.cache?.stale} onClick={prepare}>{preparing ? 'Đang kiểm tra…' : 'Cài vào AIPRO Global'}</button></div>
-    </section></div>}
-    {operation && detail && <InstallDialog api={api} skill={detail} initial={operation} onClose={() => { setOperation(undefined); setDetail(undefined); selectedId.current = undefined; }} onRefresh={refreshChanged} onExpired={message => onExpired(message, detail.id)} onInstalled={onInstalled} />}
-  </>;
-}
-````
-
-## File: src/company/tests/catalog.test.tsx
-````typescript
+import { workspaceApi } from './workspace-api';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { expect, test, vi } from 'vitest';
 import { CompanyApp } from '../CompanyApp';
 
-const skill = { id: 'skl_001', slug: 'jira-project-summary', name: 'Tổng hợp tiến độ Jira', updatedAt: '2026-10-12T00:00:00Z', descriptionExcerpt: 'Tổng hợp công việc dự án.', package: { format: 'zip' as const, sizeBytes: 2048, sha256: 'a'.repeat(64), etag: '"r1"' } };
-const page = { items: [skill], pagination: { page: 1, pageSize: 20, total: 1, totalPages: 1 } };
-function api() {
-  return {
+test('employee can sign in and sign out without losing access to local installations', async () => {
+  const api = { ...workspaceApi(),
     environment: vi.fn().mockResolvedValue({ mock: true, storeUrl: 'http://127.0.0.1:4318', profileRoot: 'C:/demo', dataRoot: 'C:/data', configured: true }),
-    session: vi.fn().mockResolvedValue({ user: { id: 'usr_001', username: 'employee01', displayName: 'Nhân viên 01' }, expiresAt: '2099-10-12T12:00:00Z', persistent: true }),
-    login: vi.fn(), logout: vi.fn(), installationsList: vi.fn().mockResolvedValue([]),
-    storeSearch: vi.fn().mockResolvedValue(page),
-    storeDetail: vi.fn().mockResolvedValue({ ...skill, description: 'Mô tả đầy đủ.\n\nMCP bắt buộc: jira-mcp, confluence-mcp\n\nHướng dẫn nội bộ.' }),
+    session: vi.fn().mockResolvedValue({ user: null, expiresAt: null, persistent: true }),
+    login: vi.fn().mockResolvedValue({ user: { id: 'usr_001', username: 'employee01', displayName: 'Nhân viên 01' }, expiresAt: '2099-10-12T12:00:00Z', persistent: true }),
+    logout: vi.fn().mockResolvedValue(null),
+    storeSearch: vi.fn().mockResolvedValue({ items: [], pagination: { page: 1, pageSize: 20, total: 0, totalPages: 0 } }),
+    installationsList: vi.fn().mockResolvedValue([]),
+    storeDetail: vi.fn(),
     prepareInstallation: vi.fn(), confirmInstallation: vi.fn(), operationStatus: vi.fn(), cancelOperation: vi.fn(),
   };
-}
-
-test('employee searches the Store and opens full description with MCP declaration', async () => {
-  const bridge = api();
-  render(<CompanyApp api={bridge} />);
+  render(<CompanyApp api={api} />);
   const user = userEvent.setup();
-  await user.type(await screen.findByPlaceholderText('Tìm theo tên hoặc công dụng skill…'), 'jira');
-  await waitFor(() => expect(bridge.storeSearch).toHaveBeenLastCalledWith('jira', 1));
-  await user.click(await screen.findByRole('button', { name: 'Xem chi tiết Tổng hợp tiến độ Jira' }));
-  expect(await screen.findByText(/MCP bắt buộc: jira-mcp, confluence-mcp/)).toBeInTheDocument();
-  expect(screen.getByText('Hướng dẫn nội bộ.')).toBeInTheDocument();
-});
-
-test('expired session asks for login while local installations stay available', async () => {
-  const bridge = api();
-  bridge.storeSearch.mockRejectedValue({ code: 'SESSION_EXPIRED', message: 'Phiên đăng nhập đã hết hạn.' });
-  render(<CompanyApp api={bridge} />);
-  expect(await screen.findByLabelText('Tài khoản')).toBeInTheDocument();
-  await userEvent.click(screen.getByRole('button', { name: 'Skill đã cài' }));
+  await user.type(await screen.findByLabelText('Tài khoản'), 'employee01');
+  await user.type(screen.getByLabelText('Mật khẩu'), 'demo-password');
+  await user.click(screen.getByRole('button', { name: 'Đăng nhập' }));
+  expect(await screen.findByText('Nhân viên 01')).toBeInTheDocument();
+  expect(screen.queryByLabelText('Mật khẩu')).not.toBeInTheDocument();
+  await user.click(screen.getByRole('button', { name: 'Đăng xuất' }));
+  await waitFor(() => expect(screen.queryByText('Nhân viên 01')).not.toBeInTheDocument());
+  await user.click(screen.getByRole('button', { name: 'Skill đã cài' }));
   expect(await screen.findByText('Chưa có skill được cài bởi ứng dụng.')).toBeInTheDocument();
+  expect(screen.getByText('Dữ liệu giả lập')).toBeInTheDocument();
 });
 
-test('offline cached catalog shows its timestamp and disables Store installation', async () => {
-  const bridge = api();
-  bridge.storeSearch.mockResolvedValue({ ...page, cache: { fetchedAt: '2026-10-12T00:00:00Z', stale: true } });
-  render(<CompanyApp api={bridge} />);
-  expect(await screen.findByText(/Dữ liệu đã lưu lúc/)).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Xem chi tiết Tổng hợp tiến độ Jira' })).toBeDisabled();
-  expect(bridge.prepareInstallation).not.toHaveBeenCalled();
-});
-
-test('a late response from the old query cannot replace the new results', async () => {
-  const bridge = api();
-  let finishOld: (value: typeof page) => void = () => {};
-  bridge.storeSearch.mockImplementation(query => query === 'old' ? new Promise(resolve => { finishOld = resolve; }) : Promise.resolve({ ...page, items: [{ ...skill, name: query === 'new' ? 'Kết quả mới' : skill.name }] }));
-  render(<CompanyApp api={bridge} />);
+test('invalid credentials are shown and password is cleared', async () => {
+  const api = { ...workspaceApi(),
+    environment: vi.fn().mockResolvedValue({ mock: false, storeUrl: 'https://store.internal', profileRoot: 'C:/demo', dataRoot: 'C:/data', configured: true }),
+    session: vi.fn().mockResolvedValue({ user: null, expiresAt: null, persistent: true }),
+    login: vi.fn().mockRejectedValue({ code: 'INVALID_CREDENTIALS', message: 'Tài khoản hoặc mật khẩu không đúng.' }),
+    logout: vi.fn(), storeSearch: vi.fn(), storeDetail: vi.fn(), installationsList: vi.fn().mockResolvedValue([]),
+    prepareInstallation: vi.fn(), confirmInstallation: vi.fn(), operationStatus: vi.fn(), cancelOperation: vi.fn(),
+  };
+  render(<CompanyApp api={api} />);
   const user = userEvent.setup();
-  const input = await screen.findByLabelText('Tìm kiếm skill');
-  await user.type(input, 'old');
-  await waitFor(() => expect(bridge.storeSearch).toHaveBeenCalledWith('old', 1));
-  await user.clear(input); await user.type(input, 'new');
-  expect(await screen.findByRole('heading', { name: 'Kết quả mới' })).toBeInTheDocument();
-  finishOld(page);
-  await waitFor(() => expect(screen.queryByRole('heading', { name: skill.name })).not.toBeInTheDocument());
+  await user.type(await screen.findByLabelText('Tài khoản'), 'bad');
+  await user.type(screen.getByLabelText('Mật khẩu'), 'secret');
+  await user.click(screen.getByRole('button', { name: 'Đăng nhập' }));
+  expect(await screen.findByRole('alert')).toHaveTextContent('Tài khoản hoặc mật khẩu không đúng.');
+  expect(screen.getByLabelText('Mật khẩu')).toHaveValue('');
 });
 ````
 
-## File: src/company/tests/install.test.tsx
+## File: src/company/tests/updates.test.tsx
 ````typescript
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { expect, test, vi } from 'vitest';
 import { CompanyApp } from '../CompanyApp';
+import { workspaceApi } from './workspace-api';
+import { UpdateDialog } from '../flows/UpdateDialog';
 
-const skill = { id: 'skl_001', slug: 'jira-project-summary', name: 'Jira Summary', updatedAt: '2026-10-12T00:00:00Z', description: 'MCP bắt buộc: jira-mcp', package: { format: 'zip' as const, sizeBytes: 100, sha256: 'a'.repeat(64), etag: '"r1"' } };
-function bridge() {
-  const op = { id: 'op1', state: 'awaiting_decision', target: 'C:/demo/.aipro/skills/jira-project-summary', mcp: { state: 'missing', required: ['jira-mcp'], present: [], missing: ['jira-mcp'], checkedAt: '2026-10-12T00:00:00Z', reason: null }, progressBytes: 0, totalBytes: 100, error: null };
-  return {
-    environment: vi.fn().mockResolvedValue({ mock: true, storeUrl: 'http://127.0.0.1:4318', profileRoot: 'C:/demo', dataRoot: 'C:/data', configured: true }),
-    session: vi.fn().mockResolvedValue({ user: { id: 'u1', username: 'employee01', displayName: 'Nhân viên' }, expiresAt: '2099-01-01T00:00:00Z', persistent: true }),
-    login: vi.fn(), logout: vi.fn(), storeSearch: vi.fn().mockResolvedValue({ items: [skill], pagination: { page: 1, pageSize: 20, total: 1, totalPages: 1 } }),
-    storeDetail: vi.fn().mockResolvedValue(skill), installationsList: vi.fn().mockResolvedValue([]),
-    prepareInstallation: vi.fn().mockResolvedValue(op),
-    confirmInstallation: vi.fn().mockResolvedValue({ ...op, state: 'downloading' }),
-    operationStatus: vi.fn().mockResolvedValue({ ...op, state: 'succeeded' }),
-    cancelOperation: vi.fn().mockResolvedValue({ ...op, state: 'cancelled' }),
+test('employee previews a customized update and explicitly replaces only that copy after backup', async () => {
+  const mcp = { state: 'not_required', required: [], present: [], missing: [], reason: null, checkedAt: '' };
+  const initial = { id: 'update-op', kind: 'update', state: 'awaiting_decision', target: 'C:/project/.aipro/skills/jira', mcp, progressBytes: 0, totalBytes: 100, error: null, customized: true, previewReady: false, changes: [] };
+  const ready = { ...initial, previewReady: true, changes: [{ path: 'SKILL.md', kind: 'modified' }] };
+  const api = {
+    ...workspaceApi(), environment: vi.fn().mockResolvedValue({ mock: true, configured: true, profileRoot: 'C:/profile', dataRoot: 'C:/data', storeUrl: 'http://localhost' }),
+    session: vi.fn().mockResolvedValue({ user: { id: 'usr_001', displayName: 'Employee', username: 'employee01' }, persistent: true, expiresAt: '2099-01-01T00:00:00Z' }),
+    login: vi.fn(), logout: vi.fn(), storeSearch: vi.fn().mockResolvedValue({ items: [], pagination: { page: 1, pageSize: 20, total: 0, totalPages: 0 } }),
+    storeDetail: vi.fn(), prepareInstallation: vi.fn(), confirmInstallation: vi.fn().mockResolvedValue({ ...initial, state: 'downloading' }),
+    operationStatus: vi.fn().mockResolvedValue(ready), cancelOperation: vi.fn(),
+    installationsList: vi.fn().mockResolvedValue([{ id: 'project-copy', skillId: 'skl_001', name: 'Jira skill', target: initial.target, packageHash: 'old', installedAt: '', mcpBypassed: false, contentState: 'customized', storeState: 'new_package' }]),
   };
-}
-async function openInstall(api: ReturnType<typeof bridge>) {
-  render(<CompanyApp api={api} />);
-  await userEvent.click(await screen.findByRole('button', { name: 'Xem chi tiết Jira Summary' }));
-  await userEvent.click(await screen.findByRole('button', { name: 'Cài vào AIPRO Global' }));
-  expect(await screen.findByText('Chưa có MCP trong cấu hình')).toBeInTheDocument();
-  expect(screen.getByText('MCP yêu cầu')).toBeInTheDocument();
-  expect(screen.getByText('Thiếu: jira-mcp')).toBeInTheDocument();
-}
-
-test('employee stops installation to configure missing MCP manually', async () => {
-  const api = bridge();
-  await openInstall(api);
-  await userEvent.click(screen.getByRole('button', { name: 'Dừng cài đặt' }));
-  await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Cài skill' })).not.toBeInTheDocument());
-  expect(api.confirmInstallation).not.toHaveBeenCalled();
+  api.prepareUpdate.mockResolvedValue(initial);
+  api.applyUpdate.mockImplementation(async () => { api.operationStatus.mockResolvedValue({ ...ready, state: 'succeeded' }); return { ...ready, state: 'committing' }; });
+  const user = userEvent.setup(); render(<CompanyApp api={api} />);
+  await user.click(await screen.findByRole('button', { name: 'Skill đã cài' }));
+  await user.click(screen.getByRole('button', { name: 'Xem cập nhật' }));
+  await user.click(await screen.findByRole('button', { name: 'Tải để xem thay đổi' }));
+  expect(await screen.findByText('SKILL.md', { exact: true })).toBeInTheDocument();
+  expect(api.applyUpdate).not.toHaveBeenCalled();
+  expect(screen.getByRole('button', { name: 'Backup và cập nhật' })).toBeDisabled();
+  await user.click(screen.getByLabelText('Tôi đồng ý thay bản đã tùy chỉnh bằng gói Store'));
+  await user.click(screen.getByRole('button', { name: 'Backup và cập nhật' }));
+  await waitFor(() => expect(api.applyUpdate).toHaveBeenCalledWith('update-op', true));
+  expect(await screen.findByText('Đã cập nhật đích này; bản trước đã được lưu.')).toBeInTheDocument();
 });
 
-test('employee bypasses MCP warning and sees successful installation result', async () => {
-  const api = bridge();
-  await openInstall(api);
-  await userEvent.click(screen.getByRole('button', { name: 'Bỏ qua và cài tiếp' }));
-  expect(await screen.findByText('Cài xong; đã bỏ qua cảnh báo MCP của lần này.')).toBeInTheDocument();
-  expect(api.confirmInstallation).toHaveBeenCalledWith('op1', true);
+test('cancelling after commit has started keeps reporting the actual result instead of claiming the old copy was kept', async () => {
+  const op = { id: 'op', state: 'staging' as const, target: 'C:/project', mcp: { state: 'not_required' as const, required: [], present: [], missing: [], reason: null, checkedAt: '' }, progressBytes: 100, totalBytes: 100, error: null, previewReady: true };
+  const api = {
+    ...workspaceApi(), environment: vi.fn(), session: vi.fn(), login: vi.fn(), logout: vi.fn(), storeSearch: vi.fn(), storeDetail: vi.fn(), installationsList: vi.fn(), prepareInstallation: vi.fn(), confirmInstallation: vi.fn(),
+    operationStatus: vi.fn().mockResolvedValue({ ...op, state: 'committing' }), cancelOperation: vi.fn().mockResolvedValue({ ...op, state: 'committing' }),
+  };
+  const onClose = vi.fn(); const onApplied = vi.fn();
+  render(<UpdateDialog api={api} initial={op} onClose={onClose} onApplied={onApplied} onExpired={vi.fn()} />);
+  await userEvent.setup().click(screen.getByRole('button', { name: 'Hủy' }));
+  expect(api.cancelOperation).toHaveBeenCalledWith('op');
+  expect(onClose).not.toHaveBeenCalled();
+  expect(await screen.findByRole('button', { name: 'Hủy' })).toBeDisabled();
 });
 
-test('installation shows the fresh Store snapshot returned by prepare', async () => {
-  const api = bridge();
-  const prepared = await api.prepareInstallation();
-  api.prepareInstallation.mockResolvedValue({ ...prepared, skill: { ...skill, name: 'Jira Summary mới' }, mcpPath: 'C:/demo/.aipro/mcp.json' });
-  await openInstall(api);
-  expect(screen.getByRole('heading', { name: 'Jira Summary mới' })).toBeInTheDocument();
-  expect(screen.getByText('C:/demo/.aipro/mcp.json')).toBeInTheDocument();
-});
-
-test('session expiry during preparation returns to login and keeps local skills accessible', async () => {
-  const api = bridge();
-  api.prepareInstallation.mockRejectedValue({ code: 'SESSION_EXPIRED', message: 'Phiên đã hết hạn.' });
-  render(<CompanyApp api={api} />);
-  await userEvent.click(await screen.findByRole('button', { name: 'Xem chi tiết Jira Summary' }));
-  await userEvent.click(screen.getByRole('button', { name: 'Cài vào AIPRO Global' }));
-  expect(await screen.findByLabelText('Tài khoản')).toBeInTheDocument();
-  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-  await userEvent.click(screen.getByRole('button', { name: 'Skill đã cài' }));
-  expect(await screen.findByText('Chưa có skill được cài bởi ứng dụng.')).toBeInTheDocument();
-});
-
-test('login after a download 401 reloads the selected skill and checks MCP with a new attempt', async () => {
-  const api = bridge();
-  const old = await api.prepareInstallation();
-  api.operationStatus.mockResolvedValue({ ...old, state: 'failed', error: { code: 'UNAUTHENTICATED', message: 'Đăng nhập lại.' } });
-  api.login.mockResolvedValue(await api.session());
-  await openInstall(api);
-  await userEvent.click(screen.getByRole('button', { name: 'Bỏ qua và cài tiếp' }));
-  await userEvent.type(await screen.findByLabelText('Tài khoản'), 'employee01');
-  await userEvent.type(screen.getByLabelText('Mật khẩu'), 'demo-password');
-  await userEvent.click(screen.getByRole('button', { name: 'Đăng nhập' }));
-  expect(await screen.findByRole('dialog', { name: 'Chi tiết skill' })).toBeInTheDocument();
-  expect(api.storeDetail).toHaveBeenCalledTimes(2);
-  api.prepareInstallation.mockResolvedValue({ ...old, id: 'op2' });
-  await userEvent.click(screen.getByRole('button', { name: 'Cài vào AIPRO Global' }));
-  expect(await screen.findByText('Chưa có MCP trong cấu hình')).toBeInTheDocument();
-  expect(api.confirmInstallation).toHaveBeenCalledTimes(1);
-  await userEvent.click(screen.getByRole('button', { name: 'Bỏ qua và cài tiếp' }));
-  expect(api.confirmInstallation).toHaveBeenLastCalledWith('op2', true);
-});
-
-test('a changed package refreshes detail and asks for a fresh MCP decision', async () => {
-  const api = bridge();
-  const old = await api.prepareInstallation();
-  api.operationStatus.mockResolvedValue({ ...old, state: 'failed', error: { code: 'PACKAGE_CHANGED', message: 'Gói đã đổi.' } });
-  await openInstall(api);
-  await userEvent.click(screen.getByRole('button', { name: 'Bỏ qua và cài tiếp' }));
-  await screen.findByText('Gói đã đổi.');
-  api.storeDetail.mockResolvedValue({ ...skill, name: 'Jira Summary phiên bản mới' });
-  api.prepareInstallation.mockResolvedValue({ ...old, id: 'op2', skill: { ...skill, name: 'Jira Summary phiên bản mới' } });
-  await userEvent.click(screen.getByRole('button', { name: 'Xem thông tin mới' }));
-  expect(await screen.findByRole('heading', { name: 'Jira Summary phiên bản mới' })).toBeInTheDocument();
-  await userEvent.click(screen.getByRole('button', { name: 'Cài vào AIPRO Global' }));
-  expect(await screen.findByRole('button', { name: 'Bỏ qua và cài tiếp' })).toBeInTheDocument();
-  expect(api.confirmInstallation).toHaveBeenCalledTimes(1);
+test('binary preview shows information and folder actions while text can open in an editor', async () => {
+  const op = { id: 'preview-op', state: 'awaiting_decision' as const, target: 'C:/project', mcp: { state: 'not_required' as const, required: [], present: [], missing: [], reason: null, checkedAt: '' }, progressBytes: 100, totalBytes: 100, error: null, previewReady: true,
+    changes: [
+      { path: 'tool.exe', kind: 'added' as const, incoming: { kind: 'binary' as const, sizeBytes: 4096 } },
+      { path: 'notes.txt', kind: 'added' as const, incoming: { kind: 'text' as const, sizeBytes: 20 } },
+    ] };
+  const api = { ...workspaceApi(), environment: vi.fn(), session: vi.fn(), login: vi.fn(), logout: vi.fn(), storeSearch: vi.fn(), storeDetail: vi.fn(), installationsList: vi.fn(), prepareInstallation: vi.fn(), confirmInstallation: vi.fn(), operationStatus: vi.fn(), cancelOperation: vi.fn() };
+  render(<UpdateDialog api={api} initial={op} onClose={vi.fn()} onApplied={vi.fn()} onExpired={vi.fn()} />);
+  const binaryRow = screen.getByText('tool.exe').closest('li')!;
+  expect(within(binaryRow).queryByRole('button')).not.toBeInTheDocument();
+  expect(within(binaryRow).getByText(/4096 bytes/)).toBeInTheDocument();
+  const user = userEvent.setup();
+  await user.click(within(screen.getByText('notes.txt').closest('li')!).getByRole('button', { name: 'Mở bản Store' }));
+  expect(api.openPreview).toHaveBeenCalledWith('preview-op', 'incoming', 'notes.txt');
+  await user.click(screen.getByRole('button', { name: 'Thư mục bản Store' }));
+  expect(api.openPreview).toHaveBeenCalledWith('preview-op', 'incoming', '');
 });
 ````
 
-## File: src/company/CompanyApp.tsx
+## File: src/company/api.ts
 ````typescript
-import { useCallback, useEffect, useState } from 'react';
-import { nativeApi } from './api';
-import type { CompanyApi } from './api';
-import type { Environment, Installation, SessionView } from './types';
-import { errorMessage } from './types';
-import './company.css';
-import { StoreView } from './flows/StoreView';
+import { invoke } from '@tauri-apps/api/core';
+import type { Backup, Environment, Installation, OperationView, Project, SessionView, Skill, SkillPage } from './types';
+import { open } from '@tauri-apps/plugin-dialog';
 
-const emptySession: SessionView = { user: null, expiresAt: null, persistent: false };
-const tabs = ['Store', 'Skill đã cài', 'Dự án', 'Cài đặt'] as const;
-type Tab = typeof tabs[number];
-
-export function CompanyApp({ api = nativeApi }: { api?: CompanyApi }) {
-  const [environment, setEnvironment] = useState<Environment>();
-  const [session, setSession] = useState(emptySession);
-  const [tab, setTab] = useState<Tab>('Store');
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
-  const [installations, setInstallations] = useState<Installation[]>([]);
-  const [booting, setBooting] = useState(true);
-  const [resumeSkillId, setResumeSkillId] = useState<string>();
-  const expired = useCallback((message: string, skillId?: string) => { setResumeSkillId(skillId); setSession(emptySession); setError(message); }, []);
-  const resumed = useCallback(() => setResumeSkillId(undefined), []);
-  const refreshInstallations = useCallback(() => { api.installationsList().then(setInstallations).catch(e => setError(errorMessage(e))); }, [api]);
-
-  useEffect(() => {
-    let active = true;
-    Promise.all([api.environment(), api.session(), api.installationsList()]).then(([env, current, local]) => {
-      if (active) { setEnvironment(env); setSession(current); setInstallations(local); }
-    }).catch(e => { if (active) setError(errorMessage(e)); }).finally(() => { if (active) setBooting(false); });
-    return () => { active = false; };
-  }, [api]);
-
-  async function login(event: React.FormEvent) {
-    event.preventDefault(); setBusy(true); setError('');
-    try { const current = await api.login(username.trim(), password); setSession(current); if (!current.persistent) setError('Phiên chỉ được giữ trong lần mở app này; bạn sẽ cần đăng nhập lại khi mở app.'); }
-    catch (e) { setError(errorMessage(e)); }
-    finally { setPassword(''); setBusy(false); }
-  }
-
-  async function logout() {
-    setBusy(true); setError('');
-    try { await api.logout(); }
-    catch (e) { setError(errorMessage(e)); }
-    finally { setSession(emptySession); setResumeSkillId(undefined); setPassword(''); setBusy(false); }
-  }
-
-  const signIn = <section className="company-card sign-in">
-    <div className="eyebrow">TÀI KHOẢN CÔNG TY</div><h2>Đăng nhập Skill Store</h2>
-    <p>Dùng tài khoản được công ty cấp để tìm và tải skill.</p>
-    <form onSubmit={login}>
-      <label>Tài khoản<input autoComplete="username" value={username} onChange={e => setUsername(e.target.value)} required /></label>
-      <label>Mật khẩu<input type="password" autoComplete="current-password" value={password} onChange={e => setPassword(e.target.value)} required /></label>
-      <button className="primary" disabled={busy || !environment?.configured}>{busy ? 'Đang đăng nhập…' : 'Đăng nhập'}</button>
-    </form>
-  </section>;
-
-  return <div className="company-app">
-    <aside className="company-sidebar"><div className="company-brand"><span className="brand-icon">S</span><div>Company<span>Skills Manager</span></div></div>
-      <nav aria-label="Điều hướng">{tabs.map(item => <button key={item} className={tab === item ? 'selected' : ''} onClick={() => { setTab(item); setError(''); if (item === 'Skill đã cài') refreshInstallations(); }}>{item}</button>)}</nav>
-      <div className="sidebar-footer"><span className="aipro-dot" /> AIPRO<span>Quản lý skill trên máy của bạn</span></div>
-    </aside>
-    <main className="company-main"><header className="company-header"><div className="eyebrow">WORKSPACE / AIPRO</div><div className="account">{session.user ? <><span>{session.user.displayName}</span><button onClick={logout} disabled={busy}>Đăng xuất</button></> : <span>Chưa đăng nhập</span>}</div></header>
-      {environment?.mock && <div className="mock-banner">Dữ liệu giả lập</div>}
-      {error && <div role="alert" className="error-banner">{error}</div>}
-      {environment?.recoveryWarnings?.map(message => <div className="error-banner" role="alert" key={message}>{message}</div>)}
-      {environment && !environment.configured && <div role="status" className="error-banner">Chưa cấu hình địa chỉ Skill Store. Liên hệ quản trị ứng dụng.</div>}
-      <div className="page-heading"><h1>{tab === 'Store' ? 'Skill Store' : tab}</h1><p>{tab === 'Store' ? 'Tìm skill phù hợp và đưa vào AIPRO của bạn.' : 'Các bản cài và dữ liệu trên máy Windows hiện tại.'}</p></div>
-      {booting && <p role="status">Đang mở môi trường AIPRO…</p>}
-      {tab === 'Store' && !booting && (!session.user ? signIn : <StoreView key={session.user.id} api={api} onExpired={expired} onInstalled={refreshInstallations} resumeSkillId={resumeSkillId} onResumed={resumed} />)}
-      {tab === 'Skill đã cài' && <section className="company-card">{installations.length ? installations.map(item => <article key={item.id}><h2>{item.name}</h2><p>{item.target}</p></article>) : <p>Chưa có skill được cài bởi ứng dụng.</p>}</section>}
-      {tab === 'Dự án' && <section className="company-card"><h2>Cài theo dự án</h2><p>Phiên bản này hỗ trợ cài skill cho AIPRO Global. Quản lý theo dự án sẽ được bổ sung sau.</p></section>}
-      {tab === 'Cài đặt' && <><section className="company-card"><h2>Môi trường AIPRO</h2><dl><dt>Thư mục Global</dt><dd>{environment?.profileRoot}\.aipro\skills</dd><dt>Cấu hình MCP</dt><dd>{environment?.profileRoot}\.aipro\mcp.json</dd><dt>Dữ liệu ứng dụng</dt><dd>{environment?.dataRoot}</dd><dt>Skill Store</dt><dd>{environment?.storeUrl || 'Chưa cấu hình'}</dd></dl></section>{!session.user ? signIn : <section className="company-card"><h2>Phiên đăng nhập</h2><p>{session.persistent ? 'Phiên được giữ trong Windows Credential Manager.' : 'Phiên chỉ được giữ trong lần mở app này.'}</p><p>Hết hạn: {session.expiresAt ? new Date(session.expiresAt).toLocaleString('vi-VN') : '—'}</p></section>}</>}
-    </main>
-  </div>;
+export interface CompanyApi {
+  environment(): Promise<Environment>;
+  session(): Promise<SessionView>;
+  login(username: string, password: string): Promise<SessionView>;
+  logout(): Promise<null>;
+  storeSearch(query: string, page: number): Promise<SkillPage>;
+  storeDetail(id: string): Promise<Skill>;
+  installationsList(): Promise<Installation[]>;
+  prepareInstallation(id: string): Promise<OperationView>;
+  confirmInstallation(id: string, bypassMcp: boolean): Promise<OperationView>;
+  operationStatus(id: string): Promise<OperationView>;
+  cancelOperation(id: string): Promise<OperationView>;
+  projectsList(): Promise<Project[]>;
+  addProject(path: string): Promise<Project>;
+  removeProject(id: string): Promise<null>;
+  chooseProjectFolder(): Promise<string | null>;
+  prepareProjectInstallation(id: string, projectId: string): Promise<OperationView>;
+  refreshInstallation(id: string): Promise<Installation>;
+  openInstallation(id: string, kind: 'skill_file' | 'folder'): Promise<null>;
+  checkUpdates(ids: string[]): Promise<Installation[]>;
+  prepareUpdate(id: string): Promise<OperationView>;
+  applyUpdate(id: string, replaceCustomized: boolean): Promise<OperationView>;
+  backupsList(id: string): Promise<Backup[]>;
+  openPreview(id: string, side: 'current' | 'incoming', path: string): Promise<null>;
 }
+
+export const nativeApi: CompanyApi = {
+  environment: () => invoke('company_environment'),
+  session: () => invoke('company_session'),
+  login: (username, password) => invoke('company_login', { username, password }),
+  logout: () => invoke('company_logout'),
+  storeSearch: (query, page) => invoke('company_store_search', { query, page }),
+  storeDetail: id => invoke('company_store_detail', { id }),
+  installationsList: () => invoke('company_installations_list'),
+  prepareInstallation: id => invoke('company_operation_prepare', { id }),
+  confirmInstallation: (id, bypassMcp) => invoke('company_operation_confirm', { id, bypassMcp }),
+  operationStatus: id => invoke('company_operation_status', { id }),
+  cancelOperation: id => invoke('company_operation_cancel', { id }),
+  projectsList: () => invoke('company_projects_list'),
+  addProject: path => invoke('company_project_add', { path }),
+  removeProject: id => invoke('company_project_remove', { id }),
+  chooseProjectFolder: async () => { const path = await open({ directory: true, multiple: false }); return typeof path === 'string' ? path : null; },
+  prepareProjectInstallation: (id, projectId) => invoke('company_project_install_prepare', { id, projectId }),
+  refreshInstallation: id => invoke('company_installation_refresh', { id }),
+  openInstallation: (id, kind) => invoke('company_installation_open', { id, kind }),
+  checkUpdates: ids => invoke('company_updates_check', { ids }),
+  prepareUpdate: id => invoke('company_update_prepare', { id }),
+  applyUpdate: (id, replaceCustomized) => invoke('company_update_apply', { id, replaceCustomized }),
+  backupsList: id => invoke('company_backups_list', { id }),
+  openPreview: (id, side, path) => invoke('company_operation_open_preview', { id, side, path }),
+};
 ````
 
-## File: src/company/types.ts
-````typescript
-export interface User { id: string; username: string; displayName: string }
-export interface SessionView { user: User | null; expiresAt: string | null; persistent: boolean }
-export interface Environment { mock: boolean; storeUrl: string; profileRoot: string; dataRoot: string; configured: boolean; recoveryWarnings?: string[] }
-export interface CompanyError { code: string; message: string; requestId?: string; retryAfterSeconds?: number }
-export interface PackageMeta { format: 'zip' | '7z'; sizeBytes: number; sha256: string; etag: string }
-export interface Skill { id: string; slug: string; name: string; descriptionExcerpt?: string; description?: string; updatedAt: string; package: PackageMeta }
-export interface SkillPage { items: Skill[]; pagination: { page: number; pageSize: number; total: number; totalPages: number }; cache?: { fetchedAt: string; stale: boolean } }
-export interface Installation { id: string; skillId: string; name: string; target: string; packageHash: string; installedAt: string; mcpBypassed: boolean }
-export interface McpReport { state: 'not_required' | 'undeclared' | 'present' | 'missing' | 'unknown'; required: string[]; present: string[]; missing: string[]; reason: string | null; checkedAt: string }
-export interface OperationView { id: string; state: 'awaiting_decision' | 'downloading' | 'validating' | 'staging' | 'committing' | 'succeeded' | 'cancelled' | 'failed' | 'recovery_required'; target: string; mcp: McpReport; mcpPath?: string; skill?: Skill; progressBytes: number; totalBytes: number; error: CompanyError | null }
-
-export function errorMessage(error: unknown): string {
-  if (typeof error === 'object' && error !== null && 'message' in error && typeof error.message === 'string') return error.message;
-  return typeof error === 'string' ? error : 'Không thể hoàn tất thao tác. Vui lòng thử lại.';
-}
-
-export function isSessionError(error: unknown): boolean {
-  return typeof error === 'object' && error !== null && 'code' in error &&
-    (error.code === 'SESSION_EXPIRED' || error.code === 'UNAUTHENTICATED');
-}
+## File: src/company/company.css
+````css
+.company-app { display:flex; height:100vh; font-family:Inter,"Segoe UI",sans-serif; color:#17253b; background:#f5f7fb; }
+.company-sidebar { width:238px; flex-shrink:0; background:#fff; border-right:1px solid #e1e7ef; padding:28px 18px; display:flex; flex-direction:column; }
+.company-brand { display:flex; gap:12px; align-items:center; font-weight:700; font-size:17px; padding:0 12px 36px; }.company-brand span:not(.brand-icon){display:block;font-size:13px;font-weight:500;color:#718096;margin-top:2px;}
+.brand-icon {display:grid;place-items:center;background:#2860d4;color:white;width:40px;height:40px;border-radius:12px;font-size:23px;}
+.company-sidebar nav {display:grid;gap:7px;}.company-sidebar nav button{text-align:left;padding:13px 16px;border-radius:9px;color:#657186;font-weight:600;}.company-sidebar nav button:hover{background:#f4f6fa;}.company-sidebar nav button.selected{background:#eaf0ff;color:#2255c7;}
+.sidebar-footer {margin-top:auto;padding:20px 10px 0;font-size:13px;font-weight:600;}.sidebar-footer>span:last-child{display:block;color:#8893a5;font-size:11px;font-weight:400;margin-top:7px;}.aipro-dot{display:inline-block;width:7px;height:7px;background:#2db88d;border-radius:50%;margin-right:7px;}
+.company-main {flex:1;padding:0 40px 40px;overflow:auto;min-width:0;}.company-header{height:86px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #e0e6ef;margin-bottom:28px;}.eyebrow{font-size:11px;font-weight:700;letter-spacing:1.7px;color:#8090a9;}.account{display:flex;align-items:center;gap:16px;font-size:13px;}.account button {border:1px solid #dbe2ee;background:#fff;padding:7px 12px;border-radius:7px;}
+.page-heading {margin:28px 0;}.page-heading h1{font-size:29px;letter-spacing:-.7px;margin:0 0 8px;font-weight:700;}.page-heading p,.company-card p{font-size:14px;color:#718096;line-height:1.7;}.company-card{background:white;border:1px solid #e0e6ef;border-radius:13px;padding:26px;margin-bottom:20px;}.company-card h2{font-size:18px;font-weight:650;margin:8px 0 12px;}
+.sign-in{max-width:470px;}.sign-in form{display:grid;gap:18px;margin-top:26px;}.company-app label{display:grid;gap:8px;font-size:13px;font-weight:600;}.company-app input{border:1px solid #d5deec;border-radius:8px;padding:11px 13px;font-size:14px;background:white;color:#17253b;}.company-app input:focus{outline:2px solid #b8cdfd;border-color:#709aee;}.company-app button{cursor:pointer;}.company-app button:disabled{opacity:.55;cursor:default;}.company-app button.primary{background:#2860d4;color:#fff;border-radius:8px;padding:11px 18px;font-weight:600;border:none;}.company-app button.primary:hover:not(:disabled){background:#1d4fb9;}
+.mock-banner{background:#fff7de;border:1px solid #f1deb0;color:#8c6718;padding:9px 14px;border-radius:8px;font-size:12px;}.error-banner{background:#fff1f0;color:#a4362d;border:1px solid #f4d0cc;border-radius:8px;padding:12px 16px;margin:12px 0;font-size:14px;}.company-app dl{display:grid;grid-template-columns:160px 1fr;gap:15px;font-size:13px;}.company-app dt{color:#8090a9;}.company-app dd{margin:0;overflow-wrap:anywhere;}
+.store-toolbar{display:flex;align-items:center;gap:20px;margin-bottom:24px;}.store-toolbar input{flex:1;max-width:550px;}.store-toolbar span{font-size:13px;color:#8794aa;}.skill-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(265px,1fr));gap:18px;}.skill-card{position:relative;padding:24px;}.skill-icon{display:grid;place-items:center;width:40px;height:40px;background:#eaf0ff;color:#3965c6;border-radius:10px;font-size:24px;margin-bottom:22px;}.format-tag{position:absolute;right:22px;top:25px;font-size:10px;border:1px solid #e0e6ef;padding:4px 8px;border-radius:6px;color:#8794aa;}.company-app button.secondary{border:1px solid #dbe3ef;border-radius:7px;padding:9px 14px;background:white;font-size:13px;font-weight:600;color:#3b5e9e;}.pagination{display:flex;gap:20px;justify-content:center;align-items:center;margin:20px;}.pagination button{padding:8px;border:1px solid #e0e6ef;border-radius:6px;font-size:13px;}.modal-overlay{position:fixed;inset:0;background:#10224066;display:flex;align-items:center;justify-content:center;z-index:20;padding:40px;}.company-modal{background:white;border-radius:16px;width:640px;max-height:85vh;overflow:auto;padding:32px;position:relative;box-shadow:0 24px 80px #11224433;}.company-modal h2{font-size:23px;font-weight:700;margin:16px 0 24px;}.close-modal{position:absolute;right:18px;top:12px;font-size:28px;color:#8794aa;}.skill-description{font-size:14px;line-height:1.8;color:#53657e;}.skill-description p{margin-bottom:14px;}.package-line{margin-top:24px;padding-top:16px;border-top:1px solid #e0e6ef;font-size:12px;color:#8794aa;}
+.dialog-actions{display:flex;gap:12px;justify-content:flex-end;margin-top:24px;}.target-path{padding:12px;background:#f4f7fc;border-radius:7px;font-size:12px;overflow-wrap:anywhere;margin-bottom:24px;}.company-modal h3{font-size:16px;font-weight:650;margin-bottom:12px;}.company-modal li{margin:5px 20px;font-size:14px;list-style:disc;}.company-modal>p{font-size:14px;line-height:1.8;color:#718096;}.company-modal progress{width:100%;margin:15px 0;height:9px;accent-color:#2860d4;}.success-banner{padding:16px;background:#e6f8ef;color:#187451;border-radius:9px;font-size:14px;}
+.project-form{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap}.project-form label{flex:1;min-width:260px}.row-actions{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0 20px}.status-tag{display:inline-block;padding:5px 9px;border-radius:6px;background:#edf2fa;color:#50627b;font-size:12px;margin:4px 8px 8px 0}.status-tag.customized{background:#fff0d8;color:#90631d}.status-tag.original{background:#e7f5ed;color:#1f7651}.company-app select{border:1px solid #d5deec;background:#fff;color:#17253b;border-radius:8px;padding:10px;font-size:14px}
+.company-app .checkbox-label{display:flex;align-items:center;gap:10px;font-weight:500;margin-bottom:12px}.checkbox-label input{accent-color:#2860d4}.file-changes li{display:flex;justify-content:space-between;gap:12px;padding:8px 0;margin:0;border-bottom:1px solid #edf1f8;overflow-wrap:anywhere}.file-changes li button{font-size:11px;color:#2860d4;margin-left:8px}.file-changes{margin:12px 0}.installation-card p[role=status]{color:#416cb6}
 ````
 
 ## File: src/components/DetailSheet.tsx
@@ -32171,6 +31794,23 @@ export function Backup() {
 }
 ````
 
+## File: src-tauri/capabilities/default.json
+````json
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "enables the default permissions",
+  "windows": [
+    "main"
+  ],
+  "permissions": [
+    "core:default",
+    "core:window:allow-start-dragging",
+    "dialog:allow-open"
+  ]
+}
+````
+
 ## File: src-tauri/src/commands/settings.rs
 ````rust
 use semver::Version;
@@ -33590,162 +33230,990 @@ mod tests {
 }
 ````
 
-## File: src-tauri/src/core/company/installation_repository.rs
+## File: src-tauri/src/core/company/aipro_paths.rs
 ````rust
-use super::types::*;
-use rusqlite::{params, Connection};
-use std::{path::Path, sync::Mutex, time::Duration};
+use super::{
+    package_store::{reject_links, validate_slug},
+    types::*,
+};
+use std::path::{Path, PathBuf};
 
-pub struct CompanyRepository {
-    connection: Mutex<Connection>,
+pub fn path_key(path: &Path) -> String {
+    let key = path
+        .to_string_lossy()
+        .replace('\\', "/")
+        .trim_end_matches('/')
+        .to_lowercase();
+    if let Some(unc) = key.strip_prefix("//?/unc/") {
+        format!("//{unc}")
+    } else {
+        key.strip_prefix("//?/").unwrap_or(&key).to_string()
+    }
 }
-fn db_error() -> CompanyError {
+pub fn overlaps(a: &Path, b: &Path) -> bool {
+    let a = path_key(a);
+    let b = path_key(b);
+    a == b || a.starts_with(&(b.clone() + "/")) || b.starts_with(&(a + "/"))
+}
+pub fn validate_ancestors(path: &Path) -> CompanyResult<()> {
+    for ancestor in path.ancestors() {
+        match std::fs::symlink_metadata(ancestor) {
+            Ok(_) => reject_links(ancestor)?,
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+            Err(_) => {
+                return Err(CompanyError::new(
+                    "PATH_ERROR",
+                    "Không kiểm tra được đường dẫn. Kiểm tra quyền thư mục.",
+                ))
+            }
+        }
+    }
+    Ok(())
+}
+
+pub fn global_target(profile: &Path, slug: &str) -> CompanyResult<PathBuf> {
+    validate_slug(slug)?;
+    let target = profile.join(".aipro").join("skills").join(slug);
+    validate_ancestors(&target)?;
+    Ok(target)
+}
+pub fn stage_path(target: &Path, id: &str) -> CompanyResult<PathBuf> {
+    uuid::Uuid::parse_str(id)
+        .map_err(|_| CompanyError::new("WRITE_FAILED", "Operation ID không hợp lệ."))?;
+    Ok(target
+        .parent()
+        .ok_or_else(|| CompanyError::new("WRITE_FAILED", "Đích cài không hợp lệ."))?
+        .join(format!(".company-stage-{id}")))
+}
+````
+
+## File: src-tauri/src/core/company/package_store.rs
+````rust
+use super::types::{CompanyError, CompanyResult, PackageMeta};
+use sha2::{Digest, Sha256};
+use std::{
+    collections::HashMap,
+    fs::{self, File},
+    io::{Read, Write},
+    path::{Path, PathBuf},
+};
+
+pub const MAX_ARCHIVE: u64 = 100 * 1_048_576;
+pub const MAX_EXPANDED: u64 = 500 * 1_048_576;
+const MAX_ENTRIES: usize = 10_000;
+const MAX_DEPTH: usize = 32;
+
+#[derive(Clone)]
+pub struct VerifiedPackage {
+    pub original_root: PathBuf,
+    pub content_hash: String,
+    pub full_hash: String,
+    pub archive_hash: String,
+}
+fn invalid(message: &str) -> CompanyError {
+    CompanyError::new("INVALID_PACKAGE", message)
+}
+fn io_error() -> CompanyError {
+    CompanyError::new("WRITE_FAILED", "Không đọc/ghi được dữ liệu gói trên máy.")
+}
+
+pub fn validate_slug(slug: &str) -> CompanyResult<()> {
+    if slug.is_empty()
+        || slug.len() > 64
+        || !slug.as_bytes()[0].is_ascii_alphanumeric()
+        || !slug
+            .bytes()
+            .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == b'-' || c == b'_')
+        || reserved(slug)
+    {
+        return Err(invalid("Tên thư mục skill không hợp lệ trên Windows."));
+    }
+    Ok(())
+}
+fn reserved(name: &str) -> bool {
+    let base = name
+        .split('.')
+        .next()
+        .unwrap_or_default()
+        .to_ascii_uppercase();
+    matches!(base.as_str(), "CON" | "PRN" | "AUX" | "NUL")
+        || (base.len() == 4
+            && (base.starts_with("COM") || base.starts_with("LPT"))
+            && matches!(base.as_bytes()[3], b'1'..=b'9'))
+}
+pub fn checked_entry(name: &str) -> CompanyResult<PathBuf> {
+    let normalized = name.replace('\\', "/");
+    let text = normalized.trim_end_matches('/');
+    if text.is_empty() || normalized.starts_with('/') {
+        return Err(invalid("Gói có đường dẫn tuyệt đối hoặc rỗng."));
+    }
+    let parts: Vec<_> = text.split('/').collect();
+    if parts.len() > MAX_DEPTH {
+        return Err(invalid("Gói vượt giới hạn độ sâu thư mục."));
+    }
+    for part in &parts {
+        if part.is_empty()
+            || matches!(*part, "." | "..")
+            || part.ends_with('.')
+            || part.ends_with(' ')
+            || reserved(part)
+            || part
+                .chars()
+                .any(|c| c.is_control() || "<>:\"|?*".contains(c))
+        {
+            return Err(invalid(
+                "Gói có đường dẫn không an toàn hoặc tên file không hợp lệ.",
+            ));
+        }
+    }
+    Ok(parts.iter().collect())
+}
+pub fn reject_links(path: &Path) -> CompanyResult<()> {
+    let metadata = fs::symlink_metadata(path).map_err(|_| io_error())?;
+    let mut link = metadata.file_type().is_symlink();
+    #[cfg(windows)]
+    {
+        use std::os::windows::fs::MetadataExt;
+        link |= metadata.file_attributes() & 0x400 != 0;
+    }
+    if link {
+        Err(invalid("Không chấp nhận symlink hoặc junction."))
+    } else {
+        Ok(())
+    }
+}
+pub fn hash_file(path: &Path) -> CompanyResult<String> {
+    let mut file = File::open(path).map_err(|_| io_error())?;
+    let mut hash = Sha256::new();
+    let mut buffer = [0u8; 65_536];
+    loop {
+        let count = file.read(&mut buffer).map_err(|_| io_error())?;
+        if count == 0 {
+            break;
+        }
+        hash.update(&buffer[..count]);
+    }
+    Ok(hex::encode(hash.finalize()))
+}
+pub fn content_hash(root: &Path, comparison: bool) -> CompanyResult<String> {
+    let mut records = Vec::new();
+    for entry in walkdir::WalkDir::new(root)
+        .follow_links(false)
+        .into_iter()
+        .filter_entry(|entry| {
+            !comparison || !excluded(entry.file_name().to_string_lossy().as_ref())
+        })
+    {
+        let entry = entry.map_err(|_| io_error())?;
+        reject_links(entry.path())?;
+        if entry.path() == root {
+            continue;
+        }
+        let relative = entry
+            .path()
+            .strip_prefix(root)
+            .map_err(|_| invalid("Đường dẫn nội dung không hợp lệ."))?
+            .to_str()
+            .ok_or_else(|| invalid("Tên file không đọc được."))?
+            .replace('\\', "/");
+        if entry.file_type().is_file() {
+            records.push((relative, "file", Some(hash_file(entry.path())?)));
+        } else if entry.file_type().is_dir() {
+            let empty = fs::read_dir(entry.path())
+                .map_err(|_| io_error())?
+                .next()
+                .is_none();
+            if !comparison || empty {
+                records.push((relative, "directory", None));
+            }
+        } else {
+            return Err(invalid("Nội dung có loại file không hỗ trợ."));
+        }
+    }
+    records.sort_by(|a, b| a.0.cmp(&b.0));
+    let encoded =
+        serde_json::to_vec(&records).map_err(|_| invalid("Không lập được manifest nội dung."))?;
+    Ok(hex::encode(Sha256::digest(encoded)))
+}
+pub(crate) fn excluded(name: &str) -> bool {
+    matches!(name, ".git" | "__pycache__" | "Thumbs.db" | "desktop.ini") || name.ends_with(".pyc")
+}
+
+struct EntryPolicy {
+    entries: usize,
+    expanded: u64,
+    names: HashMap<String, String>,
+}
+impl EntryPolicy {
+    fn check(&mut self, name: &str, size: u64) -> CompanyResult<PathBuf> {
+        let relative = checked_entry(name)?;
+        self.entries += 1;
+        self.expanded = self
+            .expanded
+            .checked_add(size)
+            .ok_or_else(|| invalid("Kích thước gói không hợp lệ."))?;
+        if self.entries > MAX_ENTRIES || self.expanded > MAX_EXPANDED {
+            return Err(invalid(
+                "Gói vượt giới hạn số file hoặc dung lượng giải nén.",
+            ));
+        }
+        let spelling = relative.to_string_lossy().replace('\\', "/");
+        if self
+            .names
+            .insert(spelling.to_lowercase(), spelling)
+            .is_some()
+        {
+            return Err(invalid("Gói có entries trùng trên Windows."));
+        }
+        Ok(relative)
+    }
+}
+fn write_entry(
+    input: &mut dyn Read,
+    path: &Path,
+    directory: bool,
+    remaining: &mut u64,
+) -> CompanyResult<()> {
+    if directory {
+        fs::create_dir_all(path).map_err(|_| io_error())?;
+        return Ok(());
+    }
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent).map_err(|_| io_error())?;
+    }
+    let mut output = File::create(path).map_err(|_| io_error())?;
+    let mut buffer = [0u8; 65_536];
+    loop {
+        let count = input
+            .read(&mut buffer)
+            .map_err(|_| invalid("Không giải nén được nội dung gói."))?;
+        if count == 0 {
+            break;
+        }
+        if count as u64 > *remaining {
+            return Err(invalid("Dữ liệu thực tế vượt giới hạn giải nén."));
+        }
+        *remaining -= count as u64;
+        output.write_all(&buffer[..count]).map_err(|_| io_error())?;
+    }
+    output.sync_all().map_err(|_| io_error())
+}
+
+pub fn prepare_archive(
+    archive: &Path,
+    meta: &PackageMeta,
+    slug: &str,
+    packages: &Path,
+) -> CompanyResult<VerifiedPackage> {
+    validate_slug(slug)?;
+    let length = fs::metadata(archive).map_err(|_| io_error())?.len();
+    if length > MAX_ARCHIVE
+        || meta.size_bytes != length
+        || meta.sha256.len() != 64
+        || hash_file(archive)? != meta.sha256
+    {
+        return Err(CompanyError::new(
+            "PACKAGE_INTEGRITY_FAILED",
+            "Gói tải không đúng kích thước hoặc SHA-256 đã chọn.",
+        ));
+    }
+    fs::create_dir_all(packages).map_err(|_| io_error())?;
+    reject_links(packages)?;
+    let scratch = tempfile::tempdir_in(packages).map_err(|_| io_error())?;
+    let extract = scratch.path().join("extracted");
+    fs::create_dir(&extract).map_err(|_| io_error())?;
+    let mut policy = EntryPolicy {
+        entries: 0,
+        expanded: 0,
+        names: HashMap::new(),
+    };
+    let mut remaining = MAX_EXPANDED;
+    match meta.format.as_str() {
+        "zip" => {
+            let mut zip = zip::ZipArchive::new(File::open(archive).map_err(|_| io_error())?)
+                .map_err(|_| invalid("ZIP không hợp lệ."))?;
+            if zip.len() > MAX_ENTRIES {
+                return Err(invalid("Gói vượt giới hạn số entries."));
+            }
+            for index in 0..zip.len() {
+                let mut entry = zip
+                    .by_index(index)
+                    .map_err(|_| invalid("Không đọc được ZIP entry."))?;
+                let mode = entry.unix_mode().unwrap_or(0) & 0o170000;
+                if entry.encrypted() || !matches!(mode, 0 | 0o100000 | 0o040000) {
+                    return Err(invalid("ZIP có mã hóa hoặc link/file không hỗ trợ."));
+                }
+                let relative = policy.check(entry.name(), entry.size())?;
+                let directory = entry.is_dir();
+                write_entry(
+                    &mut entry,
+                    &extract.join(relative),
+                    directory,
+                    &mut remaining,
+                )?;
+            }
+        }
+        "7z" => {
+            let mut reader =
+                sevenz_rust::SevenZReader::open(archive, sevenz_rust::Password::empty())
+                    .map_err(|_| invalid("7z không hợp lệ hoặc đã mã hóa."))?;
+            for folder in &reader.archive().folders {
+                for coder in &folder.coders {
+                    let properties = &coder.properties;
+                    let dictionary = match coder.decompression_method_id() {
+                        [0x21] if properties.len() == 1 && properties[0] < 40 => {
+                            (2u64 | (properties[0] as u64 & 1)) << (properties[0] as u64 / 2 + 11)
+                        }
+                        [0x03, 0x01, 0x01] if properties.len() >= 5 => {
+                            u32::from_le_bytes(properties[1..5].try_into().unwrap()) as u64
+                        }
+                        [0x21] => u64::MAX,
+                        _ => 0,
+                    };
+                    if dictionary > MAX_EXPANDED {
+                        return Err(invalid("7z yêu cầu quá nhiều bộ nhớ giải nén."));
+                    }
+                }
+            }
+            for entry in &reader.archive().files {
+                if entry.is_anti_item
+                    || entry.windows_attributes & 0x400 != 0
+                    || (entry.windows_attributes >> 16) & 0o170000 == 0o120000
+                {
+                    return Err(invalid("7z có link hoặc anti-item không hỗ trợ."));
+                }
+                policy.check(&entry.name, entry.size)?;
+            }
+            reader
+                .for_each_entries(|entry, input| {
+                    let path = checked_entry(&entry.name)
+                        .map_err(|_| sevenz_rust::Error::other("unsafe path"))?;
+                    write_entry(
+                        input,
+                        &extract.join(path),
+                        entry.is_directory,
+                        &mut remaining,
+                    )
+                    .map_err(|_| sevenz_rust::Error::other("invalid or oversized entry"))?;
+                    Ok(true)
+                })
+                .map_err(|_| invalid("Không giải nén được 7z hoặc gói vượt giới hạn."))?;
+        }
+        _ => return Err(invalid("Định dạng gói phải là ZIP hoặc 7z.")),
+    }
+    let skill_root = if extract.join("SKILL.md").is_file() {
+        extract.clone()
+    } else {
+        let entries: Vec<_> = fs::read_dir(&extract)
+            .map_err(|_| io_error())?
+            .collect::<Result<_, _>>()
+            .map_err(|_| io_error())?;
+        let wrapped = extract.join(slug);
+        if entries.len() != 1 || !wrapped.join("SKILL.md").is_file() {
+            return Err(invalid(
+                "Gói phải có một SKILL.md ở root hoặc wrapper khớp slug.",
+            ));
+        }
+        wrapped
+    };
+    let marker = fs::read_to_string(skill_root.join("SKILL.md"))
+        .map_err(|_| invalid("SKILL.md phải là UTF-8 đọc được."))?;
+    if marker.trim().is_empty() {
+        return Err(invalid("SKILL.md không được rỗng."));
+    }
+    let full = content_hash(&skill_root, false)?;
+    let comparison = content_hash(&skill_root, true)?;
+    let destination = packages.join(&meta.sha256);
+    if destination.exists() {
+        reject_links(&destination)?;
+        if content_hash(&destination.join("original"), false)? != full {
+            return Err(invalid(
+                "Bản gốc trong cache đã thay đổi. Kiểm tra dữ liệu app trước khi thử lại.",
+            ));
+        }
+    } else {
+        let prepared = scratch.path().join("package");
+        fs::create_dir(&prepared).map_err(|_| io_error())?;
+        fs::rename(&skill_root, prepared.join("original")).map_err(|_| io_error())?;
+        fs::copy(archive, prepared.join(format!("archive.{}", meta.format)))
+            .map_err(|_| io_error())?;
+        fs::write(
+            prepared.join("manifest.json"),
+            serde_json::json!({"contentHash":comparison,"fullHash":full,"algorithm":"content-v1"})
+                .to_string(),
+        )
+        .map_err(|_| io_error())?;
+        fs::rename(prepared, &destination).map_err(|_| io_error())?;
+    }
+    Ok(VerifiedPackage {
+        original_root: destination.join("original"),
+        content_hash: comparison,
+        full_hash: full,
+        archive_hash: meta.sha256.clone(),
+    })
+}
+
+pub fn copy_tree(source: &Path, target: &Path) -> CompanyResult<()> {
+    fs::create_dir_all(target).map_err(|_| io_error())?;
+    for entry in walkdir::WalkDir::new(source).follow_links(false) {
+        let entry = entry.map_err(|_| io_error())?;
+        reject_links(entry.path())?;
+        if entry.path() == source {
+            continue;
+        }
+        let relative = entry.path().strip_prefix(source).map_err(|_| io_error())?;
+        let path = target.join(relative);
+        if entry.file_type().is_dir() {
+            fs::create_dir_all(path).map_err(|_| io_error())?;
+        } else if entry.file_type().is_file() {
+            if let Some(parent) = path.parent() {
+                fs::create_dir_all(parent).map_err(|_| io_error())?;
+            }
+            fs::copy(entry.path(), &path).map_err(|_| io_error())?;
+            File::options()
+                .write(true)
+                .open(path)
+                .map_err(|_| io_error())?
+                .sync_all()
+                .map_err(|_| io_error())?;
+        } else {
+            return Err(invalid("Không sao chép loại file không hỗ trợ."));
+        }
+    }
+    Ok(())
+}
+````
+
+## File: src-tauri/src/core/company/project_service.rs
+````rust
+use super::*;
+use crate::core::company::aipro_paths::{overlaps, path_key, validate_ancestors};
+use std::path::PathBuf;
+
+impl CompanyService {
+    pub fn projects(&self) -> CompanyResult<Vec<Project>> {
+        self.repository.projects()
+    }
+
+    pub fn add_project(&self, path: &Path) -> CompanyResult<Project> {
+        let _worker = self.worker.lock().map_err(|_| write_error())?;
+        if !path.is_absolute() || !path.is_dir() {
+            return Err(CompanyError::new(
+                "INVALID_PROJECT",
+                "Chọn thư mục dự án có sẵn trên máy.",
+            ));
+        }
+        validate_ancestors(path)?;
+        let path = fs::canonicalize(path).map_err(|_| write_error())?;
+        if overlaps(&path, &self.config.data_root)
+            || self.repository.installations()?.iter().any(|item| {
+                let key = path_key(&path);
+                let target = path_key(Path::new(&item.target));
+                key == target || key.starts_with(&(target + "/"))
+            })
+        {
+            return Err(CompanyError::new(
+                "TARGET_CONFLICT",
+                "Dự án không được nằm trong bản cài hoặc vùng dữ liệu ứng dụng.",
+            ));
+        }
+        if let Some(existing) = self
+            .projects()?
+            .into_iter()
+            .find(|p| path_key(Path::new(&p.path)) == path_key(&path))
+        {
+            return Ok(existing);
+        }
+        let project = Project {
+            id: uuid::Uuid::new_v4().to_string(),
+            name: path
+                .file_name()
+                .unwrap_or_default()
+                .to_string_lossy()
+                .to_string(),
+            path: path.display().to_string(),
+        };
+        self.repository.save_project(&project)?;
+        Ok(project)
+    }
+    pub fn remove_project(&self, id: &str) -> CompanyResult<()> {
+        let _worker = self.worker.lock().map_err(|_| write_error())?;
+        if self
+            .repository
+            .installations()?
+            .iter()
+            .any(|item| item.project_id.as_deref() == Some(id))
+        {
+            return Err(CompanyError::new(
+                "PROJECT_IN_USE",
+                "Dự án còn bản cài được quản lý; không bỏ dự án khỏi danh sách.",
+            ));
+        }
+        if self
+            .operations
+            .lock()
+            .map_err(|_| operation_error())?
+            .values()
+            .any(|op| {
+                op.project_id.as_deref() == Some(id)
+                    && !matches!(
+                        op.view.state,
+                        OperationState::Succeeded
+                            | OperationState::Failed
+                            | OperationState::Cancelled
+                    )
+            })
+        {
+            return Err(CompanyError::new(
+                "PROJECT_IN_USE",
+                "Dự án còn thao tác chưa hoàn tất.",
+            ));
+        }
+        self.repository.remove_project(id)
+    }
+    pub(super) fn installation_target(
+        &self,
+        project_id: Option<&str>,
+        slug: &str,
+    ) -> CompanyResult<PathBuf> {
+        let target = self.recorded_target(project_id, slug)?;
+        if project_id.is_some() && !self.scope_root(project_id)?.is_dir() {
+            return Err(CompanyError::new(
+                "PROJECT_MISSING",
+                "Thư mục dự án không còn tồn tại. Chọn lại thư mục trước khi cài.",
+            ));
+        }
+        Ok(target)
+    }
+    fn scope_root(&self, project_id: Option<&str>) -> CompanyResult<PathBuf> {
+        match project_id {
+            None => Ok(self.config.profile_root.clone()),
+            Some(id) => Ok(PathBuf::from(
+                self.projects()?
+                    .into_iter()
+                    .find(|p| p.id == id)
+                    .ok_or_else(|| CompanyError::new("PROJECT_NOT_FOUND", "Không tìm thấy dự án."))?
+                    .path,
+            )),
+        }
+    }
+    fn recorded_target(&self, project_id: Option<&str>, slug: &str) -> CompanyResult<PathBuf> {
+        let root = self.scope_root(project_id)?;
+        let target = global_target(&root, slug)?;
+        if overlaps(&target, &self.config.data_root) {
+            return Err(CompanyError::new(
+                "TARGET_CONFLICT",
+                "Đích cài chồng lấn dữ liệu ứng dụng.",
+            ));
+        }
+        Ok(target)
+    }
+    pub(super) fn guarded_installation(&self, id: &str) -> CompanyResult<Installation> {
+        let item = self
+            .repository
+            .installations()?
+            .into_iter()
+            .find(|item| item.id == id)
+            .ok_or_else(|| {
+                CompanyError::new("INSTALLATION_NOT_FOUND", "Không tìm thấy bản cài.")
+            })?;
+        let expected = self.recorded_target(item.project_id.as_deref(), &item.slug)?;
+        if path_key(&expected) != path_key(Path::new(&item.target)) {
+            return Err(CompanyError::new(
+                "TARGET_CONFLICT",
+                "Đường dẫn bản cài không khớp ownership đã ghi nhận.",
+            ));
+        }
+        Ok(item)
+    }
+    pub(super) fn refreshed(&self, mut item: Installation) -> Installation {
+        item.content_state = if self.guarded_installation(&item.id).is_err() {
+            ContentState::Unknown
+        } else {
+            match fs::symlink_metadata(&item.target) {
+                Err(e) if e.kind() == std::io::ErrorKind::NotFound => ContentState::Missing,
+                Err(_) => ContentState::Unknown,
+                Ok(meta) if !meta.is_dir() => ContentState::Unknown,
+                Ok(_) => match content_hash(Path::new(&item.target), true) {
+                    Ok(hash) if hash == item.content_hash => ContentState::Original,
+                    Ok(_) => ContentState::Customized,
+                    Err(_) => ContentState::Unknown,
+                },
+            }
+        };
+        item
+    }
+    pub fn refresh_installation(&self, id: &str) -> CompanyResult<Installation> {
+        Ok(self.refreshed(self.guarded_installation(id)?))
+    }
+    pub fn installation_open_path(&self, id: &str, kind: &str) -> CompanyResult<PathBuf> {
+        let item = self.guarded_installation(id)?;
+        let target = PathBuf::from(item.target);
+        let path = match kind {
+            "skill_file" => target.join("SKILL.md"),
+            "folder" => target,
+            _ => {
+                return Err(CompanyError::new(
+                    "INVALID_REQUEST",
+                    "Chọn mở SKILL.md hoặc thư mục.",
+                ))
+            }
+        };
+        validate_ancestors(&path)?;
+        if !path.exists() {
+            return Err(CompanyError::new(
+                "CONTENT_MISSING",
+                "Không tìm thấy file hoặc thư mục bản cài.",
+            ));
+        }
+        Ok(path)
+    }
+}
+````
+
+## File: src-tauri/src/core/company/replacement_service.rs
+````rust
+use super::updates::UpdateJob;
+use super::*;
+use crate::core::company::aipro_paths::{path_key, validate_ancestors};
+use std::path::PathBuf;
+
+fn needs_recovery() -> CompanyError {
     CompanyError::new(
-        "DATABASE_ERROR",
-        "Không cập nhật được dữ liệu quản lý trên máy.",
+        "RECOVERY_REQUIRED",
+        "Dữ liệu cập nhật đã được giữ. Mở lại app để phục hồi; không ghi đè đích này.",
     )
 }
-impl CompanyRepository {
-    pub fn open(path: &Path) -> CompanyResult<Self> {
-        let connection = Connection::open(path).map_err(|_| db_error())?;
-        connection
-            .busy_timeout(Duration::from_secs(3))
-            .map_err(|_| db_error())?;
-        connection.execute_batch("PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL;
-            CREATE TABLE IF NOT EXISTS company_packages (hash TEXT PRIMARY KEY, payload TEXT NOT NULL);
-            CREATE TABLE IF NOT EXISTS company_installations (id TEXT PRIMARY KEY, target_key TEXT NOT NULL UNIQUE, payload TEXT NOT NULL);
-            CREATE TABLE IF NOT EXISTS company_operations (id TEXT PRIMARY KEY, state TEXT NOT NULL, payload TEXT NOT NULL);
-            CREATE TABLE IF NOT EXISTS company_catalog_cache (store_key TEXT NOT NULL, user_id TEXT NOT NULL, query TEXT NOT NULL, page INTEGER NOT NULL, fetched_at TEXT NOT NULL, payload TEXT NOT NULL, PRIMARY KEY(store_key,user_id,query,page));
-            PRAGMA user_version=2;").map_err(|_| db_error())?;
-        Ok(Self {
-            connection: Mutex::new(connection),
-        })
+fn changed() -> CompanyError {
+    CompanyError::new(
+        "CONTENT_CHANGED",
+        "Nội dung đã thay đổi sau preview. Giữ bản hiện tại và xem lại trước khi cập nhật.",
+    )
+}
+fn matches(path: &Path, hash: &str) -> bool {
+    path.is_dir()
+        && validate_ancestors(path).is_ok()
+        && content_hash(path, false).ok().as_deref() == Some(hash)
+}
+
+impl CompanyService {
+    fn snapshot_backup(&self, old: &Installation, expected: &str) -> CompanyResult<Backup> {
+        let root = self.config.data_root.join("backups").join(&old.id);
+        uuid::Uuid::parse_str(&old.id).map_err(|_| operation_error())?;
+        validate_ancestors(&root)?;
+        fs::create_dir_all(&root).map_err(|_| {
+            CompanyError::new(
+                "BACKUP_FAILED",
+                "Không tạo được thư mục backup. Giữ bản đang dùng.",
+            )
+        })?;
+        let id = uuid::Uuid::new_v4().to_string();
+        let temporary = tempfile::tempdir_in(&root).map_err(|_| write_error())?;
+        copy_tree(Path::new(&old.target), &temporary.path().join("content"))?;
+        if !matches(&temporary.path().join("content"), expected)
+            || !matches(Path::new(&old.target), expected)
+        {
+            return Err(changed());
+        }
+        let destination = root.join(&id);
+        let backup = Backup {
+            id,
+            installation_id: old.id.clone(),
+            created_at: chrono::Utc::now().to_rfc3339(),
+            reason: "update".into(),
+            path: destination.join("content").display().to_string(),
+            full_hash: expected.into(),
+            installation: old.clone(),
+        };
+        let metadata = temporary.path().join("metadata.json");
+        fs::write(
+            &metadata,
+            serde_json::to_vec(&backup).map_err(|_| write_error())?,
+        )
+        .map_err(|_| write_error())?;
+        File::options()
+            .write(true)
+            .open(&metadata)
+            .map_err(|_| write_error())?
+            .sync_all()
+            .map_err(|_| write_error())?;
+        fs::rename(temporary.path(), &destination).map_err(|_| write_error())?;
+        self.repository.save_backup(&backup)?;
+        Ok(backup)
     }
-    pub fn installations(&self) -> CompanyResult<Vec<Installation>> {
-        let connection = self.connection.lock().map_err(|_| db_error())?;
-        let mut query = connection
-            .prepare("SELECT payload FROM company_installations ORDER BY id")
-            .map_err(|_| db_error())?;
-        let rows = query
-            .query_map([], |row| row.get::<_, String>(0))
-            .map_err(|_| db_error())?;
-        rows.map(|row| serde_json::from_str(&row.map_err(|_| db_error())?).map_err(|_| db_error()))
-            .collect()
-    }
-    pub fn cache_catalog(
+    pub(super) fn replacement_paths(
         &self,
-        store: &str,
-        user: &str,
-        query: &str,
-        page: u32,
-        result: &SkillPage,
+        journal: &ReplaceJournal,
+    ) -> CompanyResult<(PathBuf, PathBuf, PathBuf)> {
+        if journal.old.id != journal.new.id
+            || journal.old.project_id != journal.new.project_id
+            || journal.old.slug != journal.new.slug
+        {
+            return Err(needs_recovery());
+        }
+        let target =
+            self.installation_target(journal.old.project_id.as_deref(), &journal.old.slug)?;
+        if path_key(&target) != path_key(Path::new(&journal.old.target))
+            || path_key(&target) != path_key(Path::new(&journal.new.target))
+        {
+            return Err(needs_recovery());
+        }
+        let stage = stage_path(&target, &journal.view.id)?;
+        let rollback = target
+            .parent()
+            .ok_or_else(write_error)?
+            .join(format!(".company-rollback-{}", journal.view.id));
+        validate_ancestors(&rollback)?;
+        Ok((target, stage, rollback))
+    }
+    pub(super) fn replace_installation(
+        &self,
+        job: &UpdateJob,
+        package: &package_store::VerifiedPackage,
     ) -> CompanyResult<()> {
-        let mut connection = self.connection.lock().map_err(|_| db_error())?;
-        let transaction = connection.transaction().map_err(|_| db_error())?;
-        let fetched_at = chrono::Utc::now().to_rfc3339();
-        transaction.execute("INSERT INTO company_catalog_cache(store_key,user_id,query,page,fetched_at,payload) VALUES(?1,?2,?3,?4,?5,?6) ON CONFLICT(store_key,user_id,query,page) DO UPDATE SET fetched_at=excluded.fetched_at,payload=excluded.payload", params![store,user,query.trim(),page,fetched_at,serde_json::to_string(result).map_err(|_| db_error())?]).map_err(|_| db_error())?;
-        transaction.execute("DELETE FROM company_catalog_cache WHERE rowid IN (SELECT rowid FROM company_catalog_cache WHERE store_key=?1 AND user_id=?2 ORDER BY fetched_at DESC LIMIT -1 OFFSET 100)", params![store,user]).map_err(|_| db_error())?;
-        transaction.commit().map_err(|_| db_error())
+        let id = job.id.as_str();
+        let old = &job.old;
+        let old_hash = job.expected_hash.as_str();
+        let owner = job.owner.as_str();
+        let cancelled = job.cancelled.as_ref();
+        let skill = &job.skill;
+        let _worker = self.worker.lock().map_err(|_| write_error())?;
+        Self::check_cancel(cancelled)?;
+        if self.owner()? != owner {
+            return Err(CompanyError::new(
+                "SESSION_EXPIRED",
+                "Phiên đã thay đổi; chuẩn bị cập nhật lại.",
+            ));
+        }
+        let current = self.guarded_installation(&old.id)?;
+        if current.package_hash != old.package_hash || !matches(Path::new(&old.target), old_hash) {
+            return Err(changed());
+        }
+        if !matches(&package.original_root, &package.full_hash) {
+            return Err(CompanyError::new(
+                "PACKAGE_INTEGRITY_FAILED",
+                "Gói gốc đã đổi sau preview. Không cập nhật.",
+            ));
+        }
+        let backup = self.snapshot_backup(old, old_hash)?;
+        let mut new = old.clone();
+        new.package_hash = package.archive_hash.clone();
+        new.content_hash = package.content_hash.clone();
+        new.name = skill.name.clone();
+        new.description_snapshot = skill.description.clone().unwrap_or_default();
+        new.installed_at = chrono::Utc::now().to_rfc3339();
+        new.mcp_bypassed = job.bypass;
+        new.content_state = ContentState::Original;
+        new.store_state = StoreState::Current;
+        new.checked_at = Some(chrono::Utc::now().to_rfc3339());
+        new.store_error = None;
+        let mut journal = ReplaceJournal {
+            view: self.status(id)?,
+            old: old.clone(),
+            new,
+            old_full_hash: old_hash.into(),
+            new_full_hash: package.full_hash.clone(),
+            backup_id: backup.id,
+            phase: ReplacePhase::Prepared,
+            stage_owned: false,
+        };
+        let (target, stage, rollback) = self.replacement_paths(&journal)?;
+        if fs::symlink_metadata(&stage).is_ok() || fs::symlink_metadata(&rollback).is_ok() {
+            return Err(CompanyError::new(
+                "TARGET_CONFLICT",
+                "Vùng staging/rollback đã có nội dung. Không ghi đè.",
+            ));
+        }
+        self.repository.record_replacement(&journal)?;
+        let mut edited_old_returned = false;
+        let result = (|| {
+            fs::create_dir(&stage).map_err(|_| write_error())?;
+            journal.stage_owned = true;
+            self.repository.record_replacement(&journal)?;
+            copy_tree(&package.original_root, &stage)?;
+            if !matches(&stage, &journal.new_full_hash) {
+                return Err(write_error());
+            }
+            Self::check_cancel(cancelled)?;
+            if self.owner()? != owner {
+                return Err(CompanyError::new(
+                    "SESSION_EXPIRED",
+                    "Phiên đã thay đổi; chuẩn bị cập nhật lại.",
+                ));
+            }
+            if !matches(&target, &journal.old_full_hash) {
+                return Err(changed());
+            }
+            self.enter_commit(id)?;
+            fs::rename(&target, &rollback).map_err(|_| write_error())?;
+            journal.phase = ReplacePhase::OldMoved;
+            self.repository.record_replacement(&journal)?;
+            if !matches(&rollback, &journal.old_full_hash) {
+                // In this live operation we know which directory we just moved.
+                // Return late edits intact; startup recovery has no such evidence.
+                let target_absent = fs::symlink_metadata(&target)
+                    .is_err_and(|e| e.kind() == std::io::ErrorKind::NotFound);
+                if !target_absent
+                    || !rollback.is_dir()
+                    || validate_ancestors(&rollback).is_err()
+                    || !journal.stage_owned
+                    || !matches(&stage, &journal.new_full_hash)
+                {
+                    return Err(needs_recovery());
+                }
+                fs::rename(&rollback, &target).map_err(|_| needs_recovery())?;
+                fs::remove_dir_all(&stage).map_err(|_| needs_recovery())?;
+                self.repository.finish_replacement(id)?;
+                edited_old_returned = true;
+                return Err(changed());
+            }
+            if fs::symlink_metadata(&target).is_ok() {
+                return Err(needs_recovery());
+            }
+            if !matches(&stage, &journal.new_full_hash) {
+                return Err(needs_recovery());
+            }
+            fs::rename(&stage, &target).map_err(|_| write_error())?;
+            if !matches(&target, &journal.new_full_hash) {
+                return Err(needs_recovery());
+            }
+            journal.phase = ReplacePhase::NewMoved;
+            self.repository.record_replacement(&journal)?;
+            journal.phase = ReplacePhase::Committed;
+            self.repository.commit_replacement(&journal)?;
+            Ok(())
+        })();
+        if let Err(error) = result {
+            if edited_old_returned {
+                return Err(error);
+            }
+            let durable = self
+                .repository
+                .pending_replacements()?
+                .into_iter()
+                .find(|j| j.view.id == id)
+                .ok_or_else(needs_recovery)?;
+            if !self.recover_replacement(&durable).unwrap_or(false) {
+                return Err(needs_recovery());
+            }
+            return Err(error);
+        }
+        if !self.recover_replacement(&journal).unwrap_or(false) {
+            return Err(needs_recovery());
+        }
+        Ok(())
     }
-    pub fn cached_catalog(
-        &self,
-        store: &str,
-        user: &str,
-        query: &str,
-        page: u32,
-    ) -> CompanyResult<Option<SkillPage>> {
-        use rusqlite::OptionalExtension;
-        let connection = self.connection.lock().map_err(|_| db_error())?;
-        let row: Option<(String, String)> = connection.query_row("SELECT payload,fetched_at FROM company_catalog_cache WHERE store_key=?1 AND user_id=?2 AND query=?3 AND page=?4", params![store,user,query.trim(),page], |row| Ok((row.get(0)?, row.get(1)?))).optional().map_err(|_| db_error())?;
-        row.map(|(payload, fetched_at)| {
-            let mut result: SkillPage = serde_json::from_str(&payload).map_err(|_| db_error())?;
-            result.cache = Some(CatalogCache {
-                fetched_at,
-                stale: true,
+    pub(super) fn recover_replacement(&self, journal: &ReplaceJournal) -> CompanyResult<bool> {
+        let (target, stage, rollback) = self.replacement_paths(journal)?;
+        let backup = self
+            .repository
+            .backups(&journal.old.id)?
+            .into_iter()
+            .find(|b| b.id == journal.backup_id)
+            .ok_or_else(needs_recovery)?;
+        let expected_backup = self
+            .config
+            .data_root
+            .join("backups")
+            .join(&journal.old.id)
+            .join(&journal.backup_id)
+            .join("content");
+        if path_key(Path::new(&backup.path)) != path_key(&expected_backup)
+            || backup.full_hash != journal.old_full_hash
+            || !matches(&expected_backup, &journal.old_full_hash)
+        {
+            return Ok(false);
+        }
+        let stage_exists = fs::symlink_metadata(&stage).is_ok();
+        let rollback_exists = fs::symlink_metadata(&rollback).is_ok();
+        let target_exists = fs::symlink_metadata(&target).is_ok();
+        if stage_exists && (!journal.stage_owned || !matches(&stage, &journal.new_full_hash)) {
+            return Ok(false);
+        }
+        if rollback_exists && !matches(&rollback, &journal.old_full_hash) {
+            return Ok(false);
+        }
+        if journal.phase == ReplacePhase::Committed {
+            let current = self.guarded_installation(&journal.new.id)?;
+            if current.package_hash != journal.new.package_hash
+                || current.content_hash != journal.new.content_hash
+            {
+                return Ok(false);
+            }
+            if stage_exists {
+                fs::remove_dir_all(&stage).map_err(|_| write_error())?;
+            }
+            if rollback_exists {
+                fs::remove_dir_all(&rollback).map_err(|_| write_error())?;
+            }
+            self.repository.finish_replacement(&journal.view.id)?;
+            return Ok(true);
+        }
+        if rollback_exists {
+            if target_exists {
+                if !journal.stage_owned || stage_exists || !matches(&target, &journal.new_full_hash)
+                {
+                    return Ok(false);
+                }
+                fs::rename(&target, &stage).map_err(|_| write_error())?;
+            }
+            fs::rename(&rollback, &target).map_err(|_| write_error())?;
+        } else if !matches(&target, &journal.old_full_hash) {
+            return Ok(false);
+        }
+        if stage.exists() && journal.stage_owned && matches(&stage, &journal.new_full_hash) {
+            fs::remove_dir_all(&stage).map_err(|_| write_error())?;
+        }
+        self.repository.finish_replacement(&journal.view.id)?;
+        Ok(true)
+    }
+    pub(super) fn recover_replacements(&self) -> CompanyResult<()> {
+        for journal in self.repository.pending_replacements()? {
+            if self.recover_replacement(&journal).unwrap_or(false) {
+                continue;
+            }
+            let mut view = journal.view.clone();
+            view.state = OperationState::RecoveryRequired;
+            view.error = Some(CompanyError::new(
+                "RECOVERY_REQUIRED",
+                format!(
+                    "Đã giữ dữ liệu cập nhật cần kiểm tra: {} ; .company-rollback-{} ; backup {}",
+                    view.target, view.id, journal.backup_id
+                ),
+            ));
+            let skill = view.skill.clone().unwrap_or(Skill {
+                id: journal.new.skill_id.clone(),
+                slug: journal.new.slug.clone(),
+                name: journal.new.name.clone(),
+                description_excerpt: None,
+                description: Some(journal.new.description_snapshot.clone()),
+                updated_at: journal.new.installed_at.clone(),
+                package: PackageMeta {
+                    format: "zip".into(),
+                    size_bytes: 0,
+                    sha256: journal.new.package_hash.clone(),
+                    etag: String::new(),
+                },
             });
-            Ok(result)
-        })
-        .transpose()
-    }
-    pub fn clear_catalog(&self, store: &str) -> CompanyResult<()> {
-        self.connection
-            .lock()
-            .map_err(|_| db_error())?
-            .execute(
-                "DELETE FROM company_catalog_cache WHERE store_key=?1",
-                [store],
-            )
-            .map_err(|_| db_error())?;
+            self.operations
+                .lock()
+                .map_err(|_| operation_error())?
+                .insert(
+                    view.id.clone(),
+                    Operation {
+                        view,
+                        skill,
+                        owner: String::new(),
+                        cancelled: Arc::new(AtomicBool::new(true)),
+                        project_id: journal.old.project_id.clone(),
+                        old: Some(journal.old),
+                        old_full_hash: Some(journal.old_full_hash),
+                        preview: None,
+                        bypass: false,
+                    },
+                );
+        }
         Ok(())
-    }
-    pub fn prepare(&self, journal: &InstallJournal) -> CompanyResult<()> {
-        let payload = serde_json::to_string(journal).map_err(|_| db_error())?;
-        self.connection
-            .lock()
-            .map_err(|_| db_error())?
-            .execute(
-                "INSERT INTO company_operations(id,state,payload) VALUES (?1,'prepared',?2)",
-                params![journal.view.id, payload],
-            )
-            .map_err(|_| db_error())?;
-        Ok(())
-    }
-    pub fn stage_created(&self, journal: &InstallJournal) -> CompanyResult<()> {
-        self.connection
-            .lock()
-            .map_err(|_| db_error())?
-            .execute(
-                "UPDATE company_operations SET payload=?2 WHERE id=?1",
-                params![
-                    journal.view.id,
-                    serde_json::to_string(journal).map_err(|_| db_error())?
-                ],
-            )
-            .map_err(|_| db_error())?;
-        Ok(())
-    }
-    pub fn save_package(
-        &self,
-        meta: &PackageMeta,
-        content_hash: &str,
-        full_hash: &str,
-    ) -> CompanyResult<()> {
-        let payload = serde_json::json!({"package":meta,"contentHash":content_hash,"fullHash":full_hash,"algorithm":"content-v1"}).to_string();
-        self.connection.lock().map_err(|_| db_error())?.execute("INSERT INTO company_packages(hash,payload) VALUES (?1,?2) ON CONFLICT(hash) DO NOTHING", params![meta.sha256,payload]).map_err(|_| db_error())?;
-        Ok(())
-    }
-    pub fn commit(&self, journal: &InstallJournal) -> CompanyResult<()> {
-        let mut connection = self.connection.lock().map_err(|_| db_error())?;
-        let transaction = connection.transaction().map_err(|_| db_error())?;
-        let installation = &journal.installation;
-        transaction.execute("INSERT INTO company_installations(id,target_key,payload) VALUES (?1,?2,?3) ON CONFLICT(id) DO NOTHING", params![installation.id,installation.target.replace('\\',"/").to_lowercase(),serde_json::to_string(installation).map_err(|_| db_error())?]).map_err(|_| db_error())?;
-        transaction
-            .execute(
-                "UPDATE company_operations SET state='committed' WHERE id=?1",
-                params![journal.view.id],
-            )
-            .map_err(|_| db_error())?;
-        transaction.commit().map_err(|_| db_error())
-    }
-    pub fn finish(&self, id: &str, state: &str) -> CompanyResult<()> {
-        self.connection
-            .lock()
-            .map_err(|_| db_error())?
-            .execute(
-                "UPDATE company_operations SET state=?2 WHERE id=?1",
-                params![id, state],
-            )
-            .map_err(|_| db_error())?;
-        Ok(())
-    }
-    pub fn pending(&self) -> CompanyResult<Vec<InstallJournal>> {
-        let connection = self.connection.lock().map_err(|_| db_error())?;
-        let mut query = connection.prepare("SELECT payload FROM company_operations WHERE state='prepared' OR state='recovery_required'").map_err(|_| db_error())?;
-        let rows = query
-            .query_map([], |row| row.get::<_, String>(0))
-            .map_err(|_| db_error())?;
-        rows.map(|row| serde_json::from_str(&row.map_err(|_| db_error())?).map_err(|_| db_error()))
-            .collect()
     }
 }
 ````
@@ -33930,180 +34398,6 @@ impl StoreClient {
         }
         Ok(response)
     }
-}
-````
-
-## File: src-tauri/src/core/company/types.rs
-````rust
-use serde::{Deserialize, Serialize};
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct CompanyError {
-    pub code: String,
-    pub message: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub request_id: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub retry_after_seconds: Option<u64>,
-}
-pub type CompanyResult<T> = Result<T, CompanyError>;
-impl CompanyError {
-    pub fn new(code: &str, message: impl Into<String>) -> Self {
-        Self {
-            code: code.into(),
-            message: message.into(),
-            request_id: None,
-            retry_after_seconds: None,
-        }
-    }
-}
-impl std::fmt::Display for CompanyError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}: {}", self.code, self.message)
-    }
-}
-impl std::error::Error for CompanyError {}
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(rename_all = "snake_case")]
-pub enum McpState {
-    NotRequired,
-    Undeclared,
-    Present,
-    Missing,
-    Unknown,
-}
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct McpReport {
-    pub state: McpState,
-    pub required: Vec<String>,
-    pub present: Vec<String>,
-    pub missing: Vec<String>,
-    pub reason: Option<String>,
-    pub checked_at: String,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct User {
-    pub id: String,
-    pub username: String,
-    #[serde(alias = "display_name")]
-    pub display_name: String,
-}
-#[derive(Clone, Serialize, Deserialize)]
-pub struct StoredSession {
-    pub access_token: String,
-    pub expires_at: String,
-    pub user: User,
-    #[serde(default)]
-    pub nonce: String,
-}
-#[derive(Debug, Clone, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct SessionView {
-    pub user: Option<User>,
-    pub expires_at: Option<String>,
-    pub persistent: bool,
-}
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct PackageMeta {
-    pub format: String,
-    #[serde(alias = "size_bytes")]
-    pub size_bytes: u64,
-    pub sha256: String,
-    pub etag: String,
-}
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct Skill {
-    pub id: String,
-    pub slug: String,
-    pub name: String,
-    #[serde(default, alias = "description_excerpt")]
-    pub description_excerpt: Option<String>,
-    #[serde(default)]
-    pub description: Option<String>,
-    #[serde(alias = "updated_at")]
-    pub updated_at: String,
-    pub package: PackageMeta,
-}
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct Pagination {
-    pub page: u32,
-    #[serde(alias = "page_size")]
-    pub page_size: u32,
-    pub total: u64,
-    #[serde(alias = "total_pages")]
-    pub total_pages: u32,
-}
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SkillPage {
-    pub items: Vec<Skill>,
-    pub pagination: Pagination,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub cache: Option<CatalogCache>,
-}
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct CatalogCache {
-    pub fetched_at: String,
-    pub stale: bool,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(rename_all = "snake_case")]
-pub enum OperationState {
-    AwaitingDecision,
-    Downloading,
-    Validating,
-    Staging,
-    Committing,
-    Succeeded,
-    Cancelled,
-    Failed,
-    RecoveryRequired,
-}
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct OperationView {
-    pub id: String,
-    pub state: OperationState,
-    pub target: String,
-    pub mcp: McpReport,
-    #[serde(default)]
-    pub mcp_path: String,
-    #[serde(default)]
-    pub skill: Option<Skill>,
-    pub progress_bytes: u64,
-    pub total_bytes: u64,
-    pub error: Option<CompanyError>,
-}
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct Installation {
-    pub id: String,
-    pub skill_id: String,
-    pub slug: String,
-    pub name: String,
-    pub target: String,
-    pub package_hash: String,
-    pub content_hash: String,
-    pub description_snapshot: String,
-    pub installed_at: String,
-    pub mcp_bypassed: bool,
-}
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct InstallJournal {
-    pub view: OperationView,
-    pub installation: Installation,
-    pub full_hash: String,
-    #[serde(default)]
-    pub stage_owned: bool,
 }
 ````
 
@@ -36894,74 +37188,100 @@ mod tests {
 }
 ````
 
-## File: src-tauri/tests/company_flows.rs
+## File: src-tauri/src/company_app.rs
 ````rust
-use app_lib::core::company::mcp_check::{check_config, parse_requirements};
-use app_lib::core::company::{
-    config::CompanyConfig,
-    session::{MemoryCredentials, SessionService},
+use crate::{
+    commands::company::*,
+    core::company::{
+        config::CompanyConfig, installation_service::CompanyService, session::WindowsCredentials,
+    },
 };
 use std::sync::Arc;
-#[path = "company/recovery.rs"]
-mod recovery;
-#[path = "company/support.rs"]
-mod support;
-use app_lib::core::company::installation_service::CompanyService;
-use app_lib::core::company::store_client::StoreClient;
-use app_lib::core::company::{package_store::prepare_archive, types::PackageMeta};
+use tauri::Manager;
 
-#[test]
-fn company_flow02_offline_catalog_survives_restart_with_timestamp() {
-    let mut server = support::MockServer::start("normal");
-    let root = tempfile::tempdir().unwrap();
-    let config = CompanyConfig::for_test(
-        &server.url,
-        root.path().join("profile"),
-        root.path().join("data"),
-    )
-    .unwrap();
-    let credentials = Arc::new(MemoryCredentials::default());
-    let app = CompanyService::new(config.clone(), credentials.clone()).unwrap();
-    app.login("employee01", "demo-password").unwrap();
-    let online = app.search("jira", 1).unwrap();
-    assert_eq!(online.items.len(), 1);
-    drop(app);
-    server.stop();
-    let restarted = CompanyService::new(config, credentials).unwrap();
-    let cached = restarted
-        .search("jira", 1)
-        .expect("previous catalog is available offline");
-    assert_eq!(cached.items[0].id, online.items[0].id);
-    let dto = serde_json::to_value(cached).unwrap();
-    assert_eq!(dto["cache"]["stale"], true);
-    assert!(
-        chrono::DateTime::parse_from_rfc3339(dto["cache"]["fetchedAt"].as_str().unwrap()).is_ok()
-    );
-    assert!(restarted.prepare_install("skl_001").is_err());
+pub fn run() {
+    tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_single_instance::init(|app, _, _| {
+            if let Some(window) = app.get_webview_window("main") {
+                let _ = window.show();
+                let _ = window.set_focus();
+            }
+        }))
+        .setup(|app| {
+            let config = CompanyConfig::from_environment()?;
+            let credentials = Arc::new(WindowsCredentials::new(&config));
+            app.manage(Arc::new(CompanyService::new(config, credentials)?));
+            if let Some(window) = app.get_webview_window("main") {
+                window.show()?;
+            }
+            Ok(())
+        })
+        .invoke_handler(tauri::generate_handler![
+            company_environment,
+            company_session,
+            company_login,
+            company_logout,
+            company_store_search,
+            company_store_detail,
+            company_installations_list,
+            company_operation_prepare,
+            company_operation_confirm,
+            company_operation_status,
+            company_operation_cancel,
+            company_projects_list,
+            company_project_add,
+            company_project_remove,
+            company_project_install_prepare,
+            company_installation_refresh,
+            company_installation_open,
+            company_updates_check,
+            company_update_prepare,
+            company_update_apply,
+            company_backups_list,
+            company_operation_open_preview
+        ])
+        .run(tauri::generate_context!())
+        .expect("Company Skills Manager startup failed");
+}
+````
+
+## File: src-tauri/tests/company/projects.rs
+````rust
+use super::support::MockServer;
+use app_lib::core::company::{
+    config::CompanyConfig, installation_service::CompanyService, session::MemoryCredentials,
+};
+use std::{
+    fs,
+    sync::Arc,
+    time::{Duration, Instant},
+};
+
+fn wait(app: &CompanyService, id: &str) {
+    let deadline = Instant::now() + Duration::from_secs(30);
+    loop {
+        let op = app.status(id).unwrap();
+        let state = serde_json::to_value(&op).unwrap()["state"]
+            .as_str()
+            .unwrap()
+            .to_string();
+        if state == "succeeded" {
+            return;
+        }
+        assert!(
+            !matches!(state.as_str(), "failed" | "cancelled" | "recovery_required"),
+            "{:?}",
+            op.error
+        );
+        assert!(Instant::now() < deadline, "operation timed out");
+        std::thread::sleep(Duration::from_millis(20));
+    }
 }
 
 #[test]
-fn company_flow02_another_account_never_receives_previous_catalog_cache() {
-    let mut server = support::MockServer::start("normal");
-    let root = tempfile::tempdir().unwrap();
-    let config = CompanyConfig::for_test(
-        &server.url,
-        root.path().join("profile"),
-        root.path().join("data"),
-    )
-    .unwrap();
-    let app = CompanyService::new(config, Arc::new(MemoryCredentials::default())).unwrap();
-    app.login("employee01", "demo-password").unwrap();
-    app.search("jira", 1).unwrap();
-    app.logout().unwrap();
-    app.login("employee02", "demo-password").unwrap();
-    server.stop();
-    assert_eq!(app.search("jira", 1).unwrap_err().code, "NETWORK_ERROR");
-}
-
-#[test]
-fn company_flow03c_global_install_is_independent_and_survives_restart() {
-    let server = support::MockServer::start("normal");
+fn company_flow04_projects_install_independent_copies_and_keep_metadata_after_restart() {
+    let server = MockServer::start("normal");
     let root = tempfile::tempdir().unwrap();
     let config = CompanyConfig::for_test(
         &server.url,
@@ -36972,76 +37292,65 @@ fn company_flow03c_global_install_is_independent_and_survives_restart() {
     let credentials = Arc::new(MemoryCredentials::default());
     let app = Arc::new(CompanyService::new(config.clone(), credentials.clone()).unwrap());
     app.login("employee01", "demo-password").unwrap();
-    let stopped = app.prepare_install("skl_001").unwrap();
-    app.cancel(&stopped.id).unwrap();
-    assert!(!config
-        .profile_root
-        .join(".aipro/skills/jira-project-summary")
-        .exists());
-    let op = app.prepare_install("skl_001").unwrap();
-    app.confirm(&op.id, true).unwrap();
-    let result = wait_operation(&app, &op.id);
+    let a = root.path().join("Project A");
+    let b = root.path().join("Project B");
+    fs::create_dir(&a).unwrap();
+    fs::create_dir(&b).unwrap();
+    let project_a = app.add_project(&a).unwrap();
+    let project_b = app.add_project(&b).unwrap();
+    assert_eq!(app.add_project(&a.join(".")).unwrap().id, project_a.id);
+    assert!(!a.join(".aipro").exists());
+    assert!(!a.join(".claude").exists());
+    let global = app.prepare_install("skl_001").unwrap();
+    app.confirm(&global.id, true).unwrap();
+    wait(&app, &global.id);
+    for project in [&project_a, &project_b] {
+        let op = app.prepare_project_install("skl_001", &project.id).unwrap();
+        assert_eq!(op.mcp_path, global.mcp_path);
+        app.confirm(&op.id, true).unwrap();
+        wait(&app, &op.id);
+    }
+    let installed = app.installations().unwrap();
+    assert_eq!(installed.len(), 3);
+    let item_a = installed
+        .iter()
+        .find(|i| i.project_id.as_deref() == Some(&project_a.id))
+        .unwrap();
+    let target_a = std::path::Path::new(&item_a.target);
+    fs::write(target_a.join("SKILL.md"), "My project A customization").unwrap();
+    let refreshed = app.refresh_installation(&item_a.id).unwrap();
     assert_eq!(
-        serde_json::to_value(&result).unwrap()["state"],
-        "succeeded",
-        "{:?}",
-        result.error
+        serde_json::to_value(refreshed).unwrap()["contentState"],
+        "customized"
     );
-    let installations = app.installations().unwrap();
-    assert_eq!(installations.len(), 1);
-    let target = std::path::Path::new(&installations[0].target);
+    for other in installed.iter().filter(|i| i.id != item_a.id) {
+        assert_ne!(
+            fs::read_to_string(std::path::Path::new(&other.target).join("SKILL.md")).unwrap(),
+            "My project A customization"
+        );
+        assert_eq!(
+            serde_json::to_value(app.refresh_installation(&other.id).unwrap()).unwrap()
+                ["contentState"],
+            "original"
+        );
+    }
     let original = config
         .data_root
         .join("packages")
-        .join(&installations[0].package_hash)
+        .join(&item_a.package_hash)
         .join("original/SKILL.md");
-    let baseline = std::fs::read(&original).unwrap();
-    std::fs::write(target.join("SKILL.md"), "customized locally").unwrap();
-    assert_eq!(std::fs::read(original).unwrap(), baseline);
-    assert_eq!(
-        CompanyService::new(config, credentials)
-            .unwrap()
-            .installations()
-            .unwrap()
-            .len(),
-        1
+    assert_ne!(
+        fs::read_to_string(original).unwrap(),
+        "My project A customization"
     );
+    let reopened = CompanyService::new(config, credentials).unwrap();
+    assert_eq!(reopened.projects().unwrap().len(), 2);
+    assert_eq!(reopened.installations().unwrap().len(), 3);
 }
 
 #[test]
-fn company_flow03c_tampered_or_changed_package_never_writes_target() {
-    for (scenario, expected) in [
-        ("corrupt-download", "PACKAGE_INTEGRITY_FAILED"),
-        ("package-changed", "PACKAGE_CHANGED"),
-        ("forbidden-download", "FORBIDDEN"),
-    ] {
-        let server = support::MockServer::start(scenario);
-        let root = tempfile::tempdir().unwrap();
-        let config = CompanyConfig::for_test(
-            &server.url,
-            root.path().join("profile"),
-            root.path().join("data"),
-        )
-        .unwrap();
-        let app = Arc::new(
-            CompanyService::new(config.clone(), Arc::new(MemoryCredentials::default())).unwrap(),
-        );
-        app.login("employee01", "demo-password").unwrap();
-        let op = app.prepare_install("skl_001").unwrap();
-        app.confirm(&op.id, true).unwrap();
-        let result = wait_operation(&app, &op.id);
-        assert_eq!(result.error.unwrap().code, expected);
-        assert!(!config
-            .profile_root
-            .join(".aipro/skills/jira-project-summary")
-            .exists());
-        assert!(app.installations().unwrap().is_empty());
-    }
-}
-
-#[test]
-fn company_flow03c_existing_target_and_foreign_staging_are_preserved() {
-    let server = support::MockServer::start("normal");
+fn company_flow04_missing_installation_can_be_reinstalled_without_duplicate_ownership() {
+    let server = MockServer::start("normal");
     let root = tempfile::tempdir().unwrap();
     let config = CompanyConfig::for_test(
         &server.url,
@@ -37049,153 +37358,91 @@ fn company_flow03c_existing_target_and_foreign_staging_are_preserved() {
         root.path().join("data"),
     )
     .unwrap();
-    let app = Arc::new(
-        CompanyService::new(config.clone(), Arc::new(MemoryCredentials::default())).unwrap(),
-    );
+    let app =
+        Arc::new(CompanyService::new(config, Arc::new(MemoryCredentials::default())).unwrap());
     app.login("employee01", "demo-password").unwrap();
-    let op = app.prepare_install("skl_003").unwrap();
-    let stage = config
+    let first = app.prepare_install("skl_001").unwrap();
+    app.confirm(&first.id, true).unwrap();
+    wait(&app, &first.id);
+    let item = app.installations().unwrap().remove(0);
+    let target = std::path::Path::new(&item.target);
+    assert!(target.starts_with(root.path()));
+    fs::rename(target, root.path().join("user-moved-skill")).unwrap();
+    assert_eq!(
+        serde_json::to_value(app.refresh_installation(&item.id).unwrap()).unwrap()["contentState"],
+        "missing"
+    );
+    let retry = app.prepare_install("skl_001").unwrap();
+    app.confirm(&retry.id, true).unwrap();
+    wait(&app, &retry.id);
+    let all = app.installations().unwrap();
+    assert_eq!(all.len(), 1);
+    assert_eq!(all[0].id, item.id);
+    assert!(target.join("SKILL.md").is_file());
+    assert!(root.path().join("user-moved-skill/SKILL.md").is_file());
+}
+
+#[cfg(windows)]
+#[test]
+fn company_flow04_legacy_database_keeps_installation_identity_after_path_key_migration() {
+    use app_lib::core::company::package_store::content_hash;
+    let server = MockServer::start("normal");
+    let root = tempfile::tempdir().unwrap();
+    let config = CompanyConfig::for_test(
+        &server.url,
+        root.path().join("profile"),
+        root.path().join("data"),
+    )
+    .unwrap();
+    let target = config
         .profile_root
-        .join(".aipro/skills")
-        .join(format!(".company-stage-{}", op.id));
-    std::fs::create_dir_all(&stage).unwrap();
-    std::fs::write(stage.join("foreign.txt"), "keep me").unwrap();
-    app.confirm(&op.id, false).unwrap();
-    assert_eq!(
-        wait_operation(&app, &op.id).error.unwrap().code,
-        "TARGET_CONFLICT"
-    );
-    assert_eq!(
-        std::fs::read_to_string(stage.join("foreign.txt")).unwrap(),
-        "keep me"
-    );
-    let target = config.profile_root.join(".aipro/skills/writing-review");
-    std::fs::create_dir_all(&target).unwrap();
-    std::fs::write(target.join("SKILL.md"), "user content").unwrap();
-    assert_eq!(
-        app.prepare_install("skl_003").unwrap_err().code,
-        "TARGET_CONFLICT"
-    );
-    assert_eq!(
-        std::fs::read_to_string(target.join("SKILL.md")).unwrap(),
-        "user content"
-    );
-}
-
-#[test]
-fn company_flow03c_requires_fresh_mcp_check_after_manual_config_change() {
-    let server = support::MockServer::start("normal");
-    let root = tempfile::tempdir().unwrap();
-    let config = CompanyConfig::for_test(
-        &server.url,
-        root.path().join("profile"),
-        root.path().join("data"),
+        .join(".aipro/skills/jira-project-summary");
+    fs::create_dir_all(&target).unwrap();
+    fs::create_dir_all(&config.data_root).unwrap();
+    fs::write(target.join("SKILL.md"), "Legacy managed Jira").unwrap();
+    let canonical = fs::canonicalize(&target).unwrap();
+    let id = uuid::Uuid::new_v4().to_string();
+    let payload = serde_json::json!({ "id": id, "skillId":"skl_001", "slug":"jira-project-summary", "name":"Legacy Jira", "target":canonical.display().to_string(), "packageHash":"a".repeat(64), "contentHash":content_hash(&target, true).unwrap(), "descriptionSnapshot":"MCP bắt buộc: không", "installedAt":"2026-10-10T00:00:00Z", "mcpBypassed":false });
+    let db = rusqlite::Connection::open(config.data_root.join("manager.db")).unwrap();
+    db.execute_batch("CREATE TABLE company_installations(id TEXT PRIMARY KEY,target_key TEXT UNIQUE NOT NULL,payload TEXT NOT NULL); PRAGMA user_version=2;").unwrap();
+    db.execute(
+        "INSERT INTO company_installations VALUES(?1,?2,?3)",
+        rusqlite::params![
+            id,
+            canonical
+                .to_string_lossy()
+                .replace('\\', "/")
+                .to_lowercase(),
+            payload.to_string()
+        ],
     )
     .unwrap();
-    let app = Arc::new(
-        CompanyService::new(config.clone(), Arc::new(MemoryCredentials::default())).unwrap(),
+    drop(db);
+    let app =
+        Arc::new(CompanyService::new(config, Arc::new(MemoryCredentials::default())).unwrap());
+    assert_eq!(app.installations().unwrap()[0].id, id);
+    assert!(app.installations().unwrap()[0].project_id.is_none());
+    assert_eq!(
+        fs::read_to_string(target.join("SKILL.md")).unwrap(),
+        "Legacy managed Jira"
     );
+    fs::rename(&target, root.path().join("legacy-preserved")).unwrap();
     app.login("employee01", "demo-password").unwrap();
-    let old = app.prepare_install("skl_001").unwrap();
-    app.cancel(&old.id).unwrap();
-    std::fs::create_dir_all(config.profile_root.join(".aipro")).unwrap();
-    std::fs::write(
-        config.profile_root.join(".aipro/mcp.json"),
-        br#"{"mcpServers":{"jira-mcp":{},"confluence-mcp":{}}}"#,
-    )
-    .unwrap();
-    let fresh = app.prepare_install("skl_001").unwrap();
-    assert_eq!(serde_json::to_value(fresh.mcp).unwrap()["state"], "present");
-    assert!(app.confirm(&old.id, true).is_err());
-}
-
-fn wait_operation(
-    app: &Arc<CompanyService>,
-    id: &str,
-) -> app_lib::core::company::types::OperationView {
-    for _ in 0..200 {
-        let op = app.status(id).unwrap();
-        if matches!(
-            serde_json::to_value(&op).unwrap()["state"].as_str(),
-            Some("succeeded" | "failed" | "cancelled" | "recovery_required")
-        ) {
-            return op;
-        }
-        std::thread::sleep(std::time::Duration::from_millis(50));
-    }
-    panic!("operation did not finish within 10 seconds");
+    let retry = app.prepare_install("skl_001").unwrap();
+    app.confirm(&retry.id, true).unwrap();
+    wait(&app, &retry.id);
+    let all = app.installations().unwrap();
+    assert_eq!(all.len(), 1);
+    assert_eq!(all[0].id, id);
+    assert_eq!(
+        fs::read_to_string(root.path().join("legacy-preserved/SKILL.md")).unwrap(),
+        "Legacy managed Jira"
+    );
 }
 
 #[test]
-fn company_flow03b_prepares_real_zip_and_7z_without_external_extractor() {
-    use sha2::{Digest, Sha256};
-    let fixture_root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .unwrap()
-        .join("fixtures/company-store/packages");
-    for (name, slug, format) in [
-        ("jira-project-summary.zip", "jira-project-summary", "zip"),
-        ("excel-insights.7z", "excel-insights", "7z"),
-        ("excel-insights-copy.7z", "excel-insights", "7z"),
-        ("excel-insights-lzma.7z", "excel-insights", "7z"),
-    ] {
-        let root = tempfile::tempdir().unwrap();
-        let path = fixture_root.join(name);
-        let bytes = std::fs::read(&path).unwrap();
-        let meta = PackageMeta {
-            format: format.into(),
-            size_bytes: bytes.len() as u64,
-            sha256: hex::encode(Sha256::digest(&bytes)),
-            etag: "\"fixture\"".into(),
-        };
-        let verified = prepare_archive(&path, &meta, slug, root.path()).unwrap();
-        assert!(verified.original_root.join("SKILL.md").is_file());
-        assert!(!verified.content_hash.is_empty());
-    }
-}
-
-#[test]
-fn company_flow03b_rejects_unsafe_duplicate_and_markerless_archives() {
-    use sha2::{Digest, Sha256};
-    use std::io::Write;
-    for names in [
-        vec!["SKILL.md", "../escape.txt"],
-        vec!["SKILL.md", "skill.md"],
-        vec!["SKILL.md", "CON.txt"],
-        vec!["SKILL.md", "folder/file:stream"],
-        vec!["other.txt"],
-    ] {
-        let root = tempfile::tempdir().unwrap();
-        let path = root.path().join("input.zip");
-        let mut writer = zip::ZipWriter::new(std::fs::File::create(&path).unwrap());
-        for name in names {
-            writer
-                .start_file(name, zip::write::SimpleFileOptions::default())
-                .unwrap();
-            writer.write_all(b"fixture text").unwrap();
-        }
-        writer.finish().unwrap();
-        let bytes = std::fs::read(&path).unwrap();
-        let meta = PackageMeta {
-            format: "zip".into(),
-            size_bytes: bytes.len() as u64,
-            sha256: hex::encode(Sha256::digest(bytes)),
-            etag: "\"fixture\"".into(),
-        };
-        assert_eq!(
-            prepare_archive(&path, &meta, "fixture-skill", &root.path().join("packages"))
-                .err()
-                .unwrap()
-                .code,
-            "INVALID_PACKAGE"
-        );
-        assert!(!root.path().join("escape.txt").exists());
-    }
-}
-
-#[test]
-fn company_flow01_login_restores_and_offline_logout_stays_signed_out() {
-    let mut server = support::MockServer::start("normal");
+fn company_flow04_moved_project_shows_missing_without_recreating_it() {
+    let server = MockServer::start("normal");
     let root = tempfile::tempdir().unwrap();
     let config = CompanyConfig::for_test(
         &server.url,
@@ -37203,138 +37450,99 @@ fn company_flow01_login_restores_and_offline_logout_stays_signed_out() {
         root.path().join("data"),
     )
     .unwrap();
-    let credentials = Arc::new(MemoryCredentials::default());
-    let session = SessionService::new(&config, credentials.clone()).unwrap();
-    let view = session.login("employee01", "demo-password").unwrap();
-    assert_eq!(view.user.unwrap().id, "usr_001");
-    assert!(view.persistent);
-    let restored = SessionService::new(&config, credentials.clone()).unwrap();
-    assert_eq!(restored.current().user.unwrap().username, "employee01");
-    server.stop();
-    assert!(restored.logout().is_err());
-    assert!(restored.current().user.is_none());
-    assert!(SessionService::new(&config, credentials)
-        .unwrap()
-        .current()
-        .user
-        .is_none());
-}
-
-#[test]
-fn company_flow02_authenticated_catalog_keeps_full_description() {
-    let server = support::MockServer::start("normal");
-    let root = tempfile::tempdir().unwrap();
-    let config = CompanyConfig::for_test(
-        &server.url,
-        root.path().join("profile"),
-        root.path().join("data"),
-    )
-    .unwrap();
-    let session = SessionService::new(&config, Arc::new(MemoryCredentials::default())).unwrap();
+    let app =
+        Arc::new(CompanyService::new(config, Arc::new(MemoryCredentials::default())).unwrap());
+    app.login("employee01", "demo-password").unwrap();
+    let path = root.path().join("Project A");
+    fs::create_dir(&path).unwrap();
+    let project = app.add_project(&path).unwrap();
+    let op = app.prepare_project_install("skl_001", &project.id).unwrap();
+    app.confirm(&op.id, true).unwrap();
+    wait(&app, &op.id);
+    let item = app.installations().unwrap().remove(0);
+    fs::rename(&path, root.path().join("Moved Project A")).unwrap();
     assert_eq!(
-        session.login("bad", "bad").unwrap_err().code,
-        "INVALID_CREDENTIALS"
+        serde_json::to_value(app.installations().unwrap()[0].clone()).unwrap()["contentState"],
+        "missing"
     );
-    session.login("employee01", "demo-password").unwrap();
-    let client = StoreClient::new(&config).unwrap();
-    let token = session.access_token().unwrap();
-    let page = client.search(&token, "jira", 1).unwrap();
-    assert_eq!(page.items.len(), 1);
-    assert_eq!(page.pagination.page_size, 20);
-    let detail = client.detail(&token, "skl_001").unwrap();
-    assert!(detail
-        .description
-        .unwrap()
-        .contains("\n\nMCP bắt buộc: jira-mcp, confluence-mcp\n"));
     assert_eq!(
-        client.detail(&token, "unknown").unwrap_err().code,
-        "SKILL_NOT_FOUND"
+        serde_json::to_value(app.refresh_installation(&item.id).unwrap()).unwrap()["contentState"],
+        "missing"
     );
-}
-
-#[test]
-fn company_flow01_signed_out_session_does_not_require_a_live_store() {
-    let root = tempfile::tempdir().unwrap();
-    let config = CompanyConfig::for_test(
-        "http://127.0.0.1:4318",
-        root.path().join("profile"),
-        root.path().join("data"),
-    )
-    .unwrap();
-    let session = SessionService::new(&config, Arc::new(MemoryCredentials::default())).unwrap();
-    assert!(session.current().user.is_none());
-}
-
-#[test]
-fn company_flow03a_compares_exact_keys_without_reading_server_values() {
-    let requirements = parse_requirements("MCP bắt buộc: github, GitHub, github");
-    let report = check_config(&requirements, br#"{"mcpServers":{"github":null}}"#);
-    assert_eq!(report.missing, vec!["GitHub"]);
-    assert_eq!(report.present, vec!["github"]);
-}
-
-#[test]
-fn company_flow03a_invalid_declaration_does_not_claim_requirements_satisfied() {
-    let requirements = parse_requirements("MCP bắt buộc: không, jira-mcp");
-    let report = check_config(&requirements, br#"{"mcpServers":{"jira-mcp":{}}}"#);
-    assert!(!report.reason.is_none());
+    assert_eq!(
+        app.prepare_project_install("skl_001", &project.id)
+            .unwrap_err()
+            .code,
+        "PROJECT_MISSING"
+    );
+    assert!(!path.exists());
+    assert!(root
+        .path()
+        .join("Moved Project A/.aipro/skills/jira-project-summary/SKILL.md")
+        .is_file());
 }
 ````
 
-## File: COMPANY_APP_README.md
-````markdown
-# Company Skills Manager — mốc L1–L3
+## File: src-tauri/tests/company/support.rs
+````rust
+use std::{
+    io::{BufRead, BufReader},
+    process::{Child, Command, Stdio},
+};
 
-App Windows dùng React/Tauri/Rust; các luồng hiện có: đăng nhập và giữ phiên trong Windows Credential Manager, tìm kiếm/phân trang Store, xem description đầy đủ, cài ZIP/7z vào AIPRO Global, cảnh báo MCP dừng/bỏ qua, bản cài độc lập và phục hồi thao tác cài dở.
-
-Catalog đã tải được lưu theo Store/tài khoản/truy vấn với thời điểm lấy. Khi mất mạng, app chỉ hiển thị dữ liệu đã lưu và không cài từ cache; đăng xuất xóa cache tài khoản. Hết phiên giữ skill đang chọn để đọc lại detail sau đăng nhập, không tự chạy lại thao tác cài.
-
-## Chạy demo
-
-Cần Node 22.12+ (hoặc Node 24), Rust stable MSVC, Microsoft C++ Build Tools và WebView2. Cài dependencies bằng `npm ci`, sau đó:
-
-```powershell
-npm run company:demo
-```
-
-Tài khoản giả lập: `employee01`, mật khẩu `demo-password`. App có nhãn **Dữ liệu giả lập**. Demo dùng profile riêng `%LOCALAPPDATA%\CompanySkillsManagerDemo\profile`, dữ liệu riêng ở `...\data`, Store HTTP tại `127.0.0.1:4318`; không cài vào profile AIPRO thật của người dùng.
-
-1. Đăng nhập và tìm skill Jira/Excel/Rà soát tài liệu.
-2. Mở chi tiết, chọn Cài vào AIPRO Global.
-3. Demo ban đầu có mcpServers rỗng. Chọn Dừng rồi sửa `profile\.aipro\mcp.json` thủ công và thử lại, hoặc chọn Bỏ qua và cài tiếp.
-4. Xem Skill đã cài và đường dẫn đích; đóng/mở app để kiểm tra phiên và dữ liệu cục bộ.
-
-Gói Excel là 7z thật, decoder được đóng cùng app; người dùng app không cần cài 7-Zip. Nguồn fixture và archive đã được commit; 7-Zip chỉ được dùng khi tạo fixture ở giai đoạn phát triển.
-
-## Kết nối Store nội bộ
-
-Bản app bình thường đọc `%LOCALAPPDATA%\CompanySkillsManager\store.json`:
-
-```json
-{ "baseUrl": "https://your-internal-store-host" }
-```
-
-Thay hostname minh họa bằng dịch vụ nội bộ thật cung cấp năm endpoint của API draft v0.1 dưới `/api/v1`. Rust thực hiện HTTP, token không đưa ra frontend. HTTPS được xác minh bằng hệ thống chứng chỉ Windows; redirect bị từ chối. Bản release không nhận override debug/mock.
-
-Các gói/description dùng hash và strong ETag theo contract. Nếu gói hoặc description thay khi đang tải, thao tác lỗi 412; chọn **Xem thông tin mới** để đọc lại detail rồi quyết định MCP cho lần cài mới. Không tái dùng quyền bỏ qua cũ. App chỉ xét tên MCP trong mcp.json, không kiểm tra kết nối/token/runtime và không sửa file này.
-
-## Kiểm chứng
-
-```powershell
-npm run test:company
-node --test scripts/company-mock-store.test.mjs
-cargo test --manifest-path src-tauri/Cargo.toml --test company_flows
-npm run lint
-npm run build
-npm run tauri:build -- --debug
-node scripts/company-native-smoke.mjs
-```
-
-API giả lập hỗ trợ `--scenario normal`, `session-expired`, `unavailable`, `package-changed`, `corrupt-download`, `forbidden-download`. Gói hỏng/unsafe, hash/size sai, conflict đích, file khóa hoặc journal không xác định không được báo cài thành công.
-
-Native smoke mở app Windows đã build, dùng WebView2/IPC thật và profile tạm riêng; kiểm tra Credential Manager qua restart, đăng xuất, dừng/bỏ qua MCP, file ZIP/7z và dữ liệu bản cài. Recovery chỉ tự dọn staging hoàn chỉnh khớp manifest; nội dung không xác định hoặc bị sửa được giữ lại và báo đường dẫn cần kiểm tra.
-
-L4 trở đi sẽ bổ sung cài theo dự án, theo dõi tùy chỉnh, update/backup/restore và quản lý dung lượng. API thật, cách AIPRO nạp/ưu tiên skill, ký/phân phối installer do IT là phần nghiệm thu môi trường L8. Mốc L1–L3 xác nhận đặt file và quản lý bản cài, không chứng minh MCP hoặc AIPRO đã nạp/chạy skill.
+pub struct MockServer {
+    child: Child,
+    pub url: String,
+}
+impl MockServer {
+    pub fn start(scenario: &str) -> Self {
+        Self::start_with_revision(scenario, None)
+    }
+    pub fn start_with_revision(scenario: &str, revision: Option<&std::path::Path>) -> Self {
+        let script = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .unwrap()
+            .join("scripts/company-mock-store.mjs");
+        let mut command = Command::new("node");
+        command
+            .arg(script)
+            .args(["--port", "0", "--scenario", scenario])
+            .stdout(Stdio::piped())
+            .stderr(Stdio::inherit());
+        if let Some(path) = revision {
+            command.arg("--revision-file").arg(path);
+        }
+        #[cfg(windows)]
+        {
+            use std::os::windows::process::CommandExt;
+            command.creation_flags(0x08000000);
+        }
+        let mut child = command.spawn().expect("start mock HTTP Store");
+        let mut line = String::new();
+        BufReader::new(child.stdout.take().unwrap())
+            .read_line(&mut line)
+            .unwrap();
+        let url = format!(
+            "http://{}",
+            line.split("http://")
+                .nth(1)
+                .unwrap()
+                .split_whitespace()
+                .next()
+                .unwrap()
+        );
+        Self { child, url }
+    }
+    pub fn stop(&mut self) {
+        let _ = self.child.kill();
+        let _ = self.child.wait();
+    }
+}
+impl Drop for MockServer {
+    fn drop(&mut self) {
+        self.stop();
+    }
+}
 ````
 
 ## File: vite.config.ts
@@ -37358,6 +37566,376 @@ export default defineConfig({
     strictPort: true,
   },
 });
+````
+
+## File: fixtures/company-store/README.md
+````markdown
+# Store fixtures
+
+Synthetic development data only. No employee credentials or real MCP tokens.
+
+The committed ZIP archives contain a root SKILL.md; excel-insights.7z contains one matching wrapper. Source text is in sources/. The mock server computes archive SHA-256 and size from the actual committed bytes, and computes an opaque strong ETag from the archive hash and full description. No sample hash is treated as a verified archive hash.
+
+7z decoder fixtures use COPY (`excel-insights-copy.7z`), LZMA (`excel-insights-lzma.7z`) and LZMA2 (`excel-insights.7z`). The compressed fixtures contain SKILL.md plus a resource in one solid block. These were created with 7-Zip 19.00 for tests; native installation uses the bundled Rust decoder.
+
+Demo login: employee01 (or employee02), password demo-password. Sessions are in-memory on the mock server and are invalidated by logout or server restart.
+
+Production uses the native Rust HTTP client and the same five API endpoint contracts. The mock server is never launched automatically by the app, and production errors do not switch to fake data.
+
+## Gói cập nhật L5
+
+`packages/jira-project-summary-v2.zip` là ZIP thật của cùng skill Jira, gồm SKILL.md/report đã sửa và tài nguyên mới. Mock chỉ chọn gói này khi revision > 1, SHA/size/ETag được tính từ bytes thật. Dùng `--revision-file` trong integration tests hoặc `server.setRevision(2)` trong native smoke; không có endpoint admin bổ sung trong API draft.
+````
+
+## File: src/company/flows/StoreView.tsx
+````typescript
+import { useCallback, useEffect, useRef, useState } from 'react';
+import ReactMarkdown from 'react-markdown';
+import type { CompanyApi } from '../api';
+import type { CompanyError, OperationView, Project, Skill, SkillPage } from '../types';
+import { errorMessage, isSessionError } from '../types';
+import { InstallDialog } from './InstallDialog';
+
+export function StoreView({ api, onExpired, onInstalled, resumeSkillId, onResumed, projects = [], projectId = '', onProjectChange }: { api: CompanyApi; onExpired: (message: string, skillId?: string) => void; onInstalled: () => void; resumeSkillId?: string; onResumed: () => void; projects?: Project[]; projectId?: string; onProjectChange?: (id: string) => void }) {
+  const [query, setQuery] = useState('');
+  const [pageNumber, setPageNumber] = useState(1);
+  const [page, setPage] = useState<SkillPage>();
+  const [detail, setDetail] = useState<Skill>();
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [operation, setOperation] = useState<OperationView>();
+  const [preparing, setPreparing] = useState(false);
+  const [revision, setRevision] = useState(0);
+  const [retryUntil, setRetryUntil] = useState(0);
+  const selectedId = useRef<string | undefined>(undefined);
+  const handleError = useCallback((error: unknown) => {
+    if (isSessionError(error)) { onExpired(errorMessage(error), selectedId.current); return; }
+    setError(errorMessage(error));
+    const failure = error as CompanyError;
+    if (failure?.code === 'RATE_LIMITED' && failure.retryAfterSeconds) setRetryUntil(Date.now() + failure.retryAfterSeconds * 1000);
+  }, [onExpired]);
+  useEffect(() => {
+    if (!resumeSkillId) return;
+    let active = true;
+    selectedId.current = resumeSkillId;
+    api.storeDetail(resumeSkillId).then(value => { if (active) { setDetail(value); onResumed(); } }).catch(e => { if (active) handleError(e); });
+    return () => { active = false; };
+  }, [api, resumeSkillId, onResumed, handleError]);
+  useEffect(() => {
+    if (!retryUntil) return;
+    const timer = setTimeout(() => setRetryUntil(0), Math.max(0, retryUntil - Date.now()));
+    return () => clearTimeout(timer);
+  }, [retryUntil]);
+
+  useEffect(() => {
+    let active = true;
+    const timer = setTimeout(() => {
+      setLoading(true); setError('');
+      api.storeSearch(query, pageNumber).then(value => { if (active) setPage(value); }).catch(e => {
+        if (!active) return;
+        handleError(e);
+      }).finally(() => { if (active) setLoading(false); });
+    }, 300);
+    return () => { active = false; clearTimeout(timer); };
+  }, [api, query, pageNumber, handleError, revision]);
+
+  async function openDetail(id: string) {
+    selectedId.current = id;
+    setError('');
+    try { setDetail(await api.storeDetail(id)); }
+    catch (e) { handleError(e); }
+  }
+  async function refreshChanged() {
+    if (!detail) return;
+    setOperation(undefined); setDetail(undefined);
+    await openDetail(detail.id);
+  }
+  async function prepare() {
+    if (!detail) return;
+    setPreparing(true); setError('');
+    try { const prepared = await (projectId ? api.prepareProjectInstallation(detail.id, projectId) : api.prepareInstallation(detail.id)); if (prepared.skill) setDetail(prepared.skill); setOperation(prepared); }
+    catch (e) { handleError(e); }
+    finally { setPreparing(false); }
+  }
+
+  return <>
+    <div className="store-toolbar"><input aria-label="Tìm kiếm skill" placeholder="Tìm theo tên hoặc công dụng skill…" disabled={retryUntil > 0} value={query} onChange={e => { setQuery(e.target.value); setPageNumber(1); setDetail(undefined); }} /><span>{page?.pagination.total ?? 0} skill</span></div>
+    {error && <div role="alert" className="error-banner">{error}{page && ' · Đang hiển thị dữ liệu lần tải trước.'}{retryUntil > 0 && ' Vui lòng chờ trước khi thử lại.'}<button disabled={retryUntil > 0} onClick={() => setRevision(value => value + 1)}>Thử lại</button></div>}
+    {page?.cache?.stale && <div role="status" className="mock-banner">Dữ liệu đã lưu lúc {new Date(page.cache.fetchedAt).toLocaleString('vi-VN')}. Chưa kết nối được Store; kết nối lại để cài skill.<button onClick={() => setRevision(value => value + 1)}>Thử lại</button></div>}
+    {loading && <p role="status">Đang tìm skill…</p>}
+    {!loading && page?.items.length === 0 && <section className="company-card"><h2>Không tìm thấy skill</h2><p>Thử một từ khóa khác để tìm skill phù hợp.</p></section>}
+    <div className="skill-grid">{page?.items.map(skill => <article className="company-card skill-card" key={skill.id}>
+      <div className="skill-icon">↗</div><span className="format-tag">{skill.package.format.toUpperCase()}</span><h2>{skill.name}</h2><p>{skill.descriptionExcerpt}</p>
+      <button aria-label={`Xem chi tiết ${skill.name}`} className="secondary" onClick={() => openDetail(skill.id)} disabled={loading || !!error || page.cache?.stale}>Xem chi tiết →</button>
+    </article>)}</div>
+    {page && page.pagination.totalPages > 1 && <div className="pagination"><button disabled={pageNumber <= 1 || loading || retryUntil > 0} onClick={() => setPageNumber(n => n - 1)}>Trang trước</button><span>{pageNumber} / {page.pagination.totalPages}</span><button disabled={pageNumber >= page.pagination.totalPages || loading || retryUntil > 0} onClick={() => setPageNumber(n => n + 1)}>Trang sau</button></div>}
+    {detail && !operation && <div className="modal-overlay"><section role="dialog" aria-label="Chi tiết skill" aria-modal="true" className="company-modal"><button className="close-modal" onClick={() => { setDetail(undefined); selectedId.current = undefined; }} aria-label="Đóng chi tiết">×</button><div className="eyebrow">SKILL STORE / AIPRO</div><h2>{detail.name}</h2>
+      <div className="skill-description"><ReactMarkdown skipHtml components={{ img: () => null, a: ({ children }) => <span>{children}</span> }}>{detail.description}</ReactMarkdown></div><div className="package-line">{detail.package.format.toUpperCase()} · {(detail.package.sizeBytes / 1024).toFixed(1)} KiB</div>
+      <label>Phạm vi cài<select aria-label="Phạm vi cài" value={projectId} onChange={e => onProjectChange?.(e.target.value)} disabled={preparing}><option value="">AIPRO Global</option>{projects.map(p => <option key={p.id} value={p.id}>Dự án: {p.name}</option>)}</select></label>
+      <div className="dialog-actions"><button className="primary" disabled={preparing || !!error || page?.cache?.stale} onClick={prepare}>{preparing ? 'Đang kiểm tra…' : projectId ? 'Cài vào AIPRO Dự án' : 'Cài vào AIPRO Global'}</button></div>
+    </section></div>}
+    {operation && detail && <InstallDialog api={api} skill={detail} initial={operation} scopeLabel={projectId ? 'Dự án' : 'Global'} onClose={() => { setOperation(undefined); setDetail(undefined); selectedId.current = undefined; }} onRefresh={refreshChanged} onExpired={message => onExpired(message, detail.id)} onInstalled={onInstalled} />}
+  </>;
+}
+````
+
+## File: src/company/tests/catalog.test.tsx
+````typescript
+import { workspaceApi } from './workspace-api';
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { expect, test, vi } from 'vitest';
+import { CompanyApp } from '../CompanyApp';
+
+const skill = { id: 'skl_001', slug: 'jira-project-summary', name: 'Tổng hợp tiến độ Jira', updatedAt: '2026-10-12T00:00:00Z', descriptionExcerpt: 'Tổng hợp công việc dự án.', package: { format: 'zip' as const, sizeBytes: 2048, sha256: 'a'.repeat(64), etag: '"r1"' } };
+const page = { items: [skill], pagination: { page: 1, pageSize: 20, total: 1, totalPages: 1 } };
+function api() {
+  return { ...workspaceApi(),
+    environment: vi.fn().mockResolvedValue({ mock: true, storeUrl: 'http://127.0.0.1:4318', profileRoot: 'C:/demo', dataRoot: 'C:/data', configured: true }),
+    session: vi.fn().mockResolvedValue({ user: { id: 'usr_001', username: 'employee01', displayName: 'Nhân viên 01' }, expiresAt: '2099-10-12T12:00:00Z', persistent: true }),
+    login: vi.fn(), logout: vi.fn(), installationsList: vi.fn().mockResolvedValue([]),
+    storeSearch: vi.fn().mockResolvedValue(page),
+    storeDetail: vi.fn().mockResolvedValue({ ...skill, description: 'Mô tả đầy đủ.\n\nMCP bắt buộc: jira-mcp, confluence-mcp\n\nHướng dẫn nội bộ.' }),
+    prepareInstallation: vi.fn(), confirmInstallation: vi.fn(), operationStatus: vi.fn(), cancelOperation: vi.fn(),
+  };
+}
+
+test('employee searches the Store and opens full description with MCP declaration', async () => {
+  const bridge = api();
+  render(<CompanyApp api={bridge} />);
+  const user = userEvent.setup();
+  await user.type(await screen.findByPlaceholderText('Tìm theo tên hoặc công dụng skill…'), 'jira');
+  await waitFor(() => expect(bridge.storeSearch).toHaveBeenLastCalledWith('jira', 1));
+  await user.click(await screen.findByRole('button', { name: 'Xem chi tiết Tổng hợp tiến độ Jira' }));
+  expect(await screen.findByText(/MCP bắt buộc: jira-mcp, confluence-mcp/)).toBeInTheDocument();
+  expect(screen.getByText('Hướng dẫn nội bộ.')).toBeInTheDocument();
+});
+
+test('expired session asks for login while local installations stay available', async () => {
+  const bridge = api();
+  bridge.storeSearch.mockRejectedValue({ code: 'SESSION_EXPIRED', message: 'Phiên đăng nhập đã hết hạn.' });
+  render(<CompanyApp api={bridge} />);
+  expect(await screen.findByLabelText('Tài khoản')).toBeInTheDocument();
+  await userEvent.click(screen.getByRole('button', { name: 'Skill đã cài' }));
+  expect(await screen.findByText('Chưa có skill được cài bởi ứng dụng.')).toBeInTheDocument();
+});
+
+test('offline cached catalog shows its timestamp and disables Store installation', async () => {
+  const bridge = api();
+  bridge.storeSearch.mockResolvedValue({ ...page, cache: { fetchedAt: '2026-10-12T00:00:00Z', stale: true } });
+  render(<CompanyApp api={bridge} />);
+  expect(await screen.findByText(/Dữ liệu đã lưu lúc/)).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Xem chi tiết Tổng hợp tiến độ Jira' })).toBeDisabled();
+  expect(bridge.prepareInstallation).not.toHaveBeenCalled();
+});
+
+test('a late response from the old query cannot replace the new results', async () => {
+  const bridge = api();
+  let finishOld: (value: typeof page) => void = () => {};
+  bridge.storeSearch.mockImplementation(query => query === 'old' ? new Promise(resolve => { finishOld = resolve; }) : Promise.resolve({ ...page, items: [{ ...skill, name: query === 'new' ? 'Kết quả mới' : skill.name }] }));
+  render(<CompanyApp api={bridge} />);
+  const user = userEvent.setup();
+  const input = await screen.findByLabelText('Tìm kiếm skill');
+  await user.type(input, 'old');
+  await waitFor(() => expect(bridge.storeSearch).toHaveBeenCalledWith('old', 1));
+  await user.clear(input); await user.type(input, 'new');
+  expect(await screen.findByRole('heading', { name: 'Kết quả mới' })).toBeInTheDocument();
+  finishOld(page);
+  await waitFor(() => expect(screen.queryByRole('heading', { name: skill.name })).not.toBeInTheDocument());
+});
+````
+
+## File: src/company/tests/install.test.tsx
+````typescript
+import { workspaceApi } from './workspace-api';
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { expect, test, vi } from 'vitest';
+import { CompanyApp } from '../CompanyApp';
+
+const skill = { id: 'skl_001', slug: 'jira-project-summary', name: 'Jira Summary', updatedAt: '2026-10-12T00:00:00Z', description: 'MCP bắt buộc: jira-mcp', package: { format: 'zip' as const, sizeBytes: 100, sha256: 'a'.repeat(64), etag: '"r1"' } };
+function bridge() {
+  const op = { id: 'op1', state: 'awaiting_decision', target: 'C:/demo/.aipro/skills/jira-project-summary', mcp: { state: 'missing', required: ['jira-mcp'], present: [], missing: ['jira-mcp'], checkedAt: '2026-10-12T00:00:00Z', reason: null }, progressBytes: 0, totalBytes: 100, error: null };
+  return { ...workspaceApi(),
+    environment: vi.fn().mockResolvedValue({ mock: true, storeUrl: 'http://127.0.0.1:4318', profileRoot: 'C:/demo', dataRoot: 'C:/data', configured: true }),
+    session: vi.fn().mockResolvedValue({ user: { id: 'u1', username: 'employee01', displayName: 'Nhân viên' }, expiresAt: '2099-01-01T00:00:00Z', persistent: true }),
+    login: vi.fn(), logout: vi.fn(), storeSearch: vi.fn().mockResolvedValue({ items: [skill], pagination: { page: 1, pageSize: 20, total: 1, totalPages: 1 } }),
+    storeDetail: vi.fn().mockResolvedValue(skill), installationsList: vi.fn().mockResolvedValue([]),
+    prepareInstallation: vi.fn().mockResolvedValue(op),
+    confirmInstallation: vi.fn().mockResolvedValue({ ...op, state: 'downloading' }),
+    operationStatus: vi.fn().mockResolvedValue({ ...op, state: 'succeeded' }),
+    cancelOperation: vi.fn().mockResolvedValue({ ...op, state: 'cancelled' }),
+  };
+}
+async function openInstall(api: ReturnType<typeof bridge>) {
+  render(<CompanyApp api={api} />);
+  await userEvent.click(await screen.findByRole('button', { name: 'Xem chi tiết Jira Summary' }));
+  await userEvent.click(await screen.findByRole('button', { name: 'Cài vào AIPRO Global' }));
+  expect(await screen.findByText('Chưa có MCP trong cấu hình')).toBeInTheDocument();
+  expect(screen.getByText('MCP yêu cầu')).toBeInTheDocument();
+  expect(screen.getByText('Thiếu: jira-mcp')).toBeInTheDocument();
+}
+
+test('employee stops installation to configure missing MCP manually', async () => {
+  const api = bridge();
+  await openInstall(api);
+  await userEvent.click(screen.getByRole('button', { name: 'Dừng cài đặt' }));
+  await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Cài skill' })).not.toBeInTheDocument());
+  expect(api.confirmInstallation).not.toHaveBeenCalled();
+});
+
+test('employee bypasses MCP warning and sees successful installation result', async () => {
+  const api = bridge();
+  await openInstall(api);
+  await userEvent.click(screen.getByRole('button', { name: 'Bỏ qua và cài tiếp' }));
+  expect(await screen.findByText('Cài xong; đã bỏ qua cảnh báo MCP của lần này.')).toBeInTheDocument();
+  expect(api.confirmInstallation).toHaveBeenCalledWith('op1', true);
+});
+
+test('installation shows the fresh Store snapshot returned by prepare', async () => {
+  const api = bridge();
+  const prepared = await api.prepareInstallation();
+  api.prepareInstallation.mockResolvedValue({ ...prepared, skill: { ...skill, name: 'Jira Summary mới' }, mcpPath: 'C:/demo/.aipro/mcp.json' });
+  await openInstall(api);
+  expect(screen.getByRole('heading', { name: 'Jira Summary mới' })).toBeInTheDocument();
+  expect(screen.getByText('C:/demo/.aipro/mcp.json')).toBeInTheDocument();
+});
+
+test('session expiry during preparation returns to login and keeps local skills accessible', async () => {
+  const api = bridge();
+  api.prepareInstallation.mockRejectedValue({ code: 'SESSION_EXPIRED', message: 'Phiên đã hết hạn.' });
+  render(<CompanyApp api={api} />);
+  await userEvent.click(await screen.findByRole('button', { name: 'Xem chi tiết Jira Summary' }));
+  await userEvent.click(screen.getByRole('button', { name: 'Cài vào AIPRO Global' }));
+  expect(await screen.findByLabelText('Tài khoản')).toBeInTheDocument();
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  await userEvent.click(screen.getByRole('button', { name: 'Skill đã cài' }));
+  expect(await screen.findByText('Chưa có skill được cài bởi ứng dụng.')).toBeInTheDocument();
+});
+
+test('login after a download 401 reloads the selected skill and checks MCP with a new attempt', async () => {
+  const api = bridge();
+  const old = await api.prepareInstallation();
+  api.operationStatus.mockResolvedValue({ ...old, state: 'failed', error: { code: 'UNAUTHENTICATED', message: 'Đăng nhập lại.' } });
+  api.login.mockResolvedValue(await api.session());
+  await openInstall(api);
+  await userEvent.click(screen.getByRole('button', { name: 'Bỏ qua và cài tiếp' }));
+  await userEvent.type(await screen.findByLabelText('Tài khoản'), 'employee01');
+  await userEvent.type(screen.getByLabelText('Mật khẩu'), 'demo-password');
+  await userEvent.click(screen.getByRole('button', { name: 'Đăng nhập' }));
+  expect(await screen.findByRole('dialog', { name: 'Chi tiết skill' })).toBeInTheDocument();
+  expect(api.storeDetail).toHaveBeenCalledTimes(2);
+  api.prepareInstallation.mockResolvedValue({ ...old, id: 'op2' });
+  await userEvent.click(screen.getByRole('button', { name: 'Cài vào AIPRO Global' }));
+  expect(await screen.findByText('Chưa có MCP trong cấu hình')).toBeInTheDocument();
+  expect(api.confirmInstallation).toHaveBeenCalledTimes(1);
+  await userEvent.click(screen.getByRole('button', { name: 'Bỏ qua và cài tiếp' }));
+  expect(api.confirmInstallation).toHaveBeenLastCalledWith('op2', true);
+});
+
+test('a changed package refreshes detail and asks for a fresh MCP decision', async () => {
+  const api = bridge();
+  const old = await api.prepareInstallation();
+  api.operationStatus.mockResolvedValue({ ...old, state: 'failed', error: { code: 'PACKAGE_CHANGED', message: 'Gói đã đổi.' } });
+  await openInstall(api);
+  await userEvent.click(screen.getByRole('button', { name: 'Bỏ qua và cài tiếp' }));
+  await screen.findByText('Gói đã đổi.');
+  api.storeDetail.mockResolvedValue({ ...skill, name: 'Jira Summary phiên bản mới' });
+  api.prepareInstallation.mockResolvedValue({ ...old, id: 'op2', skill: { ...skill, name: 'Jira Summary phiên bản mới' } });
+  await userEvent.click(screen.getByRole('button', { name: 'Xem thông tin mới' }));
+  expect(await screen.findByRole('heading', { name: 'Jira Summary phiên bản mới' })).toBeInTheDocument();
+  await userEvent.click(screen.getByRole('button', { name: 'Cài vào AIPRO Global' }));
+  expect(await screen.findByRole('button', { name: 'Bỏ qua và cài tiếp' })).toBeInTheDocument();
+  expect(api.confirmInstallation).toHaveBeenCalledTimes(1);
+});
+````
+
+## File: src/company/CompanyApp.tsx
+````typescript
+import { useCallback, useEffect, useState } from 'react';
+import { nativeApi } from './api';
+import type { CompanyApi } from './api';
+import type { Environment, Installation, Project, SessionView } from './types';
+import { errorMessage } from './types';
+import './company.css';
+import { StoreView } from './flows/StoreView';
+import { ProjectsView } from './flows/ProjectsView';
+import { InstalledView } from './flows/InstalledView';
+
+const emptySession: SessionView = { user: null, expiresAt: null, persistent: false };
+const tabs = ['Store', 'Skill đã cài', 'Dự án', 'Cài đặt'] as const;
+type Tab = typeof tabs[number];
+
+export function CompanyApp({ api = nativeApi }: { api?: CompanyApi }) {
+  const [environment, setEnvironment] = useState<Environment>();
+  const [session, setSession] = useState(emptySession);
+  const [tab, setTab] = useState<Tab>('Store');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [installations, setInstallations] = useState<Installation[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [projectId, setProjectId] = useState('');
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const refreshProjects = useCallback(() => { api.projectsList().then(setProjects).catch(e => setError(errorMessage(e))); }, [api]);
+  const [booting, setBooting] = useState(true);
+  const [resumeSkillId, setResumeSkillId] = useState<string>();
+  const expired = useCallback((message: string, skillId?: string) => { setResumeSkillId(skillId); setSession(emptySession); setError(message); }, []);
+  const resumed = useCallback(() => setResumeSkillId(undefined), []);
+  const refreshInstallations = useCallback(() => { api.installationsList().then(setInstallations).catch(e => setError(errorMessage(e))); }, [api]);
+
+  useEffect(() => {
+    let active = true;
+    Promise.all([api.environment(), api.session(), api.installationsList(), api.projectsList()]).then(([env, current, local, knownProjects]) => {
+      if (active) { setEnvironment(env); setSession(current); setInstallations(local); setProjects(knownProjects); }
+    }).catch(e => { if (active) setError(errorMessage(e)); }).finally(() => { if (active) setBooting(false); });
+    return () => { active = false; };
+  }, [api]);
+
+  async function login(event: React.FormEvent) {
+    event.preventDefault(); setBusy(true); setError('');
+    try { const current = await api.login(username.trim(), password); setSession(current); if (!current.persistent) setError('Phiên chỉ được giữ trong lần mở app này; bạn sẽ cần đăng nhập lại khi mở app.'); }
+    catch (e) { setError(errorMessage(e)); }
+    finally { setPassword(''); setBusy(false); }
+  }
+
+  async function logout() {
+    setBusy(true); setError('');
+    try { await api.logout(); }
+    catch (e) { setError(errorMessage(e)); }
+    finally { setSession(emptySession); setResumeSkillId(undefined); setPassword(''); setBusy(false); }
+  }
+
+  const signIn = <section className="company-card sign-in">
+    <div className="eyebrow">TÀI KHOẢN CÔNG TY</div><h2>Đăng nhập Skill Store</h2>
+    <p>Dùng tài khoản được công ty cấp để tìm và tải skill.</p>
+    <form onSubmit={login}>
+      <label>Tài khoản<input autoComplete="username" value={username} onChange={e => setUsername(e.target.value)} required /></label>
+      <label>Mật khẩu<input type="password" autoComplete="current-password" value={password} onChange={e => setPassword(e.target.value)} required /></label>
+      <button className="primary" disabled={busy || !environment?.configured}>{busy ? 'Đang đăng nhập…' : 'Đăng nhập'}</button>
+    </form>
+  </section>;
+
+  return <div className="company-app">
+    <aside className="company-sidebar"><div className="company-brand"><span className="brand-icon">S</span><div>Company<span>Skills Manager</span></div></div>
+      <nav aria-label="Điều hướng">{tabs.map(item => <button key={item} className={tab === item ? 'selected' : ''} onClick={() => { setTab(item); setError(''); if (item === 'Skill đã cài') refreshInstallations(); }}>{item}</button>)}</nav>
+      <div className="sidebar-footer"><span className="aipro-dot" /> AIPRO<span>Quản lý skill trên máy của bạn</span></div>
+    </aside>
+    <main className="company-main"><header className="company-header"><div className="eyebrow">WORKSPACE / AIPRO</div><div className="account">{session.user ? <><span>{session.user.displayName}</span><button onClick={logout} disabled={busy}>Đăng xuất</button></> : <span>Chưa đăng nhập</span>}</div></header>
+      {environment?.mock && <div className="mock-banner">Dữ liệu giả lập</div>}
+      {error && <div role="alert" className="error-banner">{error}</div>}
+      {environment?.recoveryWarnings?.map(message => <div className="error-banner" role="alert" key={message}>{message}</div>)}
+      {environment && !environment.configured && <div role="status" className="error-banner">Chưa cấu hình địa chỉ Skill Store. Liên hệ quản trị ứng dụng.</div>}
+      <div className="page-heading"><h1>{tab === 'Store' ? 'Skill Store' : tab}</h1><p>{tab === 'Store' ? 'Tìm skill phù hợp và đưa vào AIPRO của bạn.' : 'Các bản cài và dữ liệu trên máy Windows hiện tại.'}</p></div>
+      {booting && <p role="status">Đang mở môi trường AIPRO…</p>}
+      {tab === 'Store' && !booting && (!session.user ? signIn : <StoreView key={session.user.id} api={api} projects={projects} projectId={projectId} onProjectChange={setProjectId} onExpired={expired} onInstalled={refreshInstallations} resumeSkillId={resumeSkillId} onResumed={resumed} />)}
+      {tab === 'Skill đã cài' && <InstalledView api={api} installations={installations} projects={projects} onChanged={refreshInstallations} signedIn={!!session.user} onExpired={expired} selectedIds={selectedIds} onSelectionChange={setSelectedIds} onReinstall={item => { setProjectId(item.projectId ?? ''); setResumeSkillId(item.skillId); setTab('Store'); }} />}
+      {tab === 'Dự án' && <ProjectsView api={api} projects={projects} installations={installations} onChanged={refreshProjects} onBrowse={id => { setProjectId(id); setTab('Store'); }} />}
+      {tab === 'Cài đặt' && <><section className="company-card"><h2>Môi trường AIPRO</h2><dl><dt>Thư mục Global</dt><dd>{environment?.profileRoot}\.aipro\skills</dd><dt>Cấu hình MCP</dt><dd>{environment?.profileRoot}\.aipro\mcp.json</dd><dt>Dữ liệu ứng dụng</dt><dd>{environment?.dataRoot}</dd><dt>Skill Store</dt><dd>{environment?.storeUrl || 'Chưa cấu hình'}</dd></dl></section>{!session.user ? signIn : <section className="company-card"><h2>Phiên đăng nhập</h2><p>{session.persistent ? 'Phiên được giữ trong Windows Credential Manager.' : 'Phiên chỉ được giữ trong lần mở app này.'}</p><p>Hết hạn: {session.expiresAt ? new Date(session.expiresAt).toLocaleString('vi-VN') : '—'}</p></section>}</>}
+    </main>
+  </div>;
+}
 ````
 
 ## File: src/lib/presetStatus.ts
@@ -39082,6 +39660,195 @@ mod tests {
 }
 ````
 
+## File: src-tauri/src/commands/company.rs
+````rust
+use crate::core::company::{config::Environment, installation_service::CompanyService, types::*};
+use std::sync::Arc;
+use tauri::State;
+
+type AppState<'a> = State<'a, Arc<CompanyService>>;
+async fn blocking<T: Send + 'static>(
+    state: AppState<'_>,
+    action: impl FnOnce(Arc<CompanyService>) -> CompanyResult<T> + Send + 'static,
+) -> CompanyResult<T> {
+    let app = state.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || action(app))
+        .await
+        .map_err(|_| CompanyError::new("INTERNAL_ERROR", "Không hoàn tất được thao tác native."))?
+}
+#[tauri::command]
+pub async fn company_environment(state: AppState<'_>) -> CompanyResult<Environment> {
+    blocking(state, |app| {
+        let mut env = app.config.environment();
+        env.recovery_warnings = app.recovery_warnings();
+        Ok(env)
+    })
+    .await
+}
+#[tauri::command]
+pub async fn company_session(state: AppState<'_>) -> CompanyResult<SessionView> {
+    blocking(state, |app| Ok(app.current_session())).await
+}
+#[tauri::command]
+pub async fn company_login(
+    state: AppState<'_>,
+    username: String,
+    password: String,
+) -> CompanyResult<SessionView> {
+    blocking(state, move |app| app.login(&username, &password)).await
+}
+#[tauri::command]
+pub async fn company_logout(state: AppState<'_>) -> CompanyResult<()> {
+    blocking(state, |app| app.logout()).await
+}
+#[tauri::command]
+pub async fn company_store_search(
+    state: AppState<'_>,
+    query: String,
+    page: u32,
+) -> CompanyResult<SkillPage> {
+    blocking(state, move |app| app.search(&query, page)).await
+}
+#[tauri::command]
+pub async fn company_store_detail(state: AppState<'_>, id: String) -> CompanyResult<Skill> {
+    blocking(state, move |app| app.detail(&id)).await
+}
+#[tauri::command]
+pub async fn company_installations_list(state: AppState<'_>) -> CompanyResult<Vec<Installation>> {
+    blocking(state, |app| app.installations()).await
+}
+#[tauri::command]
+pub async fn company_operation_prepare(
+    state: AppState<'_>,
+    id: String,
+) -> CompanyResult<OperationView> {
+    blocking(state, move |app| app.prepare_install(&id)).await
+}
+#[tauri::command]
+pub async fn company_operation_confirm(
+    state: AppState<'_>,
+    id: String,
+    bypass_mcp: bool,
+) -> CompanyResult<OperationView> {
+    blocking(state, move |app| app.confirm(&id, bypass_mcp)).await
+}
+#[tauri::command]
+pub async fn company_operation_status(
+    state: AppState<'_>,
+    id: String,
+) -> CompanyResult<OperationView> {
+    blocking(state, move |app| app.status(&id)).await
+}
+#[tauri::command]
+pub async fn company_operation_cancel(
+    state: AppState<'_>,
+    id: String,
+) -> CompanyResult<OperationView> {
+    blocking(state, move |app| app.cancel(&id)).await
+}
+
+#[tauri::command]
+pub async fn company_projects_list(state: AppState<'_>) -> CompanyResult<Vec<Project>> {
+    blocking(state, |app| app.projects()).await
+}
+#[tauri::command]
+pub async fn company_project_add(state: AppState<'_>, path: String) -> CompanyResult<Project> {
+    blocking(state, move |app| {
+        app.add_project(std::path::Path::new(&path))
+    })
+    .await
+}
+#[tauri::command]
+pub async fn company_project_remove(state: AppState<'_>, id: String) -> CompanyResult<()> {
+    blocking(state, move |app| app.remove_project(&id)).await
+}
+#[tauri::command]
+pub async fn company_project_install_prepare(
+    state: AppState<'_>,
+    id: String,
+    project_id: String,
+) -> CompanyResult<OperationView> {
+    blocking(state, move |app| {
+        app.prepare_project_install(&id, &project_id)
+    })
+    .await
+}
+#[tauri::command]
+pub async fn company_installation_refresh(
+    state: AppState<'_>,
+    id: String,
+) -> CompanyResult<Installation> {
+    blocking(state, move |app| app.refresh_installation(&id)).await
+}
+#[tauri::command]
+pub async fn company_installation_open(
+    state: AppState<'_>,
+    id: String,
+    kind: String,
+) -> CompanyResult<()> {
+    blocking(state, move |app| {
+        let path = app.installation_open_path(&id, &kind)?;
+        tauri_plugin_opener::open_path(path, None::<&str>).map_err(|_| {
+            CompanyError::new(
+                "OPEN_FAILED",
+                "Không mở được file. Dùng Mở thư mục rồi chọn ứng dụng phù hợp trên Windows.",
+            )
+        })
+    })
+    .await
+}
+#[tauri::command]
+pub async fn company_updates_check(
+    state: AppState<'_>,
+    ids: Vec<String>,
+) -> CompanyResult<Vec<Installation>> {
+    blocking(state, move |app| app.check_updates(&ids)).await
+}
+#[tauri::command]
+pub async fn company_update_prepare(
+    state: AppState<'_>,
+    id: String,
+) -> CompanyResult<OperationView> {
+    blocking(state, move |app| app.prepare_update(&id)).await
+}
+#[tauri::command]
+pub async fn company_update_apply(
+    state: AppState<'_>,
+    id: String,
+    replace_customized: bool,
+) -> CompanyResult<OperationView> {
+    blocking(state, move |app| app.apply_update(&id, replace_customized)).await
+}
+#[tauri::command]
+pub async fn company_backups_list(state: AppState<'_>, id: String) -> CompanyResult<Vec<Backup>> {
+    blocking(state, move |app| app.backups(&id)).await
+}
+#[tauri::command]
+pub async fn company_operation_open_preview(
+    state: AppState<'_>,
+    id: String,
+    side: String,
+    path: String,
+) -> CompanyResult<()> {
+    blocking(state, move |app| {
+        let path = app.preview_open_path(&id, &side, &path)?;
+        // Text preview always uses an editor, including source scripts whose OS association may run them.
+        let editor = if path.is_file() {
+            Some("notepad.exe")
+        } else {
+            None
+        };
+        tauri_plugin_opener::open_path(path, editor).map_err(|_| {
+            CompanyError::new(
+                "OPEN_FAILED",
+                "Không mở được preview. Chọn mở thư mục để xem bằng công cụ trên máy.",
+            )
+        })
+    })
+    .await
+}
+````
+
 ## File: src-tauri/src/commands/tools.rs
 ````rust
 use serde::Serialize;
@@ -39886,211 +40653,590 @@ mod tests {
 }
 ````
 
-## File: src-tauri/src/core/company/installation_service.rs
+## File: src-tauri/src/core/company/installation_repository.rs
 ````rust
-use super::{
-    aipro_paths::{global_target, stage_path},
-    config::CompanyConfig,
-    installation_repository::CompanyRepository,
-    mcp_check::{check_global_mcp, parse_requirements},
-    package_store::{self, content_hash, copy_tree, MAX_ARCHIVE},
-    session::{CredentialStore, SessionService},
-    store_client::StoreClient,
-    types::*,
-};
-use sha2::{Digest, Sha256};
-use std::{
-    collections::HashMap,
-    fs::{self, File},
-    io::{Read, Write},
-    path::Path,
-    sync::{
-        atomic::{AtomicBool, Ordering},
-        Arc, Mutex,
-    },
-};
+use super::types::*;
+use rusqlite::{params, Connection};
+use std::{path::Path, sync::Mutex, time::Duration};
 
-struct Operation {
-    view: OperationView,
-    skill: Skill,
-    owner: String,
-    cancelled: Arc<AtomicBool>,
+pub struct CompanyRepository {
+    connection: Mutex<Connection>,
 }
-pub struct CompanyService {
-    pub config: CompanyConfig,
-    session: SessionService,
-    client: StoreClient,
-    repository: CompanyRepository,
-    operations: Mutex<HashMap<String, Operation>>,
-    worker: Mutex<()>,
-}
-fn operation_error() -> CompanyError {
+fn db_error() -> CompanyError {
     CompanyError::new(
-        "OPERATION_NOT_FOUND",
-        "Không tìm thấy thao tác cài đặt. Bắt đầu cài lại để lấy thông tin mới.",
+        "DATABASE_ERROR",
+        "Không cập nhật được dữ liệu quản lý trên máy.",
     )
 }
-fn write_error() -> CompanyError {
-    CompanyError::new(
-        "WRITE_FAILED",
-        "Không ghi được bản cài. Kiểm tra quyền, dung lượng và file đang khóa.",
-    )
-}
-impl CompanyService {
-    pub fn new(
-        config: CompanyConfig,
-        credentials: Arc<dyn CredentialStore>,
-    ) -> CompanyResult<Self> {
-        let session = SessionService::new(&config, credentials)?;
-        let repository = CompanyRepository::open(&config.data_root.join("manager.db"))?;
-        let app = Self {
-            client: StoreClient::new(&config)?,
-            config,
-            session,
-            repository,
-            operations: Mutex::new(HashMap::new()),
-            worker: Mutex::new(()),
-        };
-        app.recover()?;
-        Ok(app)
-    }
-    pub fn current_session(&self) -> SessionView {
-        self.session.current()
-    }
-    pub fn login(&self, username: &str, password: &str) -> CompanyResult<SessionView> {
-        self.repository.clear_catalog(&self.config.store_url)?;
-        self.session.login(username, password)
-    }
-    pub fn logout(&self) -> CompanyResult<()> {
-        self.cancel_pending();
-        let cache_result = self.repository.clear_catalog(&self.config.store_url);
-        let logout_result = self.session.logout();
-        cache_result.and(logout_result)
-    }
-    pub fn installations(&self) -> CompanyResult<Vec<Installation>> {
-        self.repository.installations()
-    }
-    pub fn search(&self, query: &str, page: u32) -> CompanyResult<SkillPage> {
-        let token = self.session.access_token()?;
-        let user = self
-            .session
-            .current()
-            .user
-            .ok_or_else(|| CompanyError::new("SESSION_EXPIRED", "Vui lòng đăng nhập lại."))?;
-        let result = self.auth_result(self.client.search(&token, query, page));
-        if self.session.access_token().ok().as_deref() != Some(token.as_str()) {
+impl CompanyRepository {
+    pub fn open(path: &Path) -> CompanyResult<Self> {
+        let mut connection = Connection::open(path).map_err(|_| db_error())?;
+        let version: i64 = connection
+            .pragma_query_value(None, "user_version", |row| row.get(0))
+            .map_err(|_| db_error())?;
+        if version > 4 {
             return Err(CompanyError::new(
-                "SESSION_EXPIRED",
-                "Phiên đã thay đổi. Vui lòng thử lại.",
+                "DATABASE_VERSION_UNSUPPORTED",
+                "Dữ liệu thuộc phiên bản app mới hơn. Không thay đổi dữ liệu này.",
             ));
         }
-        match result {
-            Ok(page_result) => {
-                self.repository.cache_catalog(
-                    &self.config.store_url,
-                    &user.id,
-                    query,
-                    page,
-                    &page_result,
-                )?;
-                Ok(page_result)
+        connection
+            .busy_timeout(Duration::from_secs(3))
+            .map_err(|_| db_error())?;
+        connection.execute_batch("PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL;
+            CREATE TABLE IF NOT EXISTS company_packages (hash TEXT PRIMARY KEY, payload TEXT NOT NULL);
+            CREATE TABLE IF NOT EXISTS company_installations (id TEXT PRIMARY KEY, target_key TEXT NOT NULL UNIQUE, payload TEXT NOT NULL);
+            CREATE TABLE IF NOT EXISTS company_operations (id TEXT PRIMARY KEY, state TEXT NOT NULL, payload TEXT NOT NULL);
+            CREATE TABLE IF NOT EXISTS company_catalog_cache (store_key TEXT NOT NULL, user_id TEXT NOT NULL, query TEXT NOT NULL, page INTEGER NOT NULL, fetched_at TEXT NOT NULL, payload TEXT NOT NULL, PRIMARY KEY(store_key,user_id,query,page));
+            CREATE TABLE IF NOT EXISTS company_projects (id TEXT PRIMARY KEY, path_key TEXT NOT NULL UNIQUE, payload TEXT NOT NULL);
+            CREATE TABLE IF NOT EXISTS company_backups (id TEXT PRIMARY KEY, installation_id TEXT NOT NULL, payload TEXT NOT NULL);
+            CREATE TABLE IF NOT EXISTS company_replacements (id TEXT PRIMARY KEY, state TEXT NOT NULL, payload TEXT NOT NULL);").map_err(|_| db_error())?;
+        let transaction = connection.transaction().map_err(|_| db_error())?;
+        let legacy = {
+            let mut query = transaction
+                .prepare("SELECT id,target_key,payload FROM company_installations")
+                .map_err(|_| db_error())?;
+            let rows = query
+                .query_map([], |row| {
+                    Ok((
+                        row.get::<_, String>(0)?,
+                        row.get::<_, String>(1)?,
+                        row.get::<_, String>(2)?,
+                    ))
+                })
+                .map_err(|_| db_error())?;
+            rows.collect::<Result<Vec<_>, _>>()
+                .map_err(|_| db_error())?
+        };
+        for (id, old_key, payload) in legacy {
+            let item: Installation = serde_json::from_str(&payload).map_err(|_| db_error())?;
+            let key = super::aipro_paths::path_key(Path::new(&item.target));
+            if key != old_key {
+                transaction.execute("UPDATE company_installations SET target_key=?2 WHERE id=?1", params![id,key]).map_err(|_| CompanyError::new("DATABASE_MIGRATION_FAILED", "Ownership cũ chồng lấn khi chuẩn hóa đường dẫn. Dữ liệu được giữ để kiểm tra."))?;
             }
-            Err(error) if matches!(error.code.as_str(), "NETWORK_ERROR" | "STORE_UNAVAILABLE") => {
-                self.repository
-                    .cached_catalog(&self.config.store_url, &user.id, query, page)?
-                    .ok_or(error)
-            }
-            Err(error) => Err(error),
         }
+        transaction
+            .pragma_update(None, "user_version", 4)
+            .map_err(|_| db_error())?;
+        transaction.commit().map_err(|_| db_error())?;
+        Ok(Self {
+            connection: Mutex::new(connection),
+        })
     }
-    pub fn detail(&self, id: &str) -> CompanyResult<Skill> {
-        self.auth_result(self.client.detail(&self.session.access_token()?, id))
+    pub fn installations(&self) -> CompanyResult<Vec<Installation>> {
+        let connection = self.connection.lock().map_err(|_| db_error())?;
+        let mut query = connection
+            .prepare("SELECT payload FROM company_installations ORDER BY id")
+            .map_err(|_| db_error())?;
+        let rows = query
+            .query_map([], |row| row.get::<_, String>(0))
+            .map_err(|_| db_error())?;
+        rows.map(|row| serde_json::from_str(&row.map_err(|_| db_error())?).map_err(|_| db_error()))
+            .collect()
     }
-    fn auth_result<T>(&self, result: CompanyResult<T>) -> CompanyResult<T> {
-        if result
-            .as_ref()
-            .err()
-            .map(|e| matches!(e.code.as_str(), "UNAUTHENTICATED" | "SESSION_EXPIRED"))
-            .unwrap_or(false)
+    pub fn projects(&self) -> CompanyResult<Vec<Project>> {
+        let connection = self.connection.lock().map_err(|_| db_error())?;
+        let mut query = connection
+            .prepare("SELECT payload FROM company_projects ORDER BY path_key")
+            .map_err(|_| db_error())?;
+        let rows = query
+            .query_map([], |row| row.get::<_, String>(0))
+            .map_err(|_| db_error())?;
+        rows.map(|row| serde_json::from_str(&row.map_err(|_| db_error())?).map_err(|_| db_error()))
+            .collect()
+    }
+    pub fn save_project(&self, project: &Project) -> CompanyResult<()> {
+        self.connection
+            .lock()
+            .map_err(|_| db_error())?
+            .execute(
+                "INSERT INTO company_projects(id,path_key,payload) VALUES(?1,?2,?3)",
+                params![
+                    project.id,
+                    super::aipro_paths::path_key(Path::new(&project.path)),
+                    serde_json::to_string(project).map_err(|_| db_error())?
+                ],
+            )
+            .map_err(|_| db_error())?;
+        Ok(())
+    }
+    pub fn remove_project(&self, id: &str) -> CompanyResult<()> {
+        self.connection
+            .lock()
+            .map_err(|_| db_error())?
+            .execute("DELETE FROM company_projects WHERE id=?1", [id])
+            .map_err(|_| db_error())?;
+        Ok(())
+    }
+    pub fn save_installation(&self, item: &Installation) -> CompanyResult<()> {
+        let changed = self
+            .connection
+            .lock()
+            .map_err(|_| db_error())?
+            .execute(
+                "UPDATE company_installations SET payload=?2 WHERE id=?1",
+                params![
+                    item.id,
+                    serde_json::to_string(item).map_err(|_| db_error())?
+                ],
+            )
+            .map_err(|_| db_error())?;
+        if changed != 1 {
+            return Err(db_error());
+        }
+        Ok(())
+    }
+    pub fn save_backup(&self, backup: &Backup) -> CompanyResult<()> {
+        self.connection
+            .lock()
+            .map_err(|_| db_error())?
+            .execute(
+                "INSERT INTO company_backups(id,installation_id,payload) VALUES(?1,?2,?3)",
+                params![
+                    backup.id,
+                    backup.installation_id,
+                    serde_json::to_string(backup).map_err(|_| db_error())?
+                ],
+            )
+            .map_err(|_| db_error())?;
+        Ok(())
+    }
+    pub fn backups(&self, id: &str) -> CompanyResult<Vec<Backup>> {
+        let connection = self.connection.lock().map_err(|_| db_error())?;
+        let mut query = connection
+            .prepare(
+                "SELECT payload FROM company_backups WHERE installation_id=?1 ORDER BY rowid DESC",
+            )
+            .map_err(|_| db_error())?;
+        let rows = query
+            .query_map([id], |row| row.get::<_, String>(0))
+            .map_err(|_| db_error())?;
+        rows.map(|row| serde_json::from_str(&row.map_err(|_| db_error())?).map_err(|_| db_error()))
+            .collect()
+    }
+    pub fn record_replacement(&self, journal: &ReplaceJournal) -> CompanyResult<()> {
+        let phase = serde_json::to_value(&journal.phase).map_err(|_| db_error())?;
+        self.connection.lock().map_err(|_| db_error())?.execute(
+            "INSERT INTO company_replacements(id,state,payload) VALUES(?1,?2,?3) ON CONFLICT(id) DO UPDATE SET state=excluded.state,payload=excluded.payload",
+            params![journal.view.id, phase.as_str().ok_or_else(db_error)?, serde_json::to_string(journal).map_err(|_| db_error())?]).map_err(|_| db_error())?;
+        Ok(())
+    }
+    pub fn commit_replacement(&self, journal: &ReplaceJournal) -> CompanyResult<()> {
+        let mut connection = self.connection.lock().map_err(|_| db_error())?;
+        let transaction = connection.transaction().map_err(|_| db_error())?;
+        let changed = transaction
+            .execute(
+                "UPDATE company_installations SET payload=?2 WHERE id=?1",
+                params![
+                    journal.new.id,
+                    serde_json::to_string(&journal.new).map_err(|_| db_error())?
+                ],
+            )
+            .map_err(|_| db_error())?;
+        if changed != 1 {
+            return Err(db_error());
+        }
+        transaction
+            .execute(
+                "UPDATE company_replacements SET state='committed',payload=?2 WHERE id=?1",
+                params![
+                    journal.view.id,
+                    serde_json::to_string(journal).map_err(|_| db_error())?
+                ],
+            )
+            .map_err(|_| db_error())?;
+        transaction.commit().map_err(|_| db_error())
+    }
+    pub fn finish_replacement(&self, id: &str) -> CompanyResult<()> {
+        self.connection
+            .lock()
+            .map_err(|_| db_error())?
+            .execute(
+                "UPDATE company_replacements SET state='completed' WHERE id=?1",
+                [id],
+            )
+            .map_err(|_| db_error())?;
+        Ok(())
+    }
+    pub fn pending_replacements(&self) -> CompanyResult<Vec<ReplaceJournal>> {
+        let connection = self.connection.lock().map_err(|_| db_error())?;
+        let mut query = connection.prepare("SELECT payload FROM company_replacements WHERE state <> 'completed' ORDER BY rowid").map_err(|_| db_error())?;
+        let rows = query
+            .query_map([], |row| row.get::<_, String>(0))
+            .map_err(|_| db_error())?;
+        rows.map(|row| serde_json::from_str(&row.map_err(|_| db_error())?).map_err(|_| db_error()))
+            .collect()
+    }
+    pub fn cache_catalog(
+        &self,
+        store: &str,
+        user: &str,
+        query: &str,
+        page: u32,
+        result: &SkillPage,
+    ) -> CompanyResult<()> {
+        let mut connection = self.connection.lock().map_err(|_| db_error())?;
+        let transaction = connection.transaction().map_err(|_| db_error())?;
+        let fetched_at = chrono::Utc::now().to_rfc3339();
+        transaction.execute("INSERT INTO company_catalog_cache(store_key,user_id,query,page,fetched_at,payload) VALUES(?1,?2,?3,?4,?5,?6) ON CONFLICT(store_key,user_id,query,page) DO UPDATE SET fetched_at=excluded.fetched_at,payload=excluded.payload", params![store,user,query.trim(),page,fetched_at,serde_json::to_string(result).map_err(|_| db_error())?]).map_err(|_| db_error())?;
+        transaction.execute("DELETE FROM company_catalog_cache WHERE rowid IN (SELECT rowid FROM company_catalog_cache WHERE store_key=?1 AND user_id=?2 ORDER BY fetched_at DESC LIMIT -1 OFFSET 100)", params![store,user]).map_err(|_| db_error())?;
+        transaction.commit().map_err(|_| db_error())
+    }
+    pub fn cached_catalog(
+        &self,
+        store: &str,
+        user: &str,
+        query: &str,
+        page: u32,
+    ) -> CompanyResult<Option<SkillPage>> {
+        use rusqlite::OptionalExtension;
+        let connection = self.connection.lock().map_err(|_| db_error())?;
+        let row: Option<(String, String)> = connection.query_row("SELECT payload,fetched_at FROM company_catalog_cache WHERE store_key=?1 AND user_id=?2 AND query=?3 AND page=?4", params![store,user,query.trim(),page], |row| Ok((row.get(0)?, row.get(1)?))).optional().map_err(|_| db_error())?;
+        row.map(|(payload, fetched_at)| {
+            let mut result: SkillPage = serde_json::from_str(&payload).map_err(|_| db_error())?;
+            result.cache = Some(CatalogCache {
+                fetched_at,
+                stale: true,
+            });
+            Ok(result)
+        })
+        .transpose()
+    }
+    pub fn clear_catalog(&self, store: &str) -> CompanyResult<()> {
+        self.connection
+            .lock()
+            .map_err(|_| db_error())?
+            .execute(
+                "DELETE FROM company_catalog_cache WHERE store_key=?1",
+                [store],
+            )
+            .map_err(|_| db_error())?;
+        Ok(())
+    }
+    pub fn prepare(&self, journal: &InstallJournal) -> CompanyResult<()> {
+        let payload = serde_json::to_string(journal).map_err(|_| db_error())?;
+        self.connection
+            .lock()
+            .map_err(|_| db_error())?
+            .execute(
+                "INSERT INTO company_operations(id,state,payload) VALUES (?1,'prepared',?2)",
+                params![journal.view.id, payload],
+            )
+            .map_err(|_| db_error())?;
+        Ok(())
+    }
+    pub fn stage_created(&self, journal: &InstallJournal) -> CompanyResult<()> {
+        self.connection
+            .lock()
+            .map_err(|_| db_error())?
+            .execute(
+                "UPDATE company_operations SET payload=?2 WHERE id=?1",
+                params![
+                    journal.view.id,
+                    serde_json::to_string(journal).map_err(|_| db_error())?
+                ],
+            )
+            .map_err(|_| db_error())?;
+        Ok(())
+    }
+    pub fn save_package(
+        &self,
+        meta: &PackageMeta,
+        content_hash: &str,
+        full_hash: &str,
+    ) -> CompanyResult<()> {
+        let payload = serde_json::json!({"package":meta,"contentHash":content_hash,"fullHash":full_hash,"algorithm":"content-v1"}).to_string();
+        self.connection.lock().map_err(|_| db_error())?.execute("INSERT INTO company_packages(hash,payload) VALUES (?1,?2) ON CONFLICT(hash) DO NOTHING", params![meta.sha256,payload]).map_err(|_| db_error())?;
+        Ok(())
+    }
+    pub fn commit(&self, journal: &InstallJournal) -> CompanyResult<()> {
+        let mut connection = self.connection.lock().map_err(|_| db_error())?;
+        let transaction = connection.transaction().map_err(|_| db_error())?;
+        let installation = &journal.installation;
+        let changed = transaction.execute("INSERT INTO company_installations(id,target_key,payload) VALUES (?1,?2,?3) ON CONFLICT(id) DO UPDATE SET payload=excluded.payload WHERE company_installations.target_key=excluded.target_key", params![installation.id,super::aipro_paths::path_key(Path::new(&installation.target)),serde_json::to_string(installation).map_err(|_| db_error())?]).map_err(|_| db_error())?;
+        if changed != 1 {
+            return Err(db_error());
+        }
+        transaction
+            .execute(
+                "UPDATE company_operations SET state='committed' WHERE id=?1",
+                params![journal.view.id],
+            )
+            .map_err(|_| db_error())?;
+        transaction.commit().map_err(|_| db_error())
+    }
+    pub fn finish(&self, id: &str, state: &str) -> CompanyResult<()> {
+        self.connection
+            .lock()
+            .map_err(|_| db_error())?
+            .execute(
+                "UPDATE company_operations SET state=?2 WHERE id=?1",
+                params![id, state],
+            )
+            .map_err(|_| db_error())?;
+        Ok(())
+    }
+    pub fn pending(&self) -> CompanyResult<Vec<InstallJournal>> {
+        let connection = self.connection.lock().map_err(|_| db_error())?;
+        let mut query = connection.prepare("SELECT payload FROM company_operations WHERE state='prepared' OR state='recovery_required'").map_err(|_| db_error())?;
+        let rows = query
+            .query_map([], |row| row.get::<_, String>(0))
+            .map_err(|_| db_error())?;
+        rows.map(|row| serde_json::from_str(&row.map_err(|_| db_error())?).map_err(|_| db_error()))
+            .collect()
+    }
+}
+````
+
+## File: src-tauri/src/core/company/update_service.rs
+````rust
+use super::*;
+use crate::core::company::aipro_paths::{overlaps, validate_ancestors};
+use std::{collections::BTreeMap, io::Read, path::PathBuf};
+
+pub(super) struct UpdateJob {
+    pub(super) id: String,
+    pub(super) skill: Skill,
+    pub(super) old: Installation,
+    pub(super) expected_hash: String,
+    pub(super) owner: String,
+    pub(super) cancelled: Arc<AtomicBool>,
+    pub(super) bypass: bool,
+}
+impl UpdateJob {
+    fn capture(op: &Operation) -> CompanyResult<Self> {
+        Ok(Self {
+            id: op.view.id.clone(),
+            skill: op.skill.clone(),
+            old: op.old.clone().ok_or_else(operation_error)?,
+            expected_hash: op.old_full_hash.clone().ok_or_else(operation_error)?,
+            owner: op.owner.clone(),
+            cancelled: op.cancelled.clone(),
+            bypass: op.bypass,
+        })
+    }
+}
+
+fn changed() -> CompanyError {
+    CompanyError::new(
+        "CONTENT_CHANGED",
+        "Nội dung đã thay đổi sau khi xem. Giữ bản đang dùng và chuẩn bị cập nhật lại.",
+    )
+}
+#[derive(PartialEq)]
+struct PreviewEntry {
+    hash: String,
+    info: FilePreview,
+}
+fn is_text_file(path: &Path) -> CompanyResult<bool> {
+    let mut file = File::open(path).map_err(|_| write_error())?;
+    let mut buffer = [0u8; 8196];
+    let mut carried = 0;
+    loop {
+        let count = file
+            .read(&mut buffer[carried..carried + 8192])
+            .map_err(|_| write_error())?;
+        if count == 0 {
+            return Ok(carried == 0);
+        }
+        let length = carried + count;
+        if buffer[..length]
+            .iter()
+            .any(|b| (*b < 32 || *b == 127) && !matches!(*b, b'\n' | b'\r' | b'\t'))
         {
-            self.cancel_pending();
-            self.session.clear();
-            self.repository.clear_catalog(&self.config.store_url)?;
+            return Ok(false);
         }
-        result
+        match std::str::from_utf8(&buffer[..length]) {
+            Ok(_) => carried = 0,
+            Err(e) if e.error_len().is_none() => {
+                // Carry only an incomplete UTF-8 code point across chunk boundaries.
+                let start = e.valid_up_to();
+                buffer.copy_within(start..length, 0);
+                carried = length - start;
+            }
+            Err(_) => return Ok(false),
+        }
     }
-    fn cancel_pending(&self) {
-        if let Ok(operations) = self.operations.lock() {
-            for operation in operations.values() {
-                if !matches!(
-                    operation.view.state,
-                    OperationState::Committing | OperationState::Succeeded
-                ) {
-                    operation.cancelled.store(true, Ordering::Relaxed);
+}
+fn preview_info(path: &Path) -> CompanyResult<FilePreview> {
+    let meta = fs::metadata(path).map_err(|_| write_error())?;
+    if meta.is_dir() {
+        return Ok(FilePreview {
+            kind: PreviewKind::Directory,
+            size_bytes: 0,
+        });
+    }
+    let extension = path
+        .extension()
+        .unwrap_or_default()
+        .to_string_lossy()
+        .to_lowercase();
+    let text_extension = matches!(
+        extension.as_str(),
+        "md" | "txt"
+            | "json"
+            | "yaml"
+            | "yml"
+            | "toml"
+            | "xml"
+            | "csv"
+            | "log"
+            | "ini"
+            | "css"
+            | "ts"
+            | "tsx"
+            | "js"
+            | "jsx"
+            | "py"
+            | "rs"
+            | "sh"
+            | "ps1"
+            | "rb"
+            | "go"
+            | "java"
+            | "sql"
+            | "c"
+            | "h"
+            | "cpp"
+            | "hpp"
+    );
+    Ok(FilePreview {
+        kind: if meta.is_file() && text_extension && is_text_file(path)? {
+            PreviewKind::Text
+        } else {
+            PreviewKind::Binary
+        },
+        size_bytes: meta.len(),
+    })
+}
+fn files(root: &Path) -> CompanyResult<BTreeMap<String, PreviewEntry>> {
+    let mut result = BTreeMap::new();
+    for entry in walkdir::WalkDir::new(root)
+        .follow_links(false)
+        .into_iter()
+        .filter_entry(|e| !package_store::excluded(&e.file_name().to_string_lossy()))
+    {
+        let entry = entry.map_err(|_| write_error())?;
+        package_store::reject_links(entry.path())?;
+        if entry.path() == root {
+            continue;
+        }
+        let path = entry
+            .path()
+            .strip_prefix(root)
+            .map_err(|_| write_error())?
+            .to_string_lossy()
+            .replace('\\', "/");
+        if entry.file_type().is_file() {
+            result.insert(
+                path,
+                PreviewEntry {
+                    hash: package_store::hash_file(entry.path())?,
+                    info: preview_info(entry.path())?,
+                },
+            );
+        } else if entry.file_type().is_dir()
+            && fs::read_dir(entry.path())
+                .map_err(|_| write_error())?
+                .next()
+                .is_none()
+        {
+            result.insert(
+                path,
+                PreviewEntry {
+                    hash: "directory".into(),
+                    info: preview_info(entry.path())?,
+                },
+            );
+        }
+    }
+    Ok(result)
+}
+
+impl CompanyService {
+    pub fn check_updates(&self, ids: &[String]) -> CompanyResult<Vec<Installation>> {
+        let _worker = self.worker.lock().map_err(|_| write_error())?;
+        let mut results = Vec::new();
+        for id in ids {
+            let mut item = self.refresh_installation(id)?;
+            item.checked_at = Some(chrono::Utc::now().to_rfc3339());
+            match self.detail(&item.skill_id) {
+                Ok(skill) => {
+                    item.store_state = if skill.package.sha256 == item.package_hash {
+                        StoreState::Current
+                    } else {
+                        StoreState::NewPackage
+                    };
+                    item.store_error = None;
+                }
+                Err(e) if matches!(e.code.as_str(), "UNAUTHENTICATED" | "SESSION_EXPIRED") => {
+                    return Err(e)
+                }
+                Err(e) => {
+                    item.store_state = if e.code == "SKILL_NOT_FOUND" {
+                        StoreState::Unavailable
+                    } else {
+                        StoreState::Unknown
+                    };
+                    item.store_error = Some(e.message);
                 }
             }
+            self.repository.save_installation(&item)?;
+            results.push(item);
         }
+        Ok(results)
     }
-    fn owner(&self) -> CompanyResult<String> {
-        Ok(hex::encode(Sha256::digest(
-            self.session.access_token()?.as_bytes(),
-        )))
-    }
-    pub fn prepare_install(&self, id: &str) -> CompanyResult<OperationView> {
+    pub fn prepare_update(&self, id: &str) -> CompanyResult<OperationView> {
         let owner = self.owner()?;
-        let skill = self.detail(id)?;
-        let description = skill.description.as_ref().ok_or_else(|| {
-            CompanyError::new(
-                "INVALID_RESPONSE",
-                "Detail của Store thiếu description đầy đủ.",
-            )
-        })?;
-        let target = global_target(&self.config.profile_root, &skill.slug)?;
-        let target_key = target.to_string_lossy().replace('\\', "/");
+        let item = self.refresh_installation(id)?;
+        if !matches!(
+            item.content_state,
+            ContentState::Original | ContentState::Customized
+        ) {
+            return Err(CompanyError::new(
+                "CONTENT_UNREADABLE",
+                "Chưa kiểm tra được nội dung bản cài. Kiểm tra file/quyền rồi thử lại.",
+            ));
+        }
+        let target = Path::new(&item.target);
         if self
             .operations
             .lock()
             .map_err(|_| operation_error())?
             .values()
-            .any(|operation| {
-                operation.view.state == OperationState::RecoveryRequired
-                    && operation
-                        .view
-                        .target
-                        .replace('\\', "/")
-                        .eq_ignore_ascii_case(&target_key)
+            .any(|op| {
+                op.view.state == OperationState::RecoveryRequired
+                    && overlaps(Path::new(&op.view.target), target)
             })
         {
-            return Err(CompanyError::new("RECOVERY_REQUIRED", "Đích này có thao tác chưa phục hồi xong. Kiểm tra dữ liệu đã giữ trước khi cài lại."));
+            return Err(CompanyError::new(
+                "RECOVERY_REQUIRED",
+                "Đích còn dữ liệu cần phục hồi. Không cập nhật đè.",
+            ));
         }
-        if target.exists()
-            || self.installations()?.iter().any(|item| {
-                item.target
-                    .replace('\\', "/")
-                    .eq_ignore_ascii_case(&target.to_string_lossy().replace('\\', "/"))
-            })
-        {
+        let old_full_hash = content_hash(target, false)?;
+        let skill = self.detail(&item.skill_id)?;
+        if skill.slug != item.slug {
             return Err(CompanyError::new(
                 "TARGET_CONFLICT",
-                "Đích đã có nội dung. Xem bản đã cài hoặc xử lý đích này trước khi cài lại.",
+                "Slug Store đã thay đổi. Giữ bản cài để kiểm tra nguồn.",
             ));
         }
-        if skill.package.size_bytes > MAX_ARCHIVE
-            || !matches!(skill.package.format.as_str(), "zip" | "7z")
-            || !skill.package.etag.starts_with('"')
-            || !skill.package.etag.ends_with('"')
-        {
+        if skill.package.sha256 == item.package_hash {
             return Err(CompanyError::new(
-                "INVALID_PACKAGE",
-                "Metadata gói không hợp lệ hoặc vượt giới hạn.",
+                "NO_UPDATE",
+                "Bản cài đang dùng gói hiện tại trên Store.",
             ));
         }
-        let mcp = check_global_mcp(&parse_requirements(description), &self.config.profile_root);
+        let description = skill.description.as_ref().ok_or_else(|| {
+            CompanyError::new("INVALID_RESPONSE", "Store chưa có description đầy đủ.")
+        })?;
         let view = OperationView {
             id: uuid::Uuid::new_v4().to_string(),
+            kind: OperationKind::Update,
             state: OperationState::AwaitingDecision,
-            target: target.display().to_string(),
-            mcp,
+            target: item.target.clone(),
+            mcp: check_global_mcp(&parse_requirements(description), &self.config.profile_root),
             mcp_path: self
                 .config
                 .profile_root
@@ -40101,6 +41247,9 @@ impl CompanyService {
             progress_bytes: 0,
             total_bytes: skill.package.size_bytes,
             error: None,
+            preview_ready: false,
+            customized: item.content_state == ContentState::Customized,
+            changes: Vec::new(),
         };
         self.operations
             .lock()
@@ -40109,144 +41258,75 @@ impl CompanyService {
                 view.id.clone(),
                 Operation {
                     view: view.clone(),
+                    project_id: item.project_id.clone(),
+                    old: Some(item),
+                    old_full_hash: Some(old_full_hash),
+                    preview: None,
                     skill,
                     owner,
                     cancelled: Arc::new(AtomicBool::new(false)),
+                    bypass: false,
                 },
             );
         Ok(view)
     }
-    pub fn status(&self, id: &str) -> CompanyResult<OperationView> {
-        self.operations
-            .lock()
-            .map_err(|_| operation_error())?
-            .get(id)
-            .map(|op| op.view.clone())
-            .ok_or_else(operation_error)
-    }
-    pub fn cancel(&self, id: &str) -> CompanyResult<OperationView> {
-        let mut operations = self.operations.lock().map_err(|_| operation_error())?;
-        let operation = operations.get_mut(id).ok_or_else(operation_error)?;
-        if !matches!(
-            operation.view.state,
-            OperationState::Committing | OperationState::Succeeded
-        ) {
-            operation.cancelled.store(true, Ordering::Relaxed);
-            if operation.view.state == OperationState::AwaitingDecision {
-                operation.view.state = OperationState::Cancelled;
-            }
-        }
-        Ok(operation.view.clone())
-    }
-    pub fn confirm(self: &Arc<Self>, id: &str, bypass_mcp: bool) -> CompanyResult<OperationView> {
+    pub(super) fn confirm_preview(
+        self: &Arc<Self>,
+        id: &str,
+        bypass: bool,
+    ) -> CompanyResult<OperationView> {
         let owner = self.owner()?;
-        let (skill, cancelled, view) = {
+        let (job, view) = {
             let mut operations = self.operations.lock().map_err(|_| operation_error())?;
-            let operation = operations.get_mut(id).ok_or_else(operation_error)?;
-            if operation.cancelled.load(Ordering::Relaxed) {
-                return Err(CompanyError::new(
-                    "CANCELLED",
-                    "Thao tác đã hủy. Bắt đầu cài lại để kiểm tra thông tin mới.",
-                ));
-            }
-            if operation.owner != owner {
+            let op = operations.get_mut(id).ok_or_else(operation_error)?;
+            if op.owner != owner || op.cancelled.load(Ordering::Relaxed) {
                 return Err(CompanyError::new(
                     "SESSION_EXPIRED",
-                    "Quyết định cài đã hết hiệu lực. Kiểm tra lại skill và MCP.",
+                    "Quyết định đã hết hiệu lực. Chuẩn bị cập nhật lại.",
                 ));
             }
-            if operation.view.state != OperationState::AwaitingDecision {
-                return Ok(operation.view.clone());
+            if op.view.state != OperationState::AwaitingDecision || op.view.preview_ready {
+                return Ok(op.view.clone());
             }
-            if matches!(
-                operation.view.mcp.state,
-                McpState::Missing | McpState::Unknown
-            ) && !bypass_mcp
-            {
+            if matches!(op.view.mcp.state, McpState::Missing | McpState::Unknown) && !bypass {
                 return Err(CompanyError::new(
                     "MCP_WARNING",
-                    "Cần chọn dừng hoặc bỏ qua cảnh báo MCP.",
+                    "Chọn dừng hoặc bỏ qua cảnh báo MCP.",
                 ));
             }
-            operation.view.state = OperationState::Downloading;
-            (
-                operation.skill.clone(),
-                operation.cancelled.clone(),
-                operation.view.clone(),
-            )
+            op.view.state = OperationState::Downloading;
+            op.bypass = bypass;
+            (UpdateJob::capture(op)?, op.view.clone())
         };
-        let app = Arc::clone(self);
-        let id = id.to_string();
+        let app = self.clone();
         std::thread::spawn(move || {
-            let result = app.install(&id, &skill, &owner, &cancelled, bypass_mcp);
-            if let Err(error) = result {
-                app.auth_result::<()>(Err(error.clone())).ok();
-                let state = if error.code == "CANCELLED" {
-                    OperationState::Cancelled
-                } else if error.code == "RECOVERY_REQUIRED" {
-                    OperationState::RecoveryRequired
-                } else {
-                    OperationState::Failed
-                };
-                app.update(&id, state, None, Some(error));
-            } else {
-                app.update(
-                    &id,
-                    OperationState::Succeeded,
-                    Some(skill.package.size_bytes),
-                    None,
-                );
+            if let Err(error) = app.prepare_preview_files(&job) {
+                app.update_failure(&job.id, error);
             }
         });
         Ok(view)
     }
-    fn update(
-        &self,
-        id: &str,
-        state: OperationState,
-        bytes: Option<u64>,
-        error: Option<CompanyError>,
-    ) {
-        if let Ok(mut operations) = self.operations.lock() {
-            if let Some(operation) = operations.get_mut(id) {
-                operation.view.state = state;
-                operation.view.error = error;
-                if let Some(bytes) = bytes {
-                    operation.view.progress_bytes = bytes;
-                }
-            }
-        }
-    }
-    fn check_cancel(cancelled: &AtomicBool) -> CompanyResult<()> {
-        if cancelled.load(Ordering::Relaxed) {
-            Err(CompanyError::new("CANCELLED", "Đã hủy cài đặt."))
-        } else {
-            Ok(())
-        }
-    }
-    fn install(
-        &self,
-        id: &str,
-        skill: &Skill,
-        owner: &str,
-        cancelled: &AtomicBool,
-        bypass: bool,
-    ) -> CompanyResult<()> {
+    fn prepare_preview_files(&self, job: &UpdateJob) -> CompanyResult<()> {
+        let id = job.id.as_str();
+        let skill = &job.skill;
+        let old = &job.old;
+        let old_hash = job.expected_hash.as_str();
+        let owner = job.owner.as_str();
+        let cancelled = job.cancelled.as_ref();
         let _worker = self.worker.lock().map_err(|_| write_error())?;
         Self::check_cancel(cancelled)?;
         if self.owner()? != owner {
             return Err(CompanyError::new(
                 "SESSION_EXPIRED",
-                "Cần đăng nhập và chuẩn bị cài lại.",
+                "Chuẩn bị cập nhật lại sau đăng nhập.",
             ));
         }
         let operations_root = self.config.data_root.join("operations");
+        validate_ancestors(&operations_root)?;
         fs::create_dir_all(&operations_root).map_err(|_| write_error())?;
-        package_store::reject_links(&operations_root)?;
         let temporary = tempfile::tempdir_in(&operations_root).map_err(|_| write_error())?;
         let archive = temporary.path().join("download");
         self.download(id, skill, &archive, cancelled)?;
-        Self::check_cancel(cancelled)?;
         self.update(id, OperationState::Validating, None, None);
         let package = package_store::prepare_archive(
             &archive,
@@ -40256,248 +41336,1356 @@ impl CompanyService {
         )?;
         self.repository
             .save_package(&skill.package, &package.content_hash, &package.full_hash)?;
-        Self::check_cancel(cancelled)?;
-        let target = global_target(&self.config.profile_root, &skill.slug)?;
-        if target.exists() {
+        let current = self.guarded_installation(&old.id)?;
+        if current.package_hash != old.package_hash
+            || content_hash(Path::new(&current.target), false)? != old_hash
+        {
+            return Err(changed());
+        }
+        let preview = self.config.data_root.join("previews").join(id);
+        validate_ancestors(&preview)?;
+        if preview.exists() {
             return Err(CompanyError::new(
                 "TARGET_CONFLICT",
-                "Đích đã có nội dung kể từ lúc kiểm tra. Không ghi đè.",
+                "Vùng preview đã có nội dung.",
             ));
         }
-        let stage = stage_path(&target, id)?;
-        fs::create_dir_all(target.parent().ok_or_else(write_error)?).map_err(|_| write_error())?;
-        global_target(&self.config.profile_root, &skill.slug)?;
-        let view = self.status(id)?;
-        let installation = Installation {
-            id: id.into(),
-            skill_id: skill.id.clone(),
-            slug: skill.slug.clone(),
-            name: skill.name.clone(),
-            target: target.display().to_string(),
-            package_hash: package.archive_hash,
-            content_hash: package.content_hash,
-            description_snapshot: skill.description.clone().unwrap_or_default(),
-            installed_at: chrono::Utc::now().to_rfc3339(),
-            mcp_bypassed: bypass,
-        };
-        let mut journal = InstallJournal {
-            view,
-            installation,
-            full_hash: package.full_hash.clone(),
-            stage_owned: false,
-        };
-        self.repository.prepare(&journal)?;
-        self.update(id, OperationState::Staging, None, None);
-        let mut owned_stage = false;
-        let before_rename = (|| {
-            if stage.exists() {
-                return Err(CompanyError::new(
-                    "TARGET_CONFLICT",
-                    "Thư mục staging đã tồn tại.",
-                ));
-            }
-            fs::create_dir(&stage).map_err(|_| write_error())?;
-            owned_stage = true;
-            journal.stage_owned = true;
-            self.repository.stage_created(&journal)?;
-            copy_tree(&package.original_root, &stage)?;
-            if content_hash(&stage, false)? != package.full_hash {
-                return Err(CompanyError::new(
-                    "PACKAGE_INTEGRITY_FAILED",
-                    "Bản sao không khớp gói nguồn.",
-                ));
-            }
-            Self::check_cancel(cancelled)?;
-            if self.owner()? != owner {
-                return Err(CompanyError::new(
-                    "SESSION_EXPIRED",
-                    "Phiên đã thay đổi; chuẩn bị cài lại.",
-                ));
-            }
-            global_target(&self.config.profile_root, &skill.slug)?;
-            if target.exists() {
-                return Err(CompanyError::new(
-                    "TARGET_CONFLICT",
-                    "Đích đã có nội dung. Không ghi đè.",
-                ));
-            }
-            self.update(id, OperationState::Committing, None, None);
-            fs::rename(&stage, &target).map_err(|_| write_error())
-        })();
-        if let Err(error) = before_rename {
-            if owned_stage && stage.exists() && package_store::reject_links(&stage).is_ok() {
-                let _ = fs::remove_dir_all(&stage);
-            }
-            let _ = self.repository.finish(id, "cancelled");
-            return Err(error);
+        copy_tree(Path::new(&current.target), &preview.join("current"))?;
+        copy_tree(&package.original_root, &preview.join("incoming"))?;
+        if content_hash(&preview.join("current"), false)? != old_hash
+            || content_hash(&preview.join("incoming"), false)? != package.full_hash
+            || content_hash(Path::new(&current.target), false)? != old_hash
+        {
+            return Err(changed());
         }
-        self.repository.commit(&journal).map_err(|_| {
-            CompanyError::new(
-                "RECOVERY_REQUIRED",
-                "File đã được giữ tại đích; mở lại app để hoàn tất khôi phục dữ liệu quản lý.",
-            )
-        })
+        let before = files(&preview.join("current"))?;
+        let after = files(&preview.join("incoming"))?;
+        let mut changes = Vec::new();
+        for (path, hash) in &before {
+            if after.get(path) != Some(hash) {
+                changes.push(FileChange {
+                    path: path.clone(),
+                    kind: if after.contains_key(path) {
+                        FileChangeKind::Modified
+                    } else {
+                        FileChangeKind::Deleted
+                    },
+                    current: Some(hash.info.clone()),
+                    incoming: after.get(path).map(|entry| entry.info.clone()),
+                });
+            }
+        }
+        for path in after.keys() {
+            if !before.contains_key(path) {
+                changes.push(FileChange {
+                    path: path.clone(),
+                    kind: FileChangeKind::Added,
+                    current: None,
+                    incoming: after.get(path).map(|entry| entry.info.clone()),
+                });
+            }
+        }
+        changes.sort_by(|a, b| a.path.cmp(&b.path));
+        Self::check_cancel(cancelled)?;
+        if self.owner()? != owner {
+            return Err(CompanyError::new(
+                "SESSION_EXPIRED",
+                "Phiên đã thay đổi. Chuẩn bị cập nhật lại.",
+            ));
+        }
+        let mut operations = self.operations.lock().map_err(|_| operation_error())?;
+        let op = operations.get_mut(id).ok_or_else(operation_error)?;
+        op.preview = Some(package);
+        op.view.preview_ready = true;
+        op.view.changes = changes;
+        op.view.state = OperationState::AwaitingDecision;
+        Ok(())
     }
-    fn download(
+    pub fn preview_open_path(
         &self,
         id: &str,
-        skill: &Skill,
-        archive: &Path,
-        cancelled: &AtomicBool,
-    ) -> CompanyResult<()> {
-        let mut response = self.client.package_response(
-            &self.session.access_token()?,
-            &skill.id,
-            &skill.package.etag,
-        )?;
-        let mut output = File::create(archive).map_err(|_| write_error())?;
-        let mut bytes = 0u64;
-        let mut buffer = [0u8; 65_536];
-        loop {
-            Self::check_cancel(cancelled)?;
-            let count = response
-                .read(&mut buffer)
-                .map_err(|_| StoreClient::network_error())?;
-            if count == 0 {
-                break;
-            }
-            bytes += count as u64;
-            if bytes > MAX_ARCHIVE || bytes > skill.package.size_bytes {
-                return Err(CompanyError::new(
-                    "PACKAGE_INTEGRITY_FAILED",
-                    "Gói tải vượt kích thước đã khai báo.",
-                ));
-            }
-            output
-                .write_all(&buffer[..count])
-                .map_err(|_| write_error())?;
-            self.update(id, OperationState::Downloading, Some(bytes), None);
+        side: &str,
+        relative: &str,
+    ) -> CompanyResult<PathBuf> {
+        uuid::Uuid::parse_str(id).map_err(|_| operation_error())?;
+        let owner = self.owner()?;
+        let operations = self.operations.lock().map_err(|_| operation_error())?;
+        let op = operations.get(id).ok_or_else(operation_error)?;
+        if !op.view.preview_ready || op.owner != owner || op.cancelled.load(Ordering::Relaxed) {
+            return Err(operation_error());
         }
-        output.sync_all().map_err(|_| write_error())?;
-        if bytes != skill.package.size_bytes {
+        if !matches!(side, "current" | "incoming") {
+            return Err(operation_error());
+        }
+        let root = self.config.data_root.join("previews").join(id).join(side);
+        let path = if relative.is_empty() {
+            root
+        } else {
+            root.join(package_store::checked_entry(relative)?)
+        };
+        validate_ancestors(&path)?;
+        if !path.exists() {
             return Err(CompanyError::new(
-                "PACKAGE_INTEGRITY_FAILED",
-                "Gói tải chưa đủ bytes.",
+                "CONTENT_MISSING",
+                "File không có ở phía đã chọn. Có thể mở thư mục để xem.",
             ));
         }
-        Ok(())
-    }
-    fn recover_install(&self, journal: &InstallJournal) -> CompanyResult<bool> {
-        let target = global_target(&self.config.profile_root, &journal.installation.slug)?;
-        let stage = stage_path(&target, &journal.view.id)?;
-        let matches_target = target
-            .to_string_lossy()
-            .replace('\\', "/")
-            .eq_ignore_ascii_case(&journal.installation.target.replace('\\', "/"));
-        if journal.stage_owned
-            && matches_target
-            && target.exists()
-            && !stage.exists()
-            && content_hash(&target, false).ok().as_deref() == Some(journal.full_hash.as_str())
-        {
-            self.repository.commit(journal)?;
-            return Ok(true);
-        } else if matches_target
-            && !target.exists()
-            && (!stage.exists()
-                || (journal.stage_owned
-                    && content_hash(&stage, false).ok().as_deref()
-                        == Some(journal.full_hash.as_str())))
-        {
-            if stage.exists() {
-                package_store::reject_links(&stage)?;
-                fs::remove_dir_all(&stage).map_err(|_| write_error())?;
-            }
-            self.repository.finish(&journal.view.id, "cancelled")?;
-            return Ok(true);
+        if path.is_file() && preview_info(&path)?.kind != PreviewKind::Text {
+            return Err(CompanyError::new(
+                "PREVIEW_UNAVAILABLE",
+                "File nhị phân hoặc thực thi chỉ xem thông tin hoặc mở thư mục.",
+            ));
         }
-        Ok(false)
+        Ok(path)
     }
-    fn recover(&self) -> CompanyResult<()> {
-        for journal in self.repository.pending()? {
-            if !self.recover_install(&journal).unwrap_or(false) {
-                self.repository
-                    .finish(&journal.view.id, "recovery_required")?;
-                let mut view = journal.view.clone();
-                view.state = OperationState::RecoveryRequired;
-                view.error = Some(CompanyError::new(
-                    "RECOVERY_REQUIRED",
-                    format!(
-                        "Nội dung thao tác cần kiểm tra. Đã giữ dữ liệu: {} ; staging: {}",
-                        view.target,
-                        format!(".company-stage-{}", view.id)
-                    ),
+    pub fn apply_update(
+        self: &Arc<Self>,
+        id: &str,
+        replace_customized: bool,
+    ) -> CompanyResult<OperationView> {
+        let owner = self.owner()?;
+        let (job, package, view) = {
+            let mut operations = self.operations.lock().map_err(|_| operation_error())?;
+            let op = operations.get_mut(id).ok_or_else(operation_error)?;
+            if op.owner != owner || op.cancelled.load(Ordering::Relaxed) {
+                return Err(CompanyError::new(
+                    "SESSION_EXPIRED",
+                    "Quyết định đã hết hiệu lực. Chuẩn bị cập nhật lại.",
                 ));
-                let skill = Skill {
-                    id: journal.installation.skill_id,
-                    slug: journal.installation.slug,
-                    name: journal.installation.name,
-                    description_excerpt: None,
-                    description: Some(journal.installation.description_snapshot),
-                    updated_at: journal.installation.installed_at,
-                    package: PackageMeta {
-                        format: "zip".into(),
-                        size_bytes: 0,
-                        sha256: journal.installation.package_hash,
-                        etag: String::new(),
-                    },
-                };
-                self.operations
-                    .lock()
-                    .map_err(|_| operation_error())?
-                    .insert(
-                        view.id.clone(),
-                        Operation {
-                            view,
-                            skill,
-                            owner: String::new(),
-                            cancelled: Arc::new(AtomicBool::new(true)),
-                        },
-                    );
             }
-        }
-        Ok(())
+            if op.view.kind != OperationKind::Update || !op.view.preview_ready {
+                return Err(operation_error());
+            }
+            if op.view.state != OperationState::AwaitingDecision {
+                return Ok(op.view.clone());
+            }
+            if op.view.customized && !replace_customized {
+                return Err(CompanyError::new(
+                    "CUSTOMIZED_CONFIRMATION_REQUIRED",
+                    "Xác nhận thay bản đã tùy chỉnh bằng gói Store sau khi xem thay đổi.",
+                ));
+            }
+            op.view.state = OperationState::Staging;
+            (
+                UpdateJob::capture(op)?,
+                op.preview.clone().ok_or_else(operation_error)?,
+                op.view.clone(),
+            )
+        };
+        let app = self.clone();
+        std::thread::spawn(move || match app.replace_installation(&job, &package) {
+            Ok(()) => app.update(
+                &job.id,
+                OperationState::Succeeded,
+                Some(job.skill.package.size_bytes),
+                None,
+            ),
+            Err(error) => app.update_failure(&job.id, error),
+        });
+        Ok(view)
     }
-    pub fn recovery_warnings(&self) -> Vec<String> {
-        self.operations
-            .lock()
-            .map(|operations| {
-                operations
-                    .values()
-                    .filter(|op| op.view.state == OperationState::RecoveryRequired)
-                    .filter_map(|op| op.view.error.as_ref().map(|error| error.message.clone()))
-                    .collect()
-            })
-            .unwrap_or_default()
+    pub(super) fn update_failure(&self, id: &str, error: CompanyError) {
+        self.auth_result::<()>(Err(error.clone())).ok();
+        let state = match error.code.as_str() {
+            "CANCELLED" => OperationState::Cancelled,
+            "RECOVERY_REQUIRED" => OperationState::RecoveryRequired,
+            _ => OperationState::Failed,
+        };
+        self.update(id, state, None, Some(error));
+    }
+    pub fn backups(&self, installation_id: &str) -> CompanyResult<Vec<Backup>> {
+        self.guarded_installation(installation_id)?;
+        self.repository.backups(installation_id)
     }
 }
 ````
 
-## File: src-tauri/tests/company/recovery.rs
+## File: src-tauri/src/core/cli_bridge.rs
 ````rust
-use app_lib::core::company::{
-    aipro_paths::{global_target, stage_path},
-    config::CompanyConfig,
-    installation_repository::CompanyRepository,
-    installation_service::CompanyService,
-    mcp_check::{check_config, parse_requirements},
-    package_store::{copy_tree, prepare_archive},
-    session::MemoryCredentials,
-    types::*,
-};
-use sha2::{Digest, Sha256};
-use std::{fs, path::PathBuf, sync::Arc};
+//! The copy of `skills-manager-cli` that agents are told to run.
+//!
+//! The CLI already ships inside the desktop bundle — Tauri packages every
+//! `[[bin]]` of the crate — but nothing puts it anywhere an agent can find it.
+//! On Linux the `.deb`/`.rpm` land it in `/usr/bin`, which is already on PATH;
+//! on macOS it sits inside the `.app`, and on Windows inside the install
+//! directory. Neither is on PATH, and putting it there is not ours to do:
+//! `/usr/local/bin` needs an admin prompt, `~/.local/bin` is not on the default
+//! macOS PATH at all, and Windows reserves symlink creation for administrators.
+//!
+//! So the app maintains its own copy at a fixed, predictable path instead, and
+//! the `manage-skills` skill looks there first. A copy, not a symlink: an
+//! AppImage is mounted at a temporary path, and a `.app` the user drags
+//! elsewhere would leave a dangling link.
+//!
+//! ## Why the stamp file
+//!
+//! The copy can fail — on Windows the old binary may be running (an agent
+//! mid-command) or held by a virus scanner, and then the rename cannot replace
+//! it. A stale bridge is not merely out of date: before #363 the deploy path
+//! deleted a user's unmanaged directory outright, so an old binary can be one
+//! that destroys data a new one refuses to touch. The database's own
+//! `user_version` gate does not catch this, because such a fix carries no
+//! schema change.
+//!
+//! The stamp is therefore written last and removed first. Its presence means
+//! "a copy of exactly this version completed and ran"; its absence means the
+//! bridge must not be used, whether or not a binary is sitting there. It is a
+//! small text file, so it can still be removed when the locked binary cannot.
 
-fn pending_fixture(
-    owned: bool,
-) -> (
-    tempfile::TempDir,
-    CompanyConfig,
-    InstallJournal,
-    PathBuf,
-    PathBuf,
-    PathBuf,
-) {
+use anyhow::{bail, Context, Result};
+use std::path::{Path, PathBuf};
+use std::process::Command;
+
+use super::central_repo;
+
+const BRIDGE_BIN_NAME: &str = if cfg!(windows) {
+    "skills-manager-cli.exe"
+} else {
+    "skills-manager-cli"
+};
+
+/// Where the bridge lives. Deliberately the home directory rather than
+/// `central_repo::base_dir()`: the library can be relocated to anywhere the
+/// user likes, and the skill has to be able to name this path without asking.
+pub fn bridge_dir() -> PathBuf {
+    central_repo::home_base_dir().join("bin")
+}
+
+/// Whether `name` is one of the files the bridge keeps in [`bridge_dir`].
+pub(crate) fn is_bridge_file(name: &str) -> bool {
+    name == BRIDGE_BIN_NAME || name == ".version" || name == format!(".{BRIDGE_BIN_NAME}.staged")
+}
+
+pub fn bridge_path() -> PathBuf {
+    bridge_dir().join(BRIDGE_BIN_NAME)
+}
+
+fn stamp_path() -> PathBuf {
+    bridge_dir().join(".version")
+}
+
+/// The CLI that shipped alongside the running app binary.
+fn bundled_cli() -> Result<PathBuf> {
+    let exe = std::env::current_exe().context("cannot locate the running executable")?;
+    let dir = exe
+        .parent()
+        .context("the running executable has no parent directory")?;
+    let candidate = dir.join(BRIDGE_BIN_NAME);
+    if !candidate.is_file() {
+        bail!(
+            "this build does not ship {BRIDGE_BIN_NAME} next to the app binary ({})",
+            dir.display()
+        );
+    }
+    Ok(candidate)
+}
+
+/// An empty stamp counts as no stamp — that is how `invalidate_bridge` disables
+/// a file it cannot delete. The skill's own check uses `-s` for the same reason.
+fn read_stamp() -> Option<String> {
+    std::fs::read_to_string(stamp_path())
+        .ok()
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
+}
+
+/// Make the current bridge untrusted before touching the binary.
+///
+/// A stamp that survives a failed republish is the one way the whole scheme
+/// breaks: the old binary and its old stamp agree with each other, so nothing
+/// downstream can tell they are stale. Three fallbacks, cheapest first, each
+/// enough on its own to satisfy "an unstamped or absent binary is never run":
+///
+/// 1. unlink the stamp — the normal path;
+/// 2. truncate it — a file that cannot be removed but can still be written
+///    (the reader treats an empty stamp as no stamp);
+/// 3. remove the binary itself — on Windows a locked or read-only `.version`
+///    can defeat both of the above while the executable beside it is still
+///    removable, and no binary is as good as no stamp.
+///
+/// If none of them works, the publish is abandoned rather than run with a
+/// stamp that lies.
+fn invalidate_bridge() -> Result<()> {
+    let stamp = stamp_path();
+    match std::fs::remove_file(&stamp) {
+        Ok(()) => return Ok(()),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(()),
+        Err(e) => log::warn!("cli bridge: could not remove {}: {e}", stamp.display()),
+    }
+    if std::fs::write(&stamp, b"").is_ok() {
+        return Ok(());
+    }
+    log::warn!("cli bridge: could not truncate {}", stamp.display());
+    let binary = bridge_path();
+    match std::fs::remove_file(&binary) {
+        Ok(()) => Ok(()),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(()),
+        Err(e) => Err(anyhow::Error::new(e).context(format!(
+            "cannot invalidate the published CLI: neither {} nor {} could be removed",
+            stamp.display(),
+            binary.display()
+        ))),
+    }
+}
+
+/// Build the command that runs the published CLI, without a console window.
+///
+/// The CLI is a console-subsystem binary and the app is not, so spawning it
+/// plainly makes Windows open a console window for it — a black flash on the
+/// first launch after every install (#413). Every other spawn in this crate
+/// hides it the same way; a new one here has to as well.
+fn cli_command(path: &Path) -> Command {
+    #[allow(unused_mut)]
+    let mut cmd = Command::new(path);
+    #[cfg(target_os = "windows")]
+    {
+        use std::os::windows::process::CommandExt;
+        cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
+    }
+    cmd
+}
+
+/// Run the freshly copied binary. A copy that cannot report its own version is
+/// truncated, blocked, or built for another architecture — publishing it would
+/// hand agents a binary that fails on first use.
+fn verify(path: &Path, expected_version: &str) -> Result<()> {
+    let output = cli_command(path)
+        .arg("--version")
+        .output()
+        .with_context(|| format!("could not run {}", path.display()))?;
+    if !output.status.success() {
+        bail!("{} --version exited with {}", path.display(), output.status);
+    }
+    // Whole-token equality, not `contains`: 1.35.1 would otherwise accept a
+    // binary reporting 1.35.10, and catching exactly that mismatch is the
+    // reason this check exists.
+    let reported = String::from_utf8_lossy(&output.stdout);
+    let version = reported.split_whitespace().last().unwrap_or_default();
+    if version != expected_version {
+        bail!(
+            "{} reports {:?}, expected version {expected_version}",
+            path.display(),
+            reported.trim()
+        );
+    }
+    Ok(())
+}
+
+/// Publish the bundled CLI to the bridge path, replacing whatever is there.
+///
+/// Best-effort by contract: every failure leaves the stamp absent and is
+/// logged, and the caller carries on. The app must start whether or not an
+/// agent can drive it.
+pub fn ensure_bridge(app_version: &str) {
+    match ensure_bridge_inner(app_version) {
+        Ok(path) => log::info!("cli bridge: ready at {}", path.display()),
+        Err(e) => log::warn!("cli bridge: not available: {e:#}"),
+    }
+}
+
+fn ensure_bridge_inner(app_version: &str) -> Result<PathBuf> {
+    // Fast path: this version already published and still present. Checked
+    // before anything is removed so an ordinary launch does not spend 15 MB of
+    // copying, and so a running agent's binary is not disturbed for no reason.
+    if read_stamp().as_deref() == Some(app_version) && bridge_path().is_file() {
+        return Ok(bridge_path());
+    }
+    publish_from(&bundled_cli()?, app_version)
+}
+
+fn publish_from(source: &Path, app_version: &str) -> Result<PathBuf> {
+    let target = bridge_path();
+
+    // From here the bridge is not to be trusted until the new copy lands.
+    invalidate_bridge()?;
+
+    let dir = bridge_dir();
+    std::fs::create_dir_all(&dir)
+        .with_context(|| format!("could not create {}", dir.display()))?;
+
+    // Copy beside the target so the rename stays on one filesystem.
+    let staged = dir.join(format!(".{BRIDGE_BIN_NAME}.staged"));
+    let _ = std::fs::remove_file(&staged);
+    std::fs::copy(source, &staged)
+        .with_context(|| format!("could not copy {} to {}", source.display(), staged.display()))?;
+
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(&staged, std::fs::Permissions::from_mode(0o755))
+            .context("could not make the staged CLI executable")?;
+    }
+
+    if let Err(e) = verify(&staged, app_version) {
+        let _ = std::fs::remove_file(&staged);
+        return Err(e);
+    }
+
+    // On Windows this fails while the old binary is running or held open by a
+    // scanner. That is the case the stamp exists for: the stale binary stays,
+    // unusable, rather than being silently presented as current.
+    rename_retrying_sharing_violation(&staged, &target)
+        .with_context(|| format!("could not replace {} (it may be in use)", target.display()))?;
+
+    std::fs::write(stamp_path(), app_version)
+        .with_context(|| format!("could not write {}", stamp_path().display()))?;
+
+    log::info!(
+        "cli bridge: published {app_version} to {}",
+        target.display()
+    );
+    Ok(target)
+}
+
+/// #487: right after `verify` ran the staged exe, Windows can still hold it
+/// for a moment (scanners inspect a freshly executed binary), so the rename
+/// fails with a sharing violation. Wait that out, ~2 s at most; any other
+/// error, or a lock that outlasts it, is reported as before.
+fn rename_retrying_sharing_violation(from: &Path, to: &Path) -> std::io::Result<()> {
+    const ERROR_SHARING_VIOLATION: i32 = 32;
+    let mut attempts = 0;
+    loop {
+        match std::fs::rename(from, to) {
+            Err(e)
+                if cfg!(windows)
+                    && e.raw_os_error() == Some(ERROR_SHARING_VIOLATION)
+                    && attempts < 10 =>
+            {
+                attempts += 1;
+                std::thread::sleep(std::time::Duration::from_millis(200));
+            }
+            result => return result,
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tempfile::tempdir;
+
+    /// A fake "bundled CLI" that reports the version it is told to. The copy,
+    /// verify, rename and stamp sequence is what this module owns; which real
+    /// binary it copies is not.
+    #[cfg(unix)]
+    fn fake_cli(dir: &Path, reports: &str) -> PathBuf {
+        use std::os::unix::fs::PermissionsExt;
+        let path = dir.join("skills-manager-cli");
+        std::fs::write(&path, format!("#!/bin/sh\necho 'skills-manager-cli {reports}'\n")).unwrap();
+        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o755)).unwrap();
+        path
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn publishing_stamps_only_after_the_copy_runs() {
+        let _lock = central_repo::test_base_dir_lock();
+        let tmp = tempdir().unwrap();
+        central_repo::set_test_home_dir_override(Some(tmp.path().to_path_buf()));
+        let src_dir = tmp.path().join("bundle");
+        std::fs::create_dir_all(&src_dir).unwrap();
+
+        let source = fake_cli(&src_dir, "9.9.9");
+        publish_from(&source, "9.9.9").expect("a runnable copy must publish");
+
+        assert!(bridge_path().is_file());
+        assert_eq!(read_stamp().as_deref(), Some("9.9.9"));
+
+        central_repo::set_test_home_dir_override(None);
+    }
+
+    /// The publish must abandon rather than proceed when the old bridge cannot
+    /// be made untrusted — otherwise it would leave a stamp vouching for a
+    /// binary that is no longer the one the app ships.
+    ///
+    /// Calls `invalidate_bridge` directly: going through `publish_from` would
+    /// also fail at the staged copy, and an assertion that cannot tell the two
+    /// apart proves nothing about the step under test.
+    #[cfg(unix)]
+    #[test]
+    fn a_bridge_that_cannot_be_invalidated_blocks_the_publish() {
+        use std::os::unix::fs::PermissionsExt;
+        let _lock = central_repo::test_base_dir_lock();
+        let tmp = tempdir().unwrap();
+        central_repo::set_test_home_dir_override(Some(tmp.path().to_path_buf()));
+        let src_dir = tmp.path().join("bundle");
+        std::fs::create_dir_all(&src_dir).unwrap();
+
+        publish_from(&fake_cli(&src_dir, "9.9.9"), "9.9.9").unwrap();
+        let stamp = bridge_dir().join(".version");
+
+        // Nothing here can be removed (the directory denies writes) and the
+        // stamp itself cannot be rewritten, so all three fallbacks are closed.
+        std::fs::set_permissions(&stamp, std::fs::Permissions::from_mode(0o400)).unwrap();
+        std::fs::set_permissions(bridge_dir(), std::fs::Permissions::from_mode(0o500)).unwrap();
+
+        let result = invalidate_bridge();
+        let published_still_there = bridge_path().is_file() && stamp.is_file();
+
+        std::fs::set_permissions(bridge_dir(), std::fs::Permissions::from_mode(0o700)).unwrap();
+        std::fs::set_permissions(&stamp, std::fs::Permissions::from_mode(0o600)).unwrap();
+
+        result.expect_err("invalidation must fail when no fallback can take effect");
+        assert!(
+            published_still_there,
+            "precondition: the stale pair is what could not be removed"
+        );
+        // And the publish that would follow must not run.
+        std::fs::set_permissions(bridge_dir(), std::fs::Permissions::from_mode(0o500)).unwrap();
+        let publish = publish_from(&fake_cli(&src_dir, "9.9.10"), "9.9.10");
+        std::fs::set_permissions(bridge_dir(), std::fs::Permissions::from_mode(0o700)).unwrap();
+        publish.expect_err("publishing must abandon rather than leave a lying stamp");
+
+        central_repo::set_test_home_dir_override(None);
+    }
+
+    /// The invariant the stamp exists for: when a replace cannot complete, the
+    /// binary left behind is not merely old, it may be one that deletes a
+    /// user's directory where the current one refuses (#363). It must not be
+    /// reported as usable, and the schema gate cannot catch this because such
+    /// a fix carries no migration.
+    #[cfg(unix)]
+    #[test]
+    fn a_failed_republish_leaves_the_previous_bridge_unusable() {
+        let _lock = central_repo::test_base_dir_lock();
+        let tmp = tempdir().unwrap();
+        central_repo::set_test_home_dir_override(Some(tmp.path().to_path_buf()));
+        let src_dir = tmp.path().join("bundle");
+        std::fs::create_dir_all(&src_dir).unwrap();
+
+        publish_from(&fake_cli(&src_dir, "9.9.9"), "9.9.9").unwrap();
+        assert_eq!(
+            read_stamp().as_deref(),
+            Some("9.9.9"),
+            "precondition: a good bridge exists"
+        );
+
+        // The new app version ships a CLI that cannot run — a truncated copy,
+        // a blocked binary, the wrong architecture.
+        let broken = src_dir.join("broken-cli");
+        std::fs::write(&broken, "not executable").unwrap();
+        publish_from(&broken, "9.9.10").expect_err("an unrunnable copy must not publish");
+
+        assert!(
+            read_stamp().is_none(),
+            "a bridge that failed to republish must be left unstamped, so the \
+             skill refuses it even though a binary is still on disk"
+        );
+        assert!(
+            bridge_path().is_file(),
+            "the old binary may well be unremovable; the stamp is what gates it"
+        );
+
+        central_repo::set_test_home_dir_override(None);
+    }
+
+}
+````
+
+## File: src-tauri/src/core/mod.rs
+````rust
+pub mod app_state;
+pub mod company;
+pub mod audit_log;
+pub mod auto_backup;
+pub mod central_repo;
+pub mod cli_bridge;
+pub mod content_hash;
+pub mod crypto;
+pub mod error;
+pub mod file_manager;
+pub mod file_watcher;
+pub mod git2_engine;
+pub mod git_backup;
+pub mod git_credentials;
+pub mod git_fetcher;
+pub mod github_api;
+pub mod install_cancel;
+pub mod installer;
+pub mod log_sanitize;
+pub mod merge;
+pub mod migrations;
+pub mod panic_log;
+pub mod path_guard;
+pub mod project_scanner;
+pub mod removals;
+pub mod repo_lock;
+pub mod scanner;
+pub mod scenario_service;
+pub mod skill_auto_updater;
+pub mod skill_metadata;
+pub mod skill_store;
+pub mod skillssh_api;
+pub mod sync_engine;
+pub mod sync_metadata;
+pub mod timing;
+pub mod tool_adapters;
+pub mod tool_service;
+pub mod well_known;
+````
+
+## File: src-tauri/tests/company/updates.rs
+````rust
+use super::support::MockServer;
+use app_lib::core::company::{
+    config::CompanyConfig, installation_service::CompanyService, session::MemoryCredentials,
+};
+use std::{
+    fs,
+    path::Path,
+    sync::Arc,
+    time::{Duration, Instant},
+};
+
+fn wait(
+    app: &CompanyService,
+    id: &str,
+    preview: bool,
+) -> app_lib::core::company::types::OperationView {
+    let deadline = Instant::now() + Duration::from_secs(30);
+    loop {
+        let op = app.status(id).unwrap();
+        let state = serde_json::to_value(&op).unwrap()["state"]
+            .as_str()
+            .unwrap()
+            .to_string();
+        if state == "succeeded" || (preview && op.preview_ready) {
+            return op;
+        }
+        assert!(
+            !matches!(state.as_str(), "failed" | "cancelled" | "recovery_required"),
+            "{:?}",
+            op.error
+        );
+        assert!(Instant::now() < deadline);
+        std::thread::sleep(Duration::from_millis(20));
+    }
+}
+
+#[test]
+fn company_flow05_update_retains_customized_backup_and_changes_only_the_selected_target() {
+    let root = tempfile::tempdir().unwrap();
+    let revision = root.path().join("revision");
+    fs::write(&revision, "1").unwrap();
+    let server = MockServer::start_with_revision("normal", Some(&revision));
+    let config = CompanyConfig::for_test(
+        &server.url,
+        root.path().join("profile"),
+        root.path().join("data"),
+    )
+    .unwrap();
+    let credentials = Arc::new(MemoryCredentials::default());
+    let app = Arc::new(CompanyService::new(config.clone(), credentials.clone()).unwrap());
+    app.login("employee01", "demo-password").unwrap();
+    let global_op = app.prepare_install("skl_001").unwrap();
+    app.confirm(&global_op.id, true).unwrap();
+    wait(&app, &global_op.id, false);
+    let project_dir = root.path().join("Project A");
+    fs::create_dir(&project_dir).unwrap();
+    let project = app.add_project(&project_dir).unwrap();
+    let project_op = app.prepare_project_install("skl_001", &project.id).unwrap();
+    app.confirm(&project_op.id, true).unwrap();
+    wait(&app, &project_op.id, false);
+    let all = app.installations().unwrap();
+    let global = all.iter().find(|i| i.project_id.is_none()).unwrap();
+    let local = all.iter().find(|i| i.project_id.is_some()).unwrap();
+    let before_global = fs::read(Path::new(&global.target).join("SKILL.md")).unwrap();
+    fs::write(
+        Path::new(&local.target).join("SKILL.md"),
+        "My customized project skill",
+    )
+    .unwrap();
+    fs::write(&revision, "2").unwrap();
+    let checked = app
+        .check_updates(&[global.id.clone(), local.id.clone()])
+        .unwrap();
+    assert!(checked
+        .iter()
+        .all(|i| serde_json::to_value(i).unwrap()["storeState"] == "new_package"));
+    let prepared = app.prepare_update(&local.id).unwrap();
+    app.confirm(&prepared.id, true).unwrap();
+    let preview = wait(&app, &prepared.id, true);
+    assert!(preview.changes.iter().any(|f| f.path == "SKILL.md"));
+    assert_eq!(
+        fs::read_to_string(Path::new(&local.target).join("SKILL.md")).unwrap(),
+        "My customized project skill"
+    );
+    assert_eq!(
+        app.apply_update(&prepared.id, false).unwrap_err().code,
+        "CUSTOMIZED_CONFIRMATION_REQUIRED"
+    );
+    app.apply_update(&prepared.id, true).unwrap();
+    wait(&app, &prepared.id, false);
+    let after = app.refresh_installation(&local.id).unwrap();
+    assert_ne!(after.package_hash, local.package_hash);
+    assert_eq!(
+        serde_json::to_value(&after).unwrap()["contentState"],
+        "original"
+    );
+    assert_eq!(
+        fs::read(Path::new(&global.target).join("SKILL.md")).unwrap(),
+        before_global
+    );
+    let backups = app.backups(&local.id).unwrap();
+    assert_eq!(backups.len(), 1);
+    assert_eq!(backups[0].installation.package_hash, local.package_hash);
+    assert_eq!(
+        fs::read_to_string(Path::new(&backups[0].path).join("SKILL.md")).unwrap(),
+        "My customized project skill"
+    );
+    let reopened = CompanyService::new(config, credentials).unwrap();
+    assert_eq!(reopened.backups(&local.id).unwrap().len(), 1);
+    assert_eq!(
+        reopened
+            .refresh_installation(&local.id)
+            .unwrap()
+            .package_hash,
+        after.package_hash
+    );
+}
+
+fn finished(app: &CompanyService, id: &str) -> app_lib::core::company::types::OperationView {
+    let deadline = Instant::now() + Duration::from_secs(30);
+    loop {
+        let view = app.status(id).unwrap();
+        let state = serde_json::to_value(&view).unwrap()["state"]
+            .as_str()
+            .unwrap()
+            .to_string();
+        if matches!(
+            state.as_str(),
+            "succeeded" | "failed" | "cancelled" | "recovery_required"
+        ) {
+            return view;
+        }
+        assert!(Instant::now() < deadline);
+        std::thread::sleep(Duration::from_millis(20));
+    }
+}
+
+#[test]
+fn company_flow05_editing_after_preview_is_preserved_and_preview_edits_never_change_baselines() {
+    let root = tempfile::tempdir().unwrap();
+    let revision = root.path().join("revision");
+    fs::write(&revision, "1").unwrap();
+    let server = MockServer::start_with_revision("normal", Some(&revision));
+    let config = CompanyConfig::for_test(
+        &server.url,
+        root.path().join("profile"),
+        root.path().join("data"),
+    )
+    .unwrap();
+    let app = Arc::new(
+        CompanyService::new(config.clone(), Arc::new(MemoryCredentials::default())).unwrap(),
+    );
+    app.login("employee01", "demo-password").unwrap();
+    let install = app.prepare_install("skl_001").unwrap();
+    app.confirm(&install.id, true).unwrap();
+    wait(&app, &install.id, false);
+    let item = app.installations().unwrap().remove(0);
+    fs::write(&revision, "2").unwrap();
+    let op = app.prepare_update(&item.id).unwrap();
+    app.confirm(&op.id, true).unwrap();
+    wait(&app, &op.id, true);
+    fs::write(
+        Path::new(&item.target).join("SKILL.md"),
+        "Edit made AFTER preview",
+    )
+    .unwrap();
+    app.apply_update(&op.id, true).unwrap();
+    let result = finished(&app, &op.id);
+    assert_eq!(result.error.unwrap().code, "CONTENT_CHANGED");
+    assert_eq!(
+        fs::read_to_string(Path::new(&item.target).join("SKILL.md")).unwrap(),
+        "Edit made AFTER preview"
+    );
+    assert!(app.backups(&item.id).unwrap().is_empty());
+    let fresh = app.prepare_update(&item.id).unwrap();
+    app.confirm(&fresh.id, true).unwrap();
+    wait(&app, &fresh.id, true);
+    assert!(app
+        .preview_open_path(&fresh.id, "incoming", "../SKILL.md")
+        .is_err());
+    let preview = app
+        .preview_open_path(&fresh.id, "incoming", "SKILL.md")
+        .unwrap();
+    fs::write(preview, "Edit to preview copy").unwrap();
+    app.apply_update(&fresh.id, true).unwrap();
+    wait(&app, &fresh.id, false);
+    assert!(fs::read_to_string(Path::new(&item.target).join("SKILL.md"))
+        .unwrap()
+        .contains("Jira project summary v2"));
+    assert_eq!(
+        fs::read_to_string(Path::new(&app.backups(&item.id).unwrap()[0].path).join("SKILL.md"))
+            .unwrap(),
+        "Edit made AFTER preview"
+    );
+}
+
+#[test]
+fn company_flow05_backup_failure_preserves_the_current_copy_and_foreign_backup_root() {
+    let root = tempfile::tempdir().unwrap();
+    let revision = root.path().join("revision");
+    fs::write(&revision, "1").unwrap();
+    let server = MockServer::start_with_revision("normal", Some(&revision));
+    let config = CompanyConfig::for_test(
+        &server.url,
+        root.path().join("profile"),
+        root.path().join("data"),
+    )
+    .unwrap();
+    let app = Arc::new(
+        CompanyService::new(config.clone(), Arc::new(MemoryCredentials::default())).unwrap(),
+    );
+    app.login("employee01", "demo-password").unwrap();
+    let install = app.prepare_install("skl_001").unwrap();
+    app.confirm(&install.id, true).unwrap();
+    wait(&app, &install.id, false);
+    let item = app.installations().unwrap().remove(0);
+    let original = fs::read(Path::new(&item.target).join("SKILL.md")).unwrap();
+    fs::write(&revision, "2").unwrap();
+    let op = app.prepare_update(&item.id).unwrap();
+    app.confirm(&op.id, true).unwrap();
+    wait(&app, &op.id, true);
+    fs::write(
+        config.data_root.join("backups"),
+        "Foreign file: do not remove",
+    )
+    .unwrap();
+    app.apply_update(&op.id, false).unwrap();
+    let result = finished(&app, &op.id);
+    assert_eq!(serde_json::to_value(result).unwrap()["state"], "failed");
+    assert_eq!(
+        fs::read(Path::new(&item.target).join("SKILL.md")).unwrap(),
+        original
+    );
+    assert_eq!(
+        fs::read_to_string(config.data_root.join("backups")).unwrap(),
+        "Foreign file: do not remove"
+    );
+    assert_eq!(
+        app.refresh_installation(&item.id).unwrap().package_hash,
+        item.package_hash
+    );
+}
+
+#[test]
+fn company_flow05_preview_opens_text_copies_but_never_binary_or_executable_files() {
+    let root = tempfile::tempdir().unwrap();
+    let revision = root.path().join("revision");
+    fs::write(&revision, "1").unwrap();
+    let server = MockServer::start_with_revision("normal", Some(&revision));
+    let config = CompanyConfig::for_test(
+        &server.url,
+        root.path().join("profile"),
+        root.path().join("data"),
+    )
+    .unwrap();
+    let app =
+        Arc::new(CompanyService::new(config, Arc::new(MemoryCredentials::default())).unwrap());
+    app.login("employee01", "demo-password").unwrap();
+    let install = app.prepare_install("skl_001").unwrap();
+    app.confirm(&install.id, true).unwrap();
+    wait(&app, &install.id, false);
+    let item = app.installations().unwrap().remove(0);
+    let target = Path::new(&item.target);
+    fs::write(target.join("unsafe.bat"), "echo this must never execute").unwrap();
+    let mut late_binary = vec![b'a'; 8192];
+    late_binary.push(0);
+    fs::write(target.join("binary.txt"), &late_binary).unwrap();
+    *late_binary.last_mut().unwrap() = 255;
+    fs::write(target.join("nonutf8.txt"), &late_binary).unwrap();
+    let text = format!("{}ệ\n", "a".repeat(8191));
+    fs::write(target.join("notes.txt"), text).unwrap();
+    fs::write(&revision, "2").unwrap();
+    let op = app.prepare_update(&item.id).unwrap();
+    app.confirm(&op.id, true).unwrap();
+    let preview = wait(&app, &op.id, true);
+    assert_eq!(
+        app.preview_open_path(&op.id, "current", "unsafe.bat")
+            .unwrap_err()
+            .code,
+        "PREVIEW_UNAVAILABLE"
+    );
+    assert_eq!(
+        app.preview_open_path(&op.id, "current", "binary.txt")
+            .unwrap_err()
+            .code,
+        "PREVIEW_UNAVAILABLE"
+    );
+    assert_eq!(
+        app.preview_open_path(&op.id, "current", "nonutf8.txt")
+            .unwrap_err()
+            .code,
+        "PREVIEW_UNAVAILABLE"
+    );
+    assert_eq!(
+        serde_json::to_value(
+            preview
+                .changes
+                .iter()
+                .find(|f| f.path == "unsafe.bat")
+                .unwrap()
+        )
+        .unwrap()["current"]["kind"],
+        "binary"
+    );
+    assert!(app
+        .preview_open_path(&op.id, "current", "notes.txt")
+        .unwrap()
+        .is_file());
+    let folder = app.preview_open_path(&op.id, "incoming", "").unwrap();
+    assert!(folder.is_dir());
+    // Recheck the copy at the opening boundary, even if it was text when prepared.
+    fs::write(folder.join("SKILL.md"), b"\0tampered binary").unwrap();
+    assert_eq!(
+        app.preview_open_path(&op.id, "incoming", "SKILL.md")
+            .unwrap_err()
+            .code,
+        "PREVIEW_UNAVAILABLE"
+    );
+}
+
+#[test]
+fn company_flow05_live_edit_after_old_rename_returns_the_edited_copy_to_its_target() {
+    use std::io::{Seek, SeekFrom, Write};
+    let root = tempfile::tempdir().unwrap();
+    let revision = root.path().join("revision");
+    fs::write(&revision, "1").unwrap();
+    let server = MockServer::start_with_revision("normal", Some(&revision));
+    let config = CompanyConfig::for_test(
+        &server.url,
+        root.path().join("profile"),
+        root.path().join("data"),
+    )
+    .unwrap();
+    let credentials = Arc::new(MemoryCredentials::default());
+    let app = Arc::new(CompanyService::new(config.clone(), credentials.clone()).unwrap());
+    app.login("employee01", "demo-password").unwrap();
+    let install = app.prepare_install("skl_001").unwrap();
+    app.confirm(&install.id, true).unwrap();
+    wait(&app, &install.id, false);
+    let item = app.installations().unwrap().remove(0);
+    let target = Path::new(&item.target);
+    // A sizeable resource keeps the post-rename verification in progress while
+    // a real filesystem writer edits the directory that was just moved.
+    let resource = target.join("resource.bin");
+    fs::write(&resource, vec![0; 32 * 1024 * 1024]).unwrap();
+    fs::write(&revision, "2").unwrap();
+    let op = app.prepare_update(&item.id).unwrap();
+    app.confirm(&op.id, true).unwrap();
+    wait(&app, &op.id, true);
+    let rollback = target
+        .parent()
+        .unwrap()
+        .join(format!(".company-rollback-{}", op.id));
+    let writer = std::thread::spawn(move || {
+        let deadline = Instant::now() + Duration::from_secs(30);
+        while !rollback.is_dir() {
+            assert!(Instant::now() < deadline, "old directory was not moved");
+            std::thread::yield_now();
+        }
+        let mut editor = fs::OpenOptions::new()
+            .write(true)
+            .open(rollback.join("resource.bin"))
+            .unwrap();
+        editor.seek(SeekFrom::End(-1)).unwrap();
+        editor.write_all(&[42]).unwrap();
+        editor.sync_all().unwrap();
+    });
+    app.apply_update(&op.id, true).unwrap();
+    let result = finished(&app, &op.id);
+    writer.join().unwrap();
+    assert_eq!(result.error.unwrap().code, "CONTENT_CHANGED");
+    assert_eq!(fs::read(&resource).unwrap().last(), Some(&42));
+    assert!(target.join("SKILL.md").is_file());
+    assert_eq!(
+        app.refresh_installation(&item.id).unwrap().package_hash,
+        item.package_hash
+    );
+    let backup = app.backups(&item.id).unwrap().remove(0);
+    assert_eq!(
+        fs::read(Path::new(&backup.path).join("resource.bin"))
+            .unwrap()
+            .last(),
+        Some(&0)
+    );
+    let restarted = CompanyService::new(config, credentials).unwrap();
+    assert!(restarted.recovery_warnings().is_empty());
+    assert_eq!(
+        serde_json::to_value(restarted.refresh_installation(&item.id).unwrap()).unwrap()
+            ["contentState"],
+        "customized"
+    );
+}
+````
+
+## File: src-tauri/tests/company_flows.rs
+````rust
+use app_lib::core::company::mcp_check::{check_config, parse_requirements};
+use app_lib::core::company::{
+    config::CompanyConfig,
+    session::{MemoryCredentials, SessionService},
+};
+use std::sync::Arc;
+#[path = "company/recovery.rs"]
+mod recovery;
+#[path = "company/projects.rs"]
+mod projects;
+#[path = "company/updates.rs"]
+mod updates;
+#[path = "company/replace_recovery.rs"]
+mod replace_recovery;
+#[path = "company/support.rs"]
+mod support;
+use app_lib::core::company::installation_service::CompanyService;
+use app_lib::core::company::store_client::StoreClient;
+use app_lib::core::company::{package_store::prepare_archive, types::PackageMeta};
+
+#[test]
+fn company_flow02_offline_catalog_survives_restart_with_timestamp() {
+    let mut server = support::MockServer::start("normal");
+    let root = tempfile::tempdir().unwrap();
+    let config = CompanyConfig::for_test(
+        &server.url,
+        root.path().join("profile"),
+        root.path().join("data"),
+    )
+    .unwrap();
+    let credentials = Arc::new(MemoryCredentials::default());
+    let app = CompanyService::new(config.clone(), credentials.clone()).unwrap();
+    app.login("employee01", "demo-password").unwrap();
+    let online = app.search("jira", 1).unwrap();
+    assert_eq!(online.items.len(), 1);
+    drop(app);
+    server.stop();
+    let restarted = CompanyService::new(config, credentials).unwrap();
+    let cached = restarted
+        .search("jira", 1)
+        .expect("previous catalog is available offline");
+    assert_eq!(cached.items[0].id, online.items[0].id);
+    let dto = serde_json::to_value(cached).unwrap();
+    assert_eq!(dto["cache"]["stale"], true);
+    assert!(
+        chrono::DateTime::parse_from_rfc3339(dto["cache"]["fetchedAt"].as_str().unwrap()).is_ok()
+    );
+    assert!(restarted.prepare_install("skl_001").is_err());
+}
+
+#[test]
+fn company_flow02_another_account_never_receives_previous_catalog_cache() {
+    let mut server = support::MockServer::start("normal");
+    let root = tempfile::tempdir().unwrap();
+    let config = CompanyConfig::for_test(
+        &server.url,
+        root.path().join("profile"),
+        root.path().join("data"),
+    )
+    .unwrap();
+    let app = CompanyService::new(config, Arc::new(MemoryCredentials::default())).unwrap();
+    app.login("employee01", "demo-password").unwrap();
+    app.search("jira", 1).unwrap();
+    app.logout().unwrap();
+    app.login("employee02", "demo-password").unwrap();
+    server.stop();
+    assert_eq!(app.search("jira", 1).unwrap_err().code, "NETWORK_ERROR");
+}
+
+#[test]
+fn company_flow03c_global_install_is_independent_and_survives_restart() {
+    let server = support::MockServer::start("normal");
+    let root = tempfile::tempdir().unwrap();
+    let config = CompanyConfig::for_test(
+        &server.url,
+        root.path().join("profile"),
+        root.path().join("data"),
+    )
+    .unwrap();
+    let credentials = Arc::new(MemoryCredentials::default());
+    let app = Arc::new(CompanyService::new(config.clone(), credentials.clone()).unwrap());
+    app.login("employee01", "demo-password").unwrap();
+    let stopped = app.prepare_install("skl_001").unwrap();
+    app.cancel(&stopped.id).unwrap();
+    assert!(!config
+        .profile_root
+        .join(".aipro/skills/jira-project-summary")
+        .exists());
+    let op = app.prepare_install("skl_001").unwrap();
+    app.confirm(&op.id, true).unwrap();
+    let result = wait_operation(&app, &op.id);
+    assert_eq!(
+        serde_json::to_value(&result).unwrap()["state"],
+        "succeeded",
+        "{:?}",
+        result.error
+    );
+    let installations = app.installations().unwrap();
+    assert_eq!(installations.len(), 1);
+    let target = std::path::Path::new(&installations[0].target);
+    let original = config
+        .data_root
+        .join("packages")
+        .join(&installations[0].package_hash)
+        .join("original/SKILL.md");
+    let baseline = std::fs::read(&original).unwrap();
+    std::fs::write(target.join("SKILL.md"), "customized locally").unwrap();
+    assert_eq!(std::fs::read(original).unwrap(), baseline);
+    assert_eq!(
+        CompanyService::new(config, credentials)
+            .unwrap()
+            .installations()
+            .unwrap()
+            .len(),
+        1
+    );
+}
+
+#[test]
+fn company_flow03c_tampered_or_changed_package_never_writes_target() {
+    for (scenario, expected) in [
+        ("corrupt-download", "PACKAGE_INTEGRITY_FAILED"),
+        ("package-changed", "PACKAGE_CHANGED"),
+        ("forbidden-download", "FORBIDDEN"),
+    ] {
+        let server = support::MockServer::start(scenario);
+        let root = tempfile::tempdir().unwrap();
+        let config = CompanyConfig::for_test(
+            &server.url,
+            root.path().join("profile"),
+            root.path().join("data"),
+        )
+        .unwrap();
+        let app = Arc::new(
+            CompanyService::new(config.clone(), Arc::new(MemoryCredentials::default())).unwrap(),
+        );
+        app.login("employee01", "demo-password").unwrap();
+        let op = app.prepare_install("skl_001").unwrap();
+        app.confirm(&op.id, true).unwrap();
+        let result = wait_operation(&app, &op.id);
+        assert_eq!(result.error.unwrap().code, expected);
+        assert!(!config
+            .profile_root
+            .join(".aipro/skills/jira-project-summary")
+            .exists());
+        assert!(app.installations().unwrap().is_empty());
+    }
+}
+
+#[test]
+fn company_flow03c_existing_target_and_foreign_staging_are_preserved() {
+    let server = support::MockServer::start("normal");
+    let root = tempfile::tempdir().unwrap();
+    let config = CompanyConfig::for_test(
+        &server.url,
+        root.path().join("profile"),
+        root.path().join("data"),
+    )
+    .unwrap();
+    let app = Arc::new(
+        CompanyService::new(config.clone(), Arc::new(MemoryCredentials::default())).unwrap(),
+    );
+    app.login("employee01", "demo-password").unwrap();
+    let op = app.prepare_install("skl_003").unwrap();
+    let stage = config
+        .profile_root
+        .join(".aipro/skills")
+        .join(format!(".company-stage-{}", op.id));
+    std::fs::create_dir_all(&stage).unwrap();
+    std::fs::write(stage.join("foreign.txt"), "keep me").unwrap();
+    app.confirm(&op.id, false).unwrap();
+    assert_eq!(
+        wait_operation(&app, &op.id).error.unwrap().code,
+        "TARGET_CONFLICT"
+    );
+    assert_eq!(
+        std::fs::read_to_string(stage.join("foreign.txt")).unwrap(),
+        "keep me"
+    );
+    let target = config.profile_root.join(".aipro/skills/writing-review");
+    std::fs::create_dir_all(&target).unwrap();
+    std::fs::write(target.join("SKILL.md"), "user content").unwrap();
+    assert_eq!(
+        app.prepare_install("skl_003").unwrap_err().code,
+        "TARGET_CONFLICT"
+    );
+    assert_eq!(
+        std::fs::read_to_string(target.join("SKILL.md")).unwrap(),
+        "user content"
+    );
+}
+
+#[test]
+fn company_flow03c_requires_fresh_mcp_check_after_manual_config_change() {
+    let server = support::MockServer::start("normal");
+    let root = tempfile::tempdir().unwrap();
+    let config = CompanyConfig::for_test(
+        &server.url,
+        root.path().join("profile"),
+        root.path().join("data"),
+    )
+    .unwrap();
+    let app = Arc::new(
+        CompanyService::new(config.clone(), Arc::new(MemoryCredentials::default())).unwrap(),
+    );
+    app.login("employee01", "demo-password").unwrap();
+    let old = app.prepare_install("skl_001").unwrap();
+    app.cancel(&old.id).unwrap();
+    std::fs::create_dir_all(config.profile_root.join(".aipro")).unwrap();
+    std::fs::write(
+        config.profile_root.join(".aipro/mcp.json"),
+        br#"{"mcpServers":{"jira-mcp":{},"confluence-mcp":{}}}"#,
+    )
+    .unwrap();
+    let fresh = app.prepare_install("skl_001").unwrap();
+    assert_eq!(serde_json::to_value(fresh.mcp).unwrap()["state"], "present");
+    assert!(app.confirm(&old.id, true).is_err());
+}
+
+fn wait_operation(
+    app: &Arc<CompanyService>,
+    id: &str,
+) -> app_lib::core::company::types::OperationView {
+    for _ in 0..200 {
+        let op = app.status(id).unwrap();
+        if matches!(
+            serde_json::to_value(&op).unwrap()["state"].as_str(),
+            Some("succeeded" | "failed" | "cancelled" | "recovery_required")
+        ) {
+            return op;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(50));
+    }
+    panic!("operation did not finish within 10 seconds");
+}
+
+#[test]
+fn company_flow03b_prepares_real_zip_and_7z_without_external_extractor() {
+    use sha2::{Digest, Sha256};
+    let fixture_root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .unwrap()
+        .join("fixtures/company-store/packages");
+    for (name, slug, format) in [
+        ("jira-project-summary.zip", "jira-project-summary", "zip"),
+        ("excel-insights.7z", "excel-insights", "7z"),
+        ("excel-insights-copy.7z", "excel-insights", "7z"),
+        ("excel-insights-lzma.7z", "excel-insights", "7z"),
+    ] {
+        let root = tempfile::tempdir().unwrap();
+        let path = fixture_root.join(name);
+        let bytes = std::fs::read(&path).unwrap();
+        let meta = PackageMeta {
+            format: format.into(),
+            size_bytes: bytes.len() as u64,
+            sha256: hex::encode(Sha256::digest(&bytes)),
+            etag: "\"fixture\"".into(),
+        };
+        let verified = prepare_archive(&path, &meta, slug, root.path()).unwrap();
+        assert!(verified.original_root.join("SKILL.md").is_file());
+        assert!(!verified.content_hash.is_empty());
+    }
+}
+
+#[test]
+fn company_flow03b_rejects_unsafe_duplicate_and_markerless_archives() {
+    use sha2::{Digest, Sha256};
+    use std::io::Write;
+    for names in [
+        vec!["SKILL.md", "../escape.txt"],
+        vec!["SKILL.md", "skill.md"],
+        vec!["SKILL.md", "CON.txt"],
+        vec!["SKILL.md", "folder/file:stream"],
+        vec!["other.txt"],
+    ] {
+        let root = tempfile::tempdir().unwrap();
+        let path = root.path().join("input.zip");
+        let mut writer = zip::ZipWriter::new(std::fs::File::create(&path).unwrap());
+        for name in names {
+            writer
+                .start_file(name, zip::write::SimpleFileOptions::default())
+                .unwrap();
+            writer.write_all(b"fixture text").unwrap();
+        }
+        writer.finish().unwrap();
+        let bytes = std::fs::read(&path).unwrap();
+        let meta = PackageMeta {
+            format: "zip".into(),
+            size_bytes: bytes.len() as u64,
+            sha256: hex::encode(Sha256::digest(bytes)),
+            etag: "\"fixture\"".into(),
+        };
+        assert_eq!(
+            prepare_archive(&path, &meta, "fixture-skill", &root.path().join("packages"))
+                .err()
+                .unwrap()
+                .code,
+            "INVALID_PACKAGE"
+        );
+        assert!(!root.path().join("escape.txt").exists());
+    }
+}
+
+#[test]
+fn company_flow01_login_restores_and_offline_logout_stays_signed_out() {
+    let mut server = support::MockServer::start("normal");
+    let root = tempfile::tempdir().unwrap();
+    let config = CompanyConfig::for_test(
+        &server.url,
+        root.path().join("profile"),
+        root.path().join("data"),
+    )
+    .unwrap();
+    let credentials = Arc::new(MemoryCredentials::default());
+    let session = SessionService::new(&config, credentials.clone()).unwrap();
+    let view = session.login("employee01", "demo-password").unwrap();
+    assert_eq!(view.user.unwrap().id, "usr_001");
+    assert!(view.persistent);
+    let restored = SessionService::new(&config, credentials.clone()).unwrap();
+    assert_eq!(restored.current().user.unwrap().username, "employee01");
+    server.stop();
+    assert!(restored.logout().is_err());
+    assert!(restored.current().user.is_none());
+    assert!(SessionService::new(&config, credentials)
+        .unwrap()
+        .current()
+        .user
+        .is_none());
+}
+
+#[test]
+fn company_flow02_authenticated_catalog_keeps_full_description() {
+    let server = support::MockServer::start("normal");
+    let root = tempfile::tempdir().unwrap();
+    let config = CompanyConfig::for_test(
+        &server.url,
+        root.path().join("profile"),
+        root.path().join("data"),
+    )
+    .unwrap();
+    let session = SessionService::new(&config, Arc::new(MemoryCredentials::default())).unwrap();
+    assert_eq!(
+        session.login("bad", "bad").unwrap_err().code,
+        "INVALID_CREDENTIALS"
+    );
+    session.login("employee01", "demo-password").unwrap();
+    let client = StoreClient::new(&config).unwrap();
+    let token = session.access_token().unwrap();
+    let page = client.search(&token, "jira", 1).unwrap();
+    assert_eq!(page.items.len(), 1);
+    assert_eq!(page.pagination.page_size, 20);
+    let detail = client.detail(&token, "skl_001").unwrap();
+    assert!(detail
+        .description
+        .unwrap()
+        .contains("\n\nMCP bắt buộc: jira-mcp, confluence-mcp\n"));
+    assert_eq!(
+        client.detail(&token, "unknown").unwrap_err().code,
+        "SKILL_NOT_FOUND"
+    );
+}
+
+#[test]
+fn company_flow01_signed_out_session_does_not_require_a_live_store() {
     let root = tempfile::tempdir().unwrap();
     let config = CompanyConfig::for_test(
         "http://127.0.0.1:4318",
@@ -40505,149 +42693,102 @@ fn pending_fixture(
         root.path().join("data"),
     )
     .unwrap();
-    fs::create_dir_all(&config.data_root).unwrap();
-    let archive = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .unwrap()
-        .join("fixtures/company-store/packages/jira-project-summary.zip");
-    let bytes = fs::read(&archive).unwrap();
-    let meta = PackageMeta {
-        format: "zip".into(),
-        size_bytes: bytes.len() as u64,
-        sha256: hex::encode(Sha256::digest(bytes)),
-        etag: "\"fixture\"".into(),
-    };
-    let package = prepare_archive(
-        &archive,
-        &meta,
-        "jira-project-summary",
-        &config.data_root.join("packages"),
-    )
-    .unwrap();
-    let target = global_target(&config.profile_root, "jira-project-summary").unwrap();
-    let id = uuid::Uuid::new_v4().to_string();
-    let stage = stage_path(&target, &id).unwrap();
-    let view = OperationView {
-        id: id.clone(),
-        state: OperationState::Committing,
-        target: target.display().to_string(),
-        mcp: check_config(&parse_requirements("MCP bắt buộc: không"), b"{}"),
-        mcp_path: String::new(),
-        skill: None,
-        progress_bytes: meta.size_bytes,
-        total_bytes: meta.size_bytes,
-        error: None,
-    };
-    let installation = Installation {
-        id,
-        skill_id: "skl_001".into(),
-        slug: "jira-project-summary".into(),
-        name: "Jira".into(),
-        target: target.display().to_string(),
-        package_hash: meta.sha256.clone(),
-        content_hash: package.content_hash,
-        description_snapshot: "MCP bắt buộc: không".into(),
-        installed_at: "2026-10-12T00:00:00Z".into(),
-        mcp_bypassed: false,
-    };
-    let journal = InstallJournal {
-        view,
-        installation,
-        full_hash: package.full_hash.clone(),
-        stage_owned: owned,
-    };
-    let repository = CompanyRepository::open(&config.data_root.join("manager.db")).unwrap();
-    repository
-        .save_package(
-            &meta,
-            &journal.installation.content_hash,
-            &package.full_hash,
-        )
-        .unwrap();
-    repository.prepare(&journal).unwrap();
-    (root, config, journal, target, stage, package.original_root)
+    let session = SessionService::new(&config, Arc::new(MemoryCredentials::default())).unwrap();
+    assert!(session.current().user.is_none());
 }
 
 #[test]
-fn company_flow03c_recovery_commits_complete_owned_target_after_rename() {
-    let (_root, config, _journal, target, _stage, original) = pending_fixture(true);
-    copy_tree(&original, &target).unwrap();
-    let app = CompanyService::new(config, Arc::new(MemoryCredentials::default())).unwrap();
-    assert_eq!(app.installations().unwrap().len(), 1);
-    assert!(app.recovery_warnings().is_empty());
-    assert!(target.join("SKILL.md").is_file());
+fn company_flow03a_compares_exact_keys_without_reading_server_values() {
+    let requirements = parse_requirements("MCP bắt buộc: github, GitHub, github");
+    let report = check_config(&requirements, br#"{"mcpServers":{"github":null}}"#);
+    assert_eq!(report.missing, vec!["GitHub"]);
+    assert_eq!(report.present, vec!["github"]);
 }
 
 #[test]
-fn company_flow03c_recovery_cancels_before_rename_and_preserves_unowned_stage() {
-    for owned in [true, false] {
-        let (_root, config, _journal, target, stage, original) = pending_fixture(owned);
-        copy_tree(&original, &stage).unwrap();
-        let app = CompanyService::new(config, Arc::new(MemoryCredentials::default())).unwrap();
-        assert!(app.installations().unwrap().is_empty());
-        assert!(!target.exists());
-        assert_eq!(stage.exists(), !owned);
-        assert_eq!(app.recovery_warnings().is_empty(), owned);
-    }
+fn company_flow03a_invalid_declaration_does_not_claim_requirements_satisfied() {
+    let requirements = parse_requirements("MCP bắt buộc: không, jira-mcp");
+    let report = check_config(&requirements, br#"{"mcpServers":{"jira-mcp":{}}}"#);
+    assert!(!report.reason.is_none());
+}
+````
+
+## File: src/company/flows/InstallDialog.tsx
+````typescript
+import { useState } from 'react';
+import type { CompanyApi } from '../api';
+import type { OperationView, Skill } from '../types';
+import { errorMessage, isSessionError } from '../types';
+import { useCompanyOperation } from './useCompanyOperation';
+
+const labels: Record<string, string> = { downloading: 'Đang tải gói…', validating: 'Đang kiểm tra gói…', staging: 'Đang chuẩn bị bản cài…', committing: 'Đang lưu bản cài…' };
+export function InstallDialog({ api, skill, initial, onClose, onInstalled, onExpired, onRefresh, scopeLabel = 'Global' }: { api: CompanyApi; skill: Skill; initial: OperationView; onClose: () => void; onInstalled: () => void; onExpired: (message: string) => void; onRefresh: () => void; scopeLabel?: string }) {
+  const { operation, setOperation, error, setError, terminal } = useCompanyOperation(api, initial, onInstalled, onExpired);
+  const [busy, setBusy] = useState(false);
+  const [bypassed, setBypassed] = useState(false);
+
+  async function proceed(bypass: boolean) {
+    setBusy(true); setError(''); setBypassed(bypass);
+    try { setOperation(await api.confirmInstallation(operation.id, bypass)); }
+    catch (e) {
+      if (isSessionError(e)) onExpired(errorMessage(e));
+      else setError(errorMessage(e));
+    } finally { setBusy(false); }
+  }
+  async function stop() {
+    setBusy(true);
+    try { const next = await api.cancelOperation(operation.id); if (next.state === 'cancelled') onClose(); else setOperation(next); }
+    catch (e) { setError(errorMessage(e)); }
+    finally { setBusy(false); }
+  }
+  const warning = operation.mcp.state === 'missing' || operation.mcp.state === 'unknown';
+  return <div className="modal-overlay"><section role="dialog" aria-label="Cài skill" aria-modal="true" className="company-modal">
+    <div className="eyebrow">CÀI ĐẶT / AIPRO {scopeLabel.toUpperCase()}</div><h2>{skill.name}</h2><p className="target-path">{operation.target}</p>
+    {operation.state === 'awaiting_decision' && <><h3>{operation.mcp.state === 'missing' ? 'Chưa có MCP trong cấu hình' : operation.mcp.state === 'unknown' ? 'Chưa kiểm tra được MCP' : operation.mcp.state === 'undeclared' ? 'Skill chưa khai báo yêu cầu MCP' : operation.mcp.state === 'not_required' ? 'Không yêu cầu MCP' : 'Đã có MCP trong cấu hình'}</h3>
+      {operation.mcp.required.length > 0 && <><h4>MCP yêu cầu</h4><ul>{operation.mcp.required.map(name => <li key={name}>{name}</li>)}</ul><p>Đã có: {operation.mcp.present.join(', ') || 'Chưa xác nhận được tên nào'}</p><p>Thiếu: {operation.mcp.missing.join(', ') || (operation.mcp.state === 'unknown' ? 'Chưa kiểm tra được' : 'Không có')}</p></>}{operation.mcp.reason && <p>{operation.mcp.reason}</p>}
+      {operation.mcpPath && <p className="target-path">{operation.mcpPath}</p>}
+      {warning && <p>Bạn có thể cài MCP thủ công, sau đó thử cài skill lại; hoặc bỏ qua cảnh báo cho lần cài này.</p>}
+      <div className="dialog-actions"><button className="secondary" onClick={stop} disabled={busy}>Dừng cài đặt</button><button className="primary" onClick={() => proceed(warning)} disabled={busy}>{warning ? 'Bỏ qua và cài tiếp' : 'Cài skill'}</button></div></>}
+    {!terminal && operation.state !== 'awaiting_decision' && <><p role="status">{labels[operation.state] || 'Đang cài…'}</p><progress max={Math.max(operation.totalBytes, 1)} value={operation.progressBytes} /><button className="secondary" onClick={stop} disabled={operation.state === 'committing'}>Hủy</button></>}
+    {operation.state === 'succeeded' && <><div className="success-banner">{bypassed ? 'Cài xong; đã bỏ qua cảnh báo MCP của lần này.' : `Đã cài skill vào AIPRO ${scopeLabel}.`}</div><p>Bản cài được quản lý tại đường dẫn trên.</p><button className="primary" onClick={onClose}>Hoàn tất</button></>}
+    {(error || operation.error) && <div role="alert" className="error-banner">{error || operation.error?.message}</div>}
+    {operation.state === 'failed' && <>{operation.error?.code === 'PACKAGE_CHANGED' ? <><p>Thông tin skill đã thay đổi. Xem bản mới rồi kiểm tra MCP cho lần cài mới.</p><button className="primary" onClick={onRefresh}>Xem thông tin mới</button></> : <p>Thao tác chưa hoàn tất. Đóng hộp thoại rồi bấm cài lại để kiểm tra thông tin và MCP mới.</p>}<button className="secondary" onClick={onClose}>Đóng</button></>}
+    {operation.state === 'recovery_required' && <><p>Dữ liệu thao tác đã được giữ để khôi phục. Kiểm tra đường dẫn đích và thử mở lại ứng dụng.</p><button className="secondary" onClick={onClose}>Đóng</button></>}
+    {operation.state === 'cancelled' && <><p>Đã hủy cài đặt.</p><button className="secondary" onClick={onClose}>Đóng</button></>}
+  </section></div>;
+}
+````
+
+## File: src/company/types.ts
+````typescript
+export interface User { id: string; username: string; displayName: string }
+export interface SessionView { user: User | null; expiresAt: string | null; persistent: boolean }
+export interface Environment { mock: boolean; storeUrl: string; profileRoot: string; dataRoot: string; configured: boolean; recoveryWarnings?: string[] }
+export interface CompanyError { code: string; message: string; requestId?: string; retryAfterSeconds?: number }
+export interface PackageMeta { format: 'zip' | '7z'; sizeBytes: number; sha256: string; etag: string }
+export interface Skill { id: string; slug: string; name: string; descriptionExcerpt?: string; description?: string; updatedAt: string; package: PackageMeta }
+export interface SkillPage { items: Skill[]; pagination: { page: number; pageSize: number; total: number; totalPages: number }; cache?: { fetchedAt: string; stale: boolean } }
+export interface Project { id: string; name: string; path: string }
+export type ContentState = 'original' | 'customized' | 'unknown' | 'missing';
+export type StoreState = 'current' | 'new_package' | 'unknown' | 'unavailable';
+export interface Installation { id: string; skillId: string; name: string; target: string; packageHash: string; installedAt: string; mcpBypassed: boolean; projectId?: string | null; contentState?: ContentState; storeState?: StoreState; checkedAt?: string | null; storeError?: string | null }
+export interface FilePreview { kind: 'text' | 'binary' | 'directory'; sizeBytes: number }
+export interface FileChange { path: string; kind: 'added' | 'modified' | 'deleted'; current?: FilePreview | null; incoming?: FilePreview | null }
+export interface Backup { id: string; installationId: string; createdAt: string; reason: string; path: string; fullHash: string; installation: Installation }
+export interface McpReport { state: 'not_required' | 'undeclared' | 'present' | 'missing' | 'unknown'; required: string[]; present: string[]; missing: string[]; reason: string | null; checkedAt: string }
+export interface OperationView { id: string; state: 'awaiting_decision' | 'downloading' | 'validating' | 'staging' | 'committing' | 'succeeded' | 'cancelled' | 'failed' | 'recovery_required'; target: string; mcp: McpReport; mcpPath?: string; skill?: Skill; progressBytes: number; totalBytes: number; error: CompanyError | null; kind?: 'install' | 'update'; previewReady?: boolean; customized?: boolean; changes?: FileChange[] }
+
+export function errorMessage(error: unknown): string {
+  if (typeof error === 'object' && error !== null && 'message' in error && typeof error.message === 'string') return error.message;
+  return typeof error === 'string' ? error : 'Không thể hoàn tất thao tác. Vui lòng thử lại.';
 }
 
-#[test]
-fn company_flow03c_recovery_does_not_adopt_foreign_target_even_when_bytes_match() {
-    let (_root, config, _journal, target, _stage, original) = pending_fixture(false);
-    copy_tree(&original, &target).unwrap();
-    let before = fs::read(target.join("SKILL.md")).unwrap();
-    let app = CompanyService::new(config, Arc::new(MemoryCredentials::default())).unwrap();
-    assert!(app.installations().unwrap().is_empty());
-    assert!(!app.recovery_warnings().is_empty());
-    assert_eq!(fs::read(target.join("SKILL.md")).unwrap(), before);
+export function isSessionError(error: unknown): boolean {
+  return typeof error === 'object' && error !== null && 'code' in error &&
+    (error.code === 'SESSION_EXPIRED' || error.code === 'UNAUTHENTICATED');
 }
-
-#[test]
-fn company_flow03c_recovery_preserves_modified_owned_staging() {
-    let (_root, config, _journal, target, stage, original) = pending_fixture(true);
-    copy_tree(&original, &stage).unwrap();
-    fs::write(stage.join("external-note.txt"), "keep this change").unwrap();
-    let app = CompanyService::new(config, Arc::new(MemoryCredentials::default())).unwrap();
-    assert!(app.installations().unwrap().is_empty());
-    assert!(!target.exists());
-    assert!(!app.recovery_warnings().is_empty());
-    assert_eq!(
-        fs::read_to_string(stage.join("external-note.txt")).unwrap(),
-        "keep this change"
-    );
-}
-
-#[test]
-fn company_flow03c_unresolved_recovery_blocks_only_its_target() {
-    let server = super::support::MockServer::start("normal");
-    let (_root, mut config, _journal, _target, stage, original) = pending_fixture(true);
-    config.store_url = server.url.clone();
-    copy_tree(&original, &stage).unwrap();
-    fs::write(stage.join("external-note.txt"), "keep this change").unwrap();
-    let app = CompanyService::new(config, Arc::new(MemoryCredentials::default())).unwrap();
-    app.login("employee01", "demo-password").unwrap();
-    assert_eq!(
-        app.prepare_install("skl_001").unwrap_err().code,
-        "RECOVERY_REQUIRED"
-    );
-    assert!(app.prepare_install("skl_003").is_ok());
-    assert_eq!(
-        fs::read_to_string(stage.join("external-note.txt")).unwrap(),
-        "keep this change"
-    );
-}
-
-#[cfg(windows)]
-#[test]
-fn company_flow03c_recovery_keeps_foreign_junction_and_starts_with_warning() {
-    let (_root, config, _journal, target, _stage, original) = pending_fixture(true);
-    fs::create_dir_all(target.parent().unwrap()).unwrap();
-    junction::create(&original, &target).unwrap();
-    let app = CompanyService::new(config, Arc::new(MemoryCredentials::default()))
-        .expect("unsafe target must not prevent opening local data");
-    assert!(!app.recovery_warnings().is_empty());
-    assert!(junction::exists(&target).unwrap());
-    assert!(original.join("SKILL.md").is_file());
+export function displayPath(path: string): string {
+  return path.replace(/^\\\\\?\\UNC\\/i, '\\\\').replace(/^\\\\\?\\/, '');
 }
 ````
 
@@ -45447,385 +47588,2261 @@ mod tests {
 }
 ````
 
-## File: src-tauri/src/core/cli_bridge.rs
+## File: src-tauri/src/core/company/installation_service.rs
 ````rust
-//! The copy of `skills-manager-cli` that agents are told to run.
-//!
-//! The CLI already ships inside the desktop bundle — Tauri packages every
-//! `[[bin]]` of the crate — but nothing puts it anywhere an agent can find it.
-//! On Linux the `.deb`/`.rpm` land it in `/usr/bin`, which is already on PATH;
-//! on macOS it sits inside the `.app`, and on Windows inside the install
-//! directory. Neither is on PATH, and putting it there is not ours to do:
-//! `/usr/local/bin` needs an admin prompt, `~/.local/bin` is not on the default
-//! macOS PATH at all, and Windows reserves symlink creation for administrators.
-//!
-//! So the app maintains its own copy at a fixed, predictable path instead, and
-//! the `manage-skills` skill looks there first. A copy, not a symlink: an
-//! AppImage is mounted at a temporary path, and a `.app` the user drags
-//! elsewhere would leave a dangling link.
-//!
-//! ## Why the stamp file
-//!
-//! The copy can fail — on Windows the old binary may be running (an agent
-//! mid-command) or held by a virus scanner, and then the rename cannot replace
-//! it. A stale bridge is not merely out of date: before #363 the deploy path
-//! deleted a user's unmanaged directory outright, so an old binary can be one
-//! that destroys data a new one refuses to touch. The database's own
-//! `user_version` gate does not catch this, because such a fix carries no
-//! schema change.
-//!
-//! The stamp is therefore written last and removed first. Its presence means
-//! "a copy of exactly this version completed and ran"; its absence means the
-//! bridge must not be used, whether or not a binary is sitting there. It is a
-//! small text file, so it can still be removed when the locked binary cannot.
-
-use anyhow::{bail, Context, Result};
-use std::path::{Path, PathBuf};
-use std::process::Command;
-
-use super::central_repo;
-
-const BRIDGE_BIN_NAME: &str = if cfg!(windows) {
-    "skills-manager-cli.exe"
-} else {
-    "skills-manager-cli"
+use super::{
+    aipro_paths::{global_target, stage_path},
+    config::CompanyConfig,
+    installation_repository::CompanyRepository,
+    mcp_check::{check_global_mcp, parse_requirements},
+    package_store::{self, content_hash, copy_tree, MAX_ARCHIVE},
+    session::{CredentialStore, SessionService},
+    store_client::StoreClient,
+    types::*,
+};
+use sha2::{Digest, Sha256};
+use std::{
+    collections::HashMap,
+    fs::{self, File},
+    io::{Read, Write},
+    path::Path,
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc, Mutex,
+    },
 };
 
-/// Where the bridge lives. Deliberately the home directory rather than
-/// `central_repo::base_dir()`: the library can be relocated to anywhere the
-/// user likes, and the skill has to be able to name this path without asking.
-pub fn bridge_dir() -> PathBuf {
-    central_repo::home_base_dir().join("bin")
+struct Operation {
+    view: OperationView,
+    skill: Skill,
+    owner: String,
+    cancelled: Arc<AtomicBool>,
+    project_id: Option<String>,
+    old: Option<Installation>,
+    old_full_hash: Option<String>,
+    preview: Option<package_store::VerifiedPackage>,
+    bypass: bool,
 }
-
-/// Whether `name` is one of the files the bridge keeps in [`bridge_dir`].
-pub(crate) fn is_bridge_file(name: &str) -> bool {
-    name == BRIDGE_BIN_NAME || name == ".version" || name == format!(".{BRIDGE_BIN_NAME}.staged")
+#[path = "project_service.rs"]
+mod projects;
+#[path = "replacement_service.rs"]
+mod replacements;
+#[path = "update_service.rs"]
+mod updates;
+pub struct CompanyService {
+    pub config: CompanyConfig,
+    session: SessionService,
+    client: StoreClient,
+    repository: CompanyRepository,
+    operations: Mutex<HashMap<String, Operation>>,
+    worker: Mutex<()>,
 }
-
-pub fn bridge_path() -> PathBuf {
-    bridge_dir().join(BRIDGE_BIN_NAME)
+fn operation_error() -> CompanyError {
+    CompanyError::new(
+        "OPERATION_NOT_FOUND",
+        "Không tìm thấy thao tác cài đặt. Bắt đầu cài lại để lấy thông tin mới.",
+    )
 }
-
-fn stamp_path() -> PathBuf {
-    bridge_dir().join(".version")
+fn write_error() -> CompanyError {
+    CompanyError::new(
+        "WRITE_FAILED",
+        "Không ghi được bản cài. Kiểm tra quyền, dung lượng và file đang khóa.",
+    )
 }
-
-/// The CLI that shipped alongside the running app binary.
-fn bundled_cli() -> Result<PathBuf> {
-    let exe = std::env::current_exe().context("cannot locate the running executable")?;
-    let dir = exe
-        .parent()
-        .context("the running executable has no parent directory")?;
-    let candidate = dir.join(BRIDGE_BIN_NAME);
-    if !candidate.is_file() {
-        bail!(
-            "this build does not ship {BRIDGE_BIN_NAME} next to the app binary ({})",
-            dir.display()
-        );
+impl CompanyService {
+    pub fn new(
+        config: CompanyConfig,
+        credentials: Arc<dyn CredentialStore>,
+    ) -> CompanyResult<Self> {
+        let session = SessionService::new(&config, credentials)?;
+        let repository = CompanyRepository::open(&config.data_root.join("manager.db"))?;
+        let app = Self {
+            client: StoreClient::new(&config)?,
+            config,
+            session,
+            repository,
+            operations: Mutex::new(HashMap::new()),
+            worker: Mutex::new(()),
+        };
+        app.recover()?;
+        app.recover_replacements()?;
+        Ok(app)
     }
-    Ok(candidate)
+    pub fn current_session(&self) -> SessionView {
+        self.session.current()
+    }
+    pub fn login(&self, username: &str, password: &str) -> CompanyResult<SessionView> {
+        self.repository.clear_catalog(&self.config.store_url)?;
+        self.session.login(username, password)
+    }
+    pub fn logout(&self) -> CompanyResult<()> {
+        self.cancel_pending();
+        let cache_result = self.repository.clear_catalog(&self.config.store_url);
+        let logout_result = self.session.logout();
+        cache_result.and(logout_result)
+    }
+    pub fn installations(&self) -> CompanyResult<Vec<Installation>> {
+        Ok(self
+            .repository
+            .installations()?
+            .into_iter()
+            .map(|item| self.refreshed(item))
+            .collect())
+    }
+    pub fn search(&self, query: &str, page: u32) -> CompanyResult<SkillPage> {
+        let token = self.session.access_token()?;
+        let user = self
+            .session
+            .current()
+            .user
+            .ok_or_else(|| CompanyError::new("SESSION_EXPIRED", "Vui lòng đăng nhập lại."))?;
+        let result = self.auth_result(self.client.search(&token, query, page));
+        if self.session.access_token().ok().as_deref() != Some(token.as_str()) {
+            return Err(CompanyError::new(
+                "SESSION_EXPIRED",
+                "Phiên đã thay đổi. Vui lòng thử lại.",
+            ));
+        }
+        match result {
+            Ok(page_result) => {
+                self.repository.cache_catalog(
+                    &self.config.store_url,
+                    &user.id,
+                    query,
+                    page,
+                    &page_result,
+                )?;
+                Ok(page_result)
+            }
+            Err(error) if matches!(error.code.as_str(), "NETWORK_ERROR" | "STORE_UNAVAILABLE") => {
+                self.repository
+                    .cached_catalog(&self.config.store_url, &user.id, query, page)?
+                    .ok_or(error)
+            }
+            Err(error) => Err(error),
+        }
+    }
+    pub fn detail(&self, id: &str) -> CompanyResult<Skill> {
+        self.auth_result(self.client.detail(&self.session.access_token()?, id))
+    }
+    fn auth_result<T>(&self, result: CompanyResult<T>) -> CompanyResult<T> {
+        if result
+            .as_ref()
+            .err()
+            .map(|e| matches!(e.code.as_str(), "UNAUTHENTICATED" | "SESSION_EXPIRED"))
+            .unwrap_or(false)
+        {
+            self.cancel_pending();
+            self.session.clear();
+            self.repository.clear_catalog(&self.config.store_url)?;
+        }
+        result
+    }
+    fn cancel_pending(&self) {
+        if let Ok(operations) = self.operations.lock() {
+            for operation in operations.values() {
+                if !matches!(
+                    operation.view.state,
+                    OperationState::Committing | OperationState::Succeeded
+                ) {
+                    operation.cancelled.store(true, Ordering::Relaxed);
+                }
+            }
+        }
+    }
+    fn owner(&self) -> CompanyResult<String> {
+        Ok(hex::encode(Sha256::digest(
+            self.session.access_token()?.as_bytes(),
+        )))
+    }
+    pub fn prepare_install(&self, id: &str) -> CompanyResult<OperationView> {
+        self.prepare_scoped_install(id, None)
+    }
+    pub fn prepare_project_install(
+        &self,
+        id: &str,
+        project_id: &str,
+    ) -> CompanyResult<OperationView> {
+        self.prepare_scoped_install(id, Some(project_id))
+    }
+    fn prepare_scoped_install(
+        &self,
+        id: &str,
+        project_id: Option<&str>,
+    ) -> CompanyResult<OperationView> {
+        let owner = self.owner()?;
+        let skill = self.detail(id)?;
+        let description = skill.description.as_ref().ok_or_else(|| {
+            CompanyError::new(
+                "INVALID_RESPONSE",
+                "Detail của Store thiếu description đầy đủ.",
+            )
+        })?;
+        let target = self.installation_target(project_id, &skill.slug)?;
+        if self
+            .operations
+            .lock()
+            .map_err(|_| operation_error())?
+            .values()
+            .any(|operation| {
+                operation.view.state == OperationState::RecoveryRequired
+                    && super::aipro_paths::overlaps(Path::new(&operation.view.target), &target)
+            })
+        {
+            return Err(CompanyError::new("RECOVERY_REQUIRED", "Đích này có thao tác chưa phục hồi xong. Kiểm tra dữ liệu đã giữ trước khi cài lại."));
+        }
+        let existing = self.repository.installations()?;
+        let reinstall = existing
+            .iter()
+            .find(|item| {
+                super::aipro_paths::path_key(Path::new(&item.target))
+                    == super::aipro_paths::path_key(&target)
+                    && item.skill_id == skill.id
+                    && item.project_id.as_deref() == project_id
+            })
+            .cloned();
+        if target.exists()
+            || existing.iter().any(|item| {
+                super::aipro_paths::overlaps(Path::new(&item.target), &target)
+                    && reinstall.as_ref().map(|old| old.id.as_str()) != Some(item.id.as_str())
+            })
+        {
+            return Err(CompanyError::new(
+                "TARGET_CONFLICT",
+                "Đích đã có nội dung. Xem bản đã cài hoặc xử lý đích này trước khi cài lại.",
+            ));
+        }
+        if skill.package.size_bytes > MAX_ARCHIVE
+            || !matches!(skill.package.format.as_str(), "zip" | "7z")
+            || !skill.package.etag.starts_with('"')
+            || !skill.package.etag.ends_with('"')
+        {
+            return Err(CompanyError::new(
+                "INVALID_PACKAGE",
+                "Metadata gói không hợp lệ hoặc vượt giới hạn.",
+            ));
+        }
+        let mcp = check_global_mcp(&parse_requirements(description), &self.config.profile_root);
+        let view = OperationView {
+            id: uuid::Uuid::new_v4().to_string(),
+            state: OperationState::AwaitingDecision,
+            target: target.display().to_string(),
+            mcp,
+            mcp_path: self
+                .config
+                .profile_root
+                .join(".aipro/mcp.json")
+                .display()
+                .to_string(),
+            skill: Some(skill.clone()),
+            progress_bytes: 0,
+            total_bytes: skill.package.size_bytes,
+            error: None,
+            kind: OperationKind::Install,
+            preview_ready: false,
+            customized: false,
+            changes: Vec::new(),
+        };
+        self.operations
+            .lock()
+            .map_err(|_| operation_error())?
+            .insert(
+                view.id.clone(),
+                Operation {
+                    view: view.clone(),
+                    skill,
+                    owner,
+                    cancelled: Arc::new(AtomicBool::new(false)),
+                    project_id: project_id.map(str::to_string),
+                    old: reinstall,
+                    old_full_hash: None,
+                    preview: None,
+                    bypass: false,
+                },
+            );
+        Ok(view)
+    }
+    pub fn status(&self, id: &str) -> CompanyResult<OperationView> {
+        self.operations
+            .lock()
+            .map_err(|_| operation_error())?
+            .get(id)
+            .map(|op| op.view.clone())
+            .ok_or_else(operation_error)
+    }
+    pub fn cancel(&self, id: &str) -> CompanyResult<OperationView> {
+        let mut operations = self.operations.lock().map_err(|_| operation_error())?;
+        let operation = operations.get_mut(id).ok_or_else(operation_error)?;
+        if !matches!(
+            operation.view.state,
+            OperationState::Committing | OperationState::Succeeded
+        ) {
+            operation.cancelled.store(true, Ordering::Relaxed);
+            if operation.view.state == OperationState::AwaitingDecision {
+                operation.view.state = OperationState::Cancelled;
+            }
+        }
+        Ok(operation.view.clone())
+    }
+    pub fn confirm(self: &Arc<Self>, id: &str, bypass_mcp: bool) -> CompanyResult<OperationView> {
+        if self.status(id)?.kind == OperationKind::Update {
+            return self.confirm_preview(id, bypass_mcp);
+        }
+        let owner = self.owner()?;
+        let (skill, cancelled, view, project_id, installation_id) = {
+            let mut operations = self.operations.lock().map_err(|_| operation_error())?;
+            let operation = operations.get_mut(id).ok_or_else(operation_error)?;
+            if operation.cancelled.load(Ordering::Relaxed) {
+                return Err(CompanyError::new(
+                    "CANCELLED",
+                    "Thao tác đã hủy. Bắt đầu cài lại để kiểm tra thông tin mới.",
+                ));
+            }
+            if operation.owner != owner {
+                return Err(CompanyError::new(
+                    "SESSION_EXPIRED",
+                    "Quyết định cài đã hết hiệu lực. Kiểm tra lại skill và MCP.",
+                ));
+            }
+            if operation.view.state != OperationState::AwaitingDecision {
+                return Ok(operation.view.clone());
+            }
+            if matches!(
+                operation.view.mcp.state,
+                McpState::Missing | McpState::Unknown
+            ) && !bypass_mcp
+            {
+                return Err(CompanyError::new(
+                    "MCP_WARNING",
+                    "Cần chọn dừng hoặc bỏ qua cảnh báo MCP.",
+                ));
+            }
+            operation.view.state = OperationState::Downloading;
+            (
+                operation.skill.clone(),
+                operation.cancelled.clone(),
+                operation.view.clone(),
+                operation.project_id.clone(),
+                operation.old.as_ref().map(|item| item.id.clone()),
+            )
+        };
+        let app = Arc::clone(self);
+        let id = id.to_string();
+        std::thread::spawn(move || {
+            let result = app.install(
+                &id,
+                &skill,
+                &owner,
+                &cancelled,
+                bypass_mcp,
+                project_id.as_deref(),
+                installation_id.as_deref(),
+            );
+            if let Err(error) = result {
+                app.auth_result::<()>(Err(error.clone())).ok();
+                let state = if error.code == "CANCELLED" {
+                    OperationState::Cancelled
+                } else if error.code == "RECOVERY_REQUIRED" {
+                    OperationState::RecoveryRequired
+                } else {
+                    OperationState::Failed
+                };
+                app.update(&id, state, None, Some(error));
+            } else {
+                app.update(
+                    &id,
+                    OperationState::Succeeded,
+                    Some(skill.package.size_bytes),
+                    None,
+                );
+            }
+        });
+        Ok(view)
+    }
+    fn update(
+        &self,
+        id: &str,
+        state: OperationState,
+        bytes: Option<u64>,
+        error: Option<CompanyError>,
+    ) {
+        if let Ok(mut operations) = self.operations.lock() {
+            if let Some(operation) = operations.get_mut(id) {
+                operation.view.state = state;
+                operation.view.error = error;
+                if let Some(bytes) = bytes {
+                    operation.view.progress_bytes = bytes;
+                }
+            }
+        }
+    }
+    fn check_cancel(cancelled: &AtomicBool) -> CompanyResult<()> {
+        if cancelled.load(Ordering::Relaxed) {
+            Err(CompanyError::new("CANCELLED", "Đã hủy cài đặt."))
+        } else {
+            Ok(())
+        }
+    }
+    fn enter_commit(&self, id: &str) -> CompanyResult<()> {
+        let mut operations = self.operations.lock().map_err(|_| operation_error())?;
+        let operation = operations.get_mut(id).ok_or_else(operation_error)?;
+        Self::check_cancel(&operation.cancelled)?;
+        operation.view.state = OperationState::Committing;
+        Ok(())
+    }
+    fn install(
+        &self,
+        id: &str,
+        skill: &Skill,
+        owner: &str,
+        cancelled: &AtomicBool,
+        bypass: bool,
+        project_id: Option<&str>,
+        installation_id: Option<&str>,
+    ) -> CompanyResult<()> {
+        let _worker = self.worker.lock().map_err(|_| write_error())?;
+        Self::check_cancel(cancelled)?;
+        if self.owner()? != owner {
+            return Err(CompanyError::new(
+                "SESSION_EXPIRED",
+                "Cần đăng nhập và chuẩn bị cài lại.",
+            ));
+        }
+        let operations_root = self.config.data_root.join("operations");
+        fs::create_dir_all(&operations_root).map_err(|_| write_error())?;
+        package_store::reject_links(&operations_root)?;
+        let temporary = tempfile::tempdir_in(&operations_root).map_err(|_| write_error())?;
+        let archive = temporary.path().join("download");
+        self.download(id, skill, &archive, cancelled)?;
+        Self::check_cancel(cancelled)?;
+        self.update(id, OperationState::Validating, None, None);
+        let package = package_store::prepare_archive(
+            &archive,
+            &skill.package,
+            &skill.slug,
+            &self.config.data_root.join("packages"),
+        )?;
+        self.repository
+            .save_package(&skill.package, &package.content_hash, &package.full_hash)?;
+        Self::check_cancel(cancelled)?;
+        let target = self.installation_target(project_id, &skill.slug)?;
+        if target.exists() {
+            return Err(CompanyError::new(
+                "TARGET_CONFLICT",
+                "Đích đã có nội dung kể từ lúc kiểm tra. Không ghi đè.",
+            ));
+        }
+        let stage = stage_path(&target, id)?;
+        fs::create_dir_all(target.parent().ok_or_else(write_error)?).map_err(|_| write_error())?;
+        self.installation_target(project_id, &skill.slug)?;
+        let view = self.status(id)?;
+        let installation = Installation {
+            id: installation_id.unwrap_or(id).into(),
+            skill_id: skill.id.clone(),
+            slug: skill.slug.clone(),
+            name: skill.name.clone(),
+            target: target.display().to_string(),
+            package_hash: package.archive_hash,
+            content_hash: package.content_hash,
+            description_snapshot: skill.description.clone().unwrap_or_default(),
+            installed_at: chrono::Utc::now().to_rfc3339(),
+            mcp_bypassed: bypass,
+            project_id: project_id.map(str::to_string),
+            content_state: ContentState::Original,
+            store_state: StoreState::Current,
+            checked_at: Some(chrono::Utc::now().to_rfc3339()),
+            store_error: None,
+        };
+        let mut journal = InstallJournal {
+            view,
+            installation,
+            full_hash: package.full_hash.clone(),
+            stage_owned: false,
+        };
+        self.repository.prepare(&journal)?;
+        self.update(id, OperationState::Staging, None, None);
+        let mut owned_stage = false;
+        let before_rename = (|| {
+            if stage.exists() {
+                return Err(CompanyError::new(
+                    "TARGET_CONFLICT",
+                    "Thư mục staging đã tồn tại.",
+                ));
+            }
+            fs::create_dir(&stage).map_err(|_| write_error())?;
+            owned_stage = true;
+            journal.stage_owned = true;
+            self.repository.stage_created(&journal)?;
+            copy_tree(&package.original_root, &stage)?;
+            if content_hash(&stage, false)? != package.full_hash {
+                return Err(CompanyError::new(
+                    "PACKAGE_INTEGRITY_FAILED",
+                    "Bản sao không khớp gói nguồn.",
+                ));
+            }
+            Self::check_cancel(cancelled)?;
+            if self.owner()? != owner {
+                return Err(CompanyError::new(
+                    "SESSION_EXPIRED",
+                    "Phiên đã thay đổi; chuẩn bị cài lại.",
+                ));
+            }
+            self.installation_target(project_id, &skill.slug)?;
+            if target.exists() {
+                return Err(CompanyError::new(
+                    "TARGET_CONFLICT",
+                    "Đích đã có nội dung. Không ghi đè.",
+                ));
+            }
+            self.enter_commit(id)?;
+            fs::rename(&stage, &target).map_err(|_| write_error())
+        })();
+        if let Err(error) = before_rename {
+            if owned_stage && stage.exists() && package_store::reject_links(&stage).is_ok() {
+                let _ = fs::remove_dir_all(&stage);
+            }
+            let _ = self.repository.finish(id, "cancelled");
+            return Err(error);
+        }
+        self.repository.commit(&journal).map_err(|_| {
+            CompanyError::new(
+                "RECOVERY_REQUIRED",
+                "File đã được giữ tại đích; mở lại app để hoàn tất khôi phục dữ liệu quản lý.",
+            )
+        })
+    }
+    fn download(
+        &self,
+        id: &str,
+        skill: &Skill,
+        archive: &Path,
+        cancelled: &AtomicBool,
+    ) -> CompanyResult<()> {
+        let mut response = self.client.package_response(
+            &self.session.access_token()?,
+            &skill.id,
+            &skill.package.etag,
+        )?;
+        let mut output = File::create(archive).map_err(|_| write_error())?;
+        let mut bytes = 0u64;
+        let mut buffer = [0u8; 65_536];
+        loop {
+            Self::check_cancel(cancelled)?;
+            let count = response
+                .read(&mut buffer)
+                .map_err(|_| StoreClient::network_error())?;
+            if count == 0 {
+                break;
+            }
+            bytes += count as u64;
+            if bytes > MAX_ARCHIVE || bytes > skill.package.size_bytes {
+                return Err(CompanyError::new(
+                    "PACKAGE_INTEGRITY_FAILED",
+                    "Gói tải vượt kích thước đã khai báo.",
+                ));
+            }
+            output
+                .write_all(&buffer[..count])
+                .map_err(|_| write_error())?;
+            self.update(id, OperationState::Downloading, Some(bytes), None);
+        }
+        output.sync_all().map_err(|_| write_error())?;
+        if bytes != skill.package.size_bytes {
+            return Err(CompanyError::new(
+                "PACKAGE_INTEGRITY_FAILED",
+                "Gói tải chưa đủ bytes.",
+            ));
+        }
+        Ok(())
+    }
+    fn recover_install(&self, journal: &InstallJournal) -> CompanyResult<bool> {
+        let target = self.installation_target(
+            journal.installation.project_id.as_deref(),
+            &journal.installation.slug,
+        )?;
+        let stage = stage_path(&target, &journal.view.id)?;
+        let matches_target = target
+            .to_string_lossy()
+            .replace('\\', "/")
+            .eq_ignore_ascii_case(&journal.installation.target.replace('\\', "/"));
+        if journal.stage_owned
+            && matches_target
+            && target.exists()
+            && !stage.exists()
+            && content_hash(&target, false).ok().as_deref() == Some(journal.full_hash.as_str())
+        {
+            self.repository.commit(journal)?;
+            return Ok(true);
+        } else if matches_target
+            && !target.exists()
+            && (!stage.exists()
+                || (journal.stage_owned
+                    && content_hash(&stage, false).ok().as_deref()
+                        == Some(journal.full_hash.as_str())))
+        {
+            if stage.exists() {
+                package_store::reject_links(&stage)?;
+                fs::remove_dir_all(&stage).map_err(|_| write_error())?;
+            }
+            self.repository.finish(&journal.view.id, "cancelled")?;
+            return Ok(true);
+        }
+        Ok(false)
+    }
+    fn recover(&self) -> CompanyResult<()> {
+        for journal in self.repository.pending()? {
+            if !self.recover_install(&journal).unwrap_or(false) {
+                self.repository
+                    .finish(&journal.view.id, "recovery_required")?;
+                let mut view = journal.view.clone();
+                view.state = OperationState::RecoveryRequired;
+                view.error = Some(CompanyError::new(
+                    "RECOVERY_REQUIRED",
+                    format!(
+                        "Nội dung thao tác cần kiểm tra. Đã giữ dữ liệu: {} ; staging: {}",
+                        view.target,
+                        format!(".company-stage-{}", view.id)
+                    ),
+                ));
+                let skill = Skill {
+                    id: journal.installation.skill_id,
+                    slug: journal.installation.slug,
+                    name: journal.installation.name,
+                    description_excerpt: None,
+                    description: Some(journal.installation.description_snapshot),
+                    updated_at: journal.installation.installed_at,
+                    package: PackageMeta {
+                        format: "zip".into(),
+                        size_bytes: 0,
+                        sha256: journal.installation.package_hash,
+                        etag: String::new(),
+                    },
+                };
+                self.operations
+                    .lock()
+                    .map_err(|_| operation_error())?
+                    .insert(
+                        view.id.clone(),
+                        Operation {
+                            view,
+                            skill,
+                            owner: String::new(),
+                            cancelled: Arc::new(AtomicBool::new(true)),
+                            project_id: journal.installation.project_id,
+                            old: None,
+                            old_full_hash: None,
+                            preview: None,
+                            bypass: false,
+                        },
+                    );
+            }
+        }
+        Ok(())
+    }
+    pub fn recovery_warnings(&self) -> Vec<String> {
+        self.operations
+            .lock()
+            .map(|operations| {
+                operations
+                    .values()
+                    .filter(|op| op.view.state == OperationState::RecoveryRequired)
+                    .filter_map(|op| op.view.error.as_ref().map(|error| error.message.clone()))
+                    .collect()
+            })
+            .unwrap_or_default()
+    }
+}
+````
+
+## File: src-tauri/src/core/company/types.rs
+````rust
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CompanyError {
+    pub code: String,
+    pub message: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub request_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub retry_after_seconds: Option<u64>,
+}
+pub type CompanyResult<T> = Result<T, CompanyError>;
+impl CompanyError {
+    pub fn new(code: &str, message: impl Into<String>) -> Self {
+        Self {
+            code: code.into(),
+            message: message.into(),
+            request_id: None,
+            retry_after_seconds: None,
+        }
+    }
+}
+impl std::fmt::Display for CompanyError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}: {}", self.code, self.message)
+    }
+}
+impl std::error::Error for CompanyError {}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum McpState {
+    NotRequired,
+    Undeclared,
+    Present,
+    Missing,
+    Unknown,
+}
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct McpReport {
+    pub state: McpState,
+    pub required: Vec<String>,
+    pub present: Vec<String>,
+    pub missing: Vec<String>,
+    pub reason: Option<String>,
+    pub checked_at: String,
 }
 
-/// An empty stamp counts as no stamp — that is how `invalidate_bridge` disables
-/// a file it cannot delete. The skill's own check uses `-s` for the same reason.
-fn read_stamp() -> Option<String> {
-    std::fs::read_to_string(stamp_path())
-        .ok()
-        .map(|s| s.trim().to_string())
-        .filter(|s| !s.is_empty())
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct User {
+    pub id: String,
+    pub username: String,
+    #[serde(alias = "display_name")]
+    pub display_name: String,
+}
+#[derive(Clone, Serialize, Deserialize)]
+pub struct StoredSession {
+    pub access_token: String,
+    pub expires_at: String,
+    pub user: User,
+    #[serde(default)]
+    pub nonce: String,
+}
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SessionView {
+    pub user: Option<User>,
+    pub expires_at: Option<String>,
+    pub persistent: bool,
+}
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PackageMeta {
+    pub format: String,
+    #[serde(alias = "size_bytes")]
+    pub size_bytes: u64,
+    pub sha256: String,
+    pub etag: String,
+}
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Skill {
+    pub id: String,
+    pub slug: String,
+    pub name: String,
+    #[serde(default, alias = "description_excerpt")]
+    pub description_excerpt: Option<String>,
+    #[serde(default)]
+    pub description: Option<String>,
+    #[serde(alias = "updated_at")]
+    pub updated_at: String,
+    pub package: PackageMeta,
+}
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Pagination {
+    pub page: u32,
+    #[serde(alias = "page_size")]
+    pub page_size: u32,
+    pub total: u64,
+    #[serde(alias = "total_pages")]
+    pub total_pages: u32,
+}
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SkillPage {
+    pub items: Vec<Skill>,
+    pub pagination: Pagination,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cache: Option<CatalogCache>,
+}
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CatalogCache {
+    pub fetched_at: String,
+    pub stale: bool,
 }
 
-/// Make the current bridge untrusted before touching the binary.
-///
-/// A stamp that survives a failed republish is the one way the whole scheme
-/// breaks: the old binary and its old stamp agree with each other, so nothing
-/// downstream can tell they are stale. Three fallbacks, cheapest first, each
-/// enough on its own to satisfy "an unstamped or absent binary is never run":
-///
-/// 1. unlink the stamp — the normal path;
-/// 2. truncate it — a file that cannot be removed but can still be written
-///    (the reader treats an empty stamp as no stamp);
-/// 3. remove the binary itself — on Windows a locked or read-only `.version`
-///    can defeat both of the above while the executable beside it is still
-///    removable, and no binary is as good as no stamp.
-///
-/// If none of them works, the publish is abandoned rather than run with a
-/// stamp that lies.
-fn invalidate_bridge() -> Result<()> {
-    let stamp = stamp_path();
-    match std::fs::remove_file(&stamp) {
-        Ok(()) => return Ok(()),
-        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(()),
-        Err(e) => log::warn!("cli bridge: could not remove {}: {e}", stamp.display()),
-    }
-    if std::fs::write(&stamp, b"").is_ok() {
-        return Ok(());
-    }
-    log::warn!("cli bridge: could not truncate {}", stamp.display());
-    let binary = bridge_path();
-    match std::fs::remove_file(&binary) {
-        Ok(()) => Ok(()),
-        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(()),
-        Err(e) => Err(anyhow::Error::new(e).context(format!(
-            "cannot invalidate the published CLI: neither {} nor {} could be removed",
-            stamp.display(),
-            binary.display()
-        ))),
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum OperationState {
+    AwaitingDecision,
+    Downloading,
+    Validating,
+    Staging,
+    Committing,
+    Succeeded,
+    Cancelled,
+    Failed,
+    RecoveryRequired,
+}
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OperationView {
+    pub id: String,
+    pub state: OperationState,
+    pub target: String,
+    pub mcp: McpReport,
+    #[serde(default)]
+    pub mcp_path: String,
+    #[serde(default)]
+    pub skill: Option<Skill>,
+    pub progress_bytes: u64,
+    pub total_bytes: u64,
+    pub error: Option<CompanyError>,
+    #[serde(default)]
+    pub kind: OperationKind,
+    #[serde(default)]
+    pub preview_ready: bool,
+    #[serde(default)]
+    pub customized: bool,
+    #[serde(default)]
+    pub changes: Vec<FileChange>,
+}
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum OperationKind {
+    #[default]
+    Install,
+    Update,
+}
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FileChange {
+    pub path: String,
+    pub kind: FileChangeKind,
+    #[serde(default)]
+    pub current: Option<FilePreview>,
+    #[serde(default)]
+    pub incoming: Option<FilePreview>,
+}
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum FileChangeKind {
+    Added,
+    Modified,
+    Deleted,
+}
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct FilePreview {
+    pub kind: PreviewKind,
+    pub size_bytes: u64,
+}
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum PreviewKind {
+    Text,
+    Binary,
+    Directory,
+}
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Installation {
+    pub id: String,
+    pub skill_id: String,
+    pub slug: String,
+    pub name: String,
+    pub target: String,
+    pub package_hash: String,
+    pub content_hash: String,
+    pub description_snapshot: String,
+    pub installed_at: String,
+    pub mcp_bypassed: bool,
+    #[serde(default)]
+    pub project_id: Option<String>,
+    #[serde(default)]
+    pub content_state: ContentState,
+    #[serde(default)]
+    pub store_state: StoreState,
+    #[serde(default)]
+    pub checked_at: Option<String>,
+    #[serde(default)]
+    pub store_error: Option<String>,
+}
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum StoreState {
+    Current,
+    NewPackage,
+    #[default]
+    Unknown,
+    Unavailable,
+}
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum ContentState {
+    Original,
+    Customized,
+    #[default]
+    Unknown,
+    Missing,
+}
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Project {
+    pub id: String,
+    pub name: String,
+    pub path: String,
+}
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Backup {
+    pub id: String,
+    pub installation_id: String,
+    pub created_at: String,
+    pub reason: String,
+    pub path: String,
+    pub full_hash: String,
+    pub installation: Installation,
+}
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum ReplacePhase {
+    Prepared,
+    OldMoved,
+    NewMoved,
+    Committed,
+}
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ReplaceJournal {
+    pub view: OperationView,
+    pub old: Installation,
+    pub new: Installation,
+    pub old_full_hash: String,
+    pub new_full_hash: String,
+    pub backup_id: String,
+    pub phase: ReplacePhase,
+    pub stage_owned: bool,
+}
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InstallJournal {
+    pub view: OperationView,
+    pub installation: Installation,
+    pub full_hash: String,
+    #[serde(default)]
+    pub stage_owned: bool,
+}
+````
+
+## File: src-tauri/src/core/central_repo.rs
+````rust
+use anyhow::{Context, Result, anyhow};
+use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
+use std::fs;
+use std::path::{Component, Path, PathBuf};
+use std::sync::{Mutex, OnceLock};
+use walkdir::WalkDir;
+
+const CONFIG_FILE_NAME: &str = "repo-config.json";
+
+static BASE_DIR_OVERRIDE: OnceLock<Mutex<Option<PathBuf>>> = OnceLock::new();
+/// Test-only redirection of the home directory, so a test can exercise paths
+/// that are deliberately *not* relocatable by the user (see `cli_bridge`).
+static HOME_DIR_OVERRIDE: OnceLock<Mutex<Option<PathBuf>>> = OnceLock::new();
+static SKILLS_DIR_OVERRIDE: OnceLock<Mutex<Option<PathBuf>>> = OnceLock::new();
+static STARTUP_WARNINGS: OnceLock<Mutex<Vec<String>>> = OnceLock::new();
+static STARTUP_ERROR_LOG: OnceLock<Mutex<Vec<String>>> = OnceLock::new();
+
+fn push_startup_warning(code: &str) {
+    let mut warnings = STARTUP_WARNINGS
+        .get_or_init(|| Mutex::new(Vec::new()))
+        .lock()
+        .unwrap_or_else(|e| e.into_inner());
+    if !warnings.iter().any(|w| w == code) {
+        warnings.push(code.to_string());
     }
 }
 
-/// Build the command that runs the published CLI, without a console window.
+/// Warning codes recorded while resolving the central repository at startup.
+/// The frontend maps them to localized banner text (`settings.repoWarning_*`).
+pub fn startup_warnings() -> Vec<String> {
+    STARTUP_WARNINGS
+        .get_or_init(|| Mutex::new(Vec::new()))
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+        .clone()
+}
+
+/// Record a detailed startup error for later logging. `ensure_central_repo`
+/// runs before `tauri_plugin_log` is installed (see `run()` in lib.rs), so a
+/// `log::error!` here is swallowed by the default no-op logger. Stash the
+/// detail and let `setup` flush it once the real logger exists.
+pub(crate) fn record_startup_error(message: String) {
+    STARTUP_ERROR_LOG
+        .get_or_init(|| Mutex::new(Vec::new()))
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+        .push(message);
+}
+
+/// Drain the startup errors stashed by [`record_startup_error`]. Called from
+/// `tauri::Builder::setup` once the logger is up so the detail lands in the log
+/// file that a support bundle collects.
+pub fn take_startup_errors() -> Vec<String> {
+    let mut guard = STARTUP_ERROR_LOG
+        .get_or_init(|| Mutex::new(Vec::new()))
+        .lock()
+        .unwrap_or_else(|e| e.into_inner());
+    std::mem::take(&mut guard)
+}
+
+/// Global mutex shared by every test that mutates the base-dir override via
+/// [`set_test_base_dir_override`]. The override is process-wide static state,
+/// so any two tests holding their own per-module locks can still race. Tests
+/// must take this guard before calling `set_test_base_dir_override` and keep
+/// it alive until they restore the previous value.
+#[cfg(test)]
+static TEST_BASE_DIR_GUARD: OnceLock<Mutex<()>> = OnceLock::new();
+
+#[cfg(test)]
+pub(crate) fn test_base_dir_lock() -> std::sync::MutexGuard<'static, ()> {
+    TEST_BASE_DIR_GUARD
+        .get_or_init(|| Mutex::new(()))
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+struct RepoPathConfig {
+    repo_path: Option<String>,
+    pending_migration_from: Option<String>,
+    /// Where the library lived before a move that has completed. Links and DB
+    /// paths still pointing there are rewritten once the store is open, then
+    /// this is cleared (see [`take_repoint_from`]).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    repoint_from: Option<String>,
+}
+
+fn default_base_dir() -> PathBuf {
+    home_base_dir()
+}
+
+/// `~/.skills-manager`, ignoring any configured relocation.
 ///
-/// The CLI is a console-subsystem binary and the app is not, so spawning it
-/// plainly makes Windows open a console window for it — a black flash on the
-/// first launch after every install (#413). Every other spawn in this crate
-/// hides it the same way; a new one here has to as well.
-fn cli_command(path: &Path) -> Command {
-    #[allow(unused_mut)]
-    let mut cmd = Command::new(path);
-    #[cfg(target_os = "windows")]
+/// The library can be moved anywhere the user likes, but a few things must
+/// stay where another program can find them without being told — the CLI
+/// bridge an agent runs, above all. Those use this rather than [`base_dir`].
+pub fn home_base_dir() -> PathBuf {
+    if let Some(path) = HOME_DIR_OVERRIDE
+        .get_or_init(|| Mutex::new(None))
+        .lock()
+        .unwrap()
+        .clone()
     {
-        use std::os::windows::process::CommandExt;
-        cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
+        return path.join(".skills-manager");
     }
-    cmd
+    dirs::home_dir()
+        .expect("Cannot determine home directory")
+        .join(".skills-manager")
 }
 
-/// Run the freshly copied binary. A copy that cannot report its own version is
-/// truncated, blocked, or built for another architecture — publishing it would
-/// hand agents a binary that fails on first use.
-fn verify(path: &Path, expected_version: &str) -> Result<()> {
-    let output = cli_command(path)
-        .arg("--version")
-        .output()
-        .with_context(|| format!("could not run {}", path.display()))?;
-    if !output.status.success() {
-        bail!("{} --version exited with {}", path.display(), output.status);
+#[cfg(test)]
+pub(crate) fn set_test_home_dir_override(path: Option<PathBuf>) {
+    *HOME_DIR_OVERRIDE
+        .get_or_init(|| Mutex::new(None))
+        .lock()
+        .unwrap() = path;
+}
+
+fn config_file_path() -> PathBuf {
+    dirs::config_dir()
+        .unwrap_or_else(default_base_dir)
+        .join("skills-manager")
+        .join(CONFIG_FILE_NAME)
+}
+
+/// Distinguishes "no config file" (normal fresh install) from "config file
+/// exists but cannot be used" (must never be silently treated as a fresh
+/// install — that is how a configured library turns into an empty default
+/// one and users report "all my skills are gone", issue #228 review).
+#[derive(Debug)]
+enum ConfigState {
+    Missing,
+    Valid(RepoPathConfig),
+    Invalid(String),
+}
+
+fn load_config_state_from(path: &Path) -> ConfigState {
+    let raw = match fs::read_to_string(path) {
+        Ok(raw) => raw,
+        Err(err) if err.kind() == std::io::ErrorKind::NotFound => return ConfigState::Missing,
+        Err(err) => {
+            return ConfigState::Invalid(format!("cannot read {}: {err}", path.display()));
+        }
+    };
+    match serde_json::from_str(&raw) {
+        Ok(config) => ConfigState::Valid(config),
+        Err(err) => ConfigState::Invalid(format!("corrupt JSON in {}: {err}", path.display())),
     }
-    // Whole-token equality, not `contains`: 1.35.1 would otherwise accept a
-    // binary reporting 1.35.10, and catching exactly that mismatch is the
-    // reason this check exists.
-    let reported = String::from_utf8_lossy(&output.stdout);
-    let version = reported.split_whitespace().last().unwrap_or_default();
-    if version != expected_version {
-        bail!(
-            "{} reports {:?}, expected version {expected_version}",
-            path.display(),
-            reported.trim()
-        );
+}
+
+fn load_config_state() -> ConfigState {
+    load_config_state_from(&config_file_path())
+}
+
+fn load_config() -> RepoPathConfig {
+    match load_config_state() {
+        ConfigState::Valid(config) => config,
+        ConfigState::Missing | ConfigState::Invalid(_) => RepoPathConfig::default(),
+    }
+}
+
+fn save_config(config: &RepoPathConfig) -> Result<()> {
+    let path = config_file_path();
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent)?;
+    }
+    fs::write(path, serde_json::to_vec_pretty(config)?)?;
+    Ok(())
+}
+
+fn normalize_path(raw: &str) -> Result<PathBuf> {
+    let trimmed = raw.trim();
+    if trimmed.is_empty() {
+        return Err(anyhow!("Path cannot be empty"));
+    }
+
+    let expanded = if trimmed == "~" {
+        dirs::home_dir().ok_or_else(|| anyhow!("Cannot determine home directory"))?
+    } else if trimmed.starts_with("~/") || trimmed.starts_with("~\\") {
+        dirs::home_dir()
+            .ok_or_else(|| anyhow!("Cannot determine home directory"))?
+            .join(&trimmed[2..])
+    } else {
+        PathBuf::from(trimmed)
+    };
+
+    if !expanded.is_absolute() {
+        return Err(anyhow!("Central repository path must be absolute"));
+    }
+
+    let mut normalized = PathBuf::new();
+    for component in expanded.components() {
+        match component {
+            Component::CurDir => {}
+            Component::ParentDir => {
+                normalized.pop();
+            }
+            other => normalized.push(other.as_os_str()),
+        }
+    }
+    Ok(normalized)
+}
+
+pub fn configured_base_dir() -> Option<PathBuf> {
+    load_config()
+        .repo_path
+        .and_then(|path| normalize_path(&path).ok())
+}
+
+/// Where the user asked the library to live (takes effect at the next launch).
+fn requested_base_from(config: &RepoPathConfig) -> PathBuf {
+    config
+        .repo_path
+        .as_deref()
+        .and_then(|path| normalize_path(path).ok())
+        .unwrap_or_else(default_base_dir)
+}
+
+/// Where the library actually is: the source of a move that hasn't happened
+/// yet, otherwise the requested location. Saving a new path therefore never
+/// switches a running session — the move happens at the next launch.
+fn live_base_from(config: &RepoPathConfig) -> PathBuf {
+    if let Some(source) = config
+        .pending_migration_from
+        .as_deref()
+        .and_then(|path| normalize_path(path).ok())
+    {
+        if source.is_dir() {
+            return source;
+        }
+    }
+    requested_base_from(config)
+}
+
+pub fn base_dir() -> PathBuf {
+    if let Some(path) = BASE_DIR_OVERRIDE
+        .get_or_init(|| Mutex::new(None))
+        .lock()
+        .unwrap()
+        .clone()
+    {
+        return path;
+    }
+
+    live_base_from(&load_config())
+}
+
+/// The location a pending move will go to at the next launch, if any.
+pub fn pending_base_dir() -> Option<PathBuf> {
+    if base_dir_override_active() {
+        return None;
+    }
+    let config = load_config();
+    let requested = requested_base_from(&config);
+    (live_base_from(&config) != requested).then_some(requested)
+}
+
+/// Whether an explicit runtime base-dir override is active (CLI `--skills-root`
+/// / `--path`). Startup migration is skipped when it is — the caller chose a
+/// specific library and the app's shared pending-migration marker doesn't apply.
+fn base_dir_override_active() -> bool {
+    BASE_DIR_OVERRIDE
+        .get_or_init(|| Mutex::new(None))
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+        .is_some()
+}
+
+pub fn set_runtime_base_dir_override(path: Option<PathBuf>) {
+    *BASE_DIR_OVERRIDE
+        .get_or_init(|| Mutex::new(None))
+        .lock()
+        .unwrap() = path;
+}
+
+pub fn set_runtime_skills_dir_override(path: Option<PathBuf>) {
+    *SKILLS_DIR_OVERRIDE
+        .get_or_init(|| Mutex::new(None))
+        .lock()
+        .unwrap() = path;
+}
+
+#[cfg(test)]
+pub(crate) fn set_test_base_dir_override(path: Option<PathBuf>) {
+    set_runtime_base_dir_override(path);
+    set_runtime_skills_dir_override(None);
+}
+
+pub fn skills_dir() -> PathBuf {
+    if let Some(path) = SKILLS_DIR_OVERRIDE
+        .get_or_init(|| Mutex::new(None))
+        .lock()
+        .unwrap()
+        .clone()
+    {
+        return path;
+    }
+    base_dir().join("skills")
+}
+
+/// Derive a stable per-skills-root state directory under the user's default base.
+///
+/// CLI's `--skills-root` lets agents operate on an external skills checkout
+/// (e.g. a freshly cloned `my-skills`) without touching the app's default repo.
+/// The manager still needs a home for its DB, scenarios, cache, and logs — but
+/// putting that state inside the external checkout would pollute the user's
+/// repo, and putting it in the parent directory would silently litter wherever
+/// the user happened to clone. Instead, namespace the state under
+/// `<default-base>/external/<sanitized-name>-<short-hash>/`, keyed by the
+/// canonical path of the skills root so repeat invocations reuse the same DB.
+pub fn external_base_dir(skills_root: &Path) -> PathBuf {
+    // canonicalize() requires the path to exist. For not-yet-cloned targets we
+    // still want a stable namespace, so fall back to absolutizing + lexically
+    // normalizing the path. Without this, `./my-skills`, `my-skills`, and
+    // `a/../my-skills` would hash to different namespaces despite resolving
+    // to the same location.
+    let canonical = match skills_root.canonicalize() {
+        Ok(p) => p,
+        Err(_) => {
+            let absolute = if skills_root.is_absolute() {
+                skills_root.to_path_buf()
+            } else {
+                std::env::current_dir()
+                    .map(|cwd| cwd.join(skills_root))
+                    .unwrap_or_else(|_| skills_root.to_path_buf())
+            };
+            lexically_normalize(&absolute)
+        }
+    };
+    let name = canonical
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or("external");
+    let mut hasher = Sha256::new();
+    hasher.update(canonical.to_string_lossy().as_bytes());
+    let digest = hasher.finalize();
+    let short_hash: String = digest.iter().take(5).map(|b| format!("{:02x}", b)).collect();
+    default_base_dir()
+        .join("external")
+        .join(format!("{}-{}", sanitize_dir_name(name), short_hash))
+}
+
+/// Lexically normalize `.` and `..` segments without touching the filesystem.
+/// `..` over a normal segment cancels it; `..` over a root or another `..`
+/// is preserved (so we don't pretend to escape the filesystem root).
+fn lexically_normalize(path: &Path) -> PathBuf {
+    use std::path::Component;
+    let mut out: Vec<Component> = Vec::new();
+    for comp in path.components() {
+        match comp {
+            Component::CurDir => {}
+            Component::ParentDir => match out.last() {
+                Some(Component::Normal(_)) => {
+                    out.pop();
+                }
+                Some(Component::RootDir) | Some(Component::Prefix(_)) => {
+                    // can't go above root — drop the `..`
+                }
+                _ => out.push(comp),
+            },
+            other => out.push(other),
+        }
+    }
+    out.iter().collect()
+}
+
+fn sanitize_dir_name(name: &str) -> String {
+    let cleaned: String = name
+        .chars()
+        .map(|c| {
+            if c.is_ascii_alphanumeric() || c == '-' || c == '_' || c == '.' {
+                c
+            } else {
+                '-'
+            }
+        })
+        .collect();
+    if cleaned.is_empty() {
+        "external".to_string()
+    } else {
+        cleaned
+    }
+}
+
+pub fn scenarios_dir() -> PathBuf {
+    base_dir().join("scenarios")
+}
+
+pub fn cache_dir() -> PathBuf {
+    base_dir().join("cache")
+}
+
+pub fn logs_dir() -> PathBuf {
+    base_dir().join("logs")
+}
+
+pub fn db_path() -> PathBuf {
+    base_dir().join("skills-manager.db")
+}
+
+pub fn set_base_dir_override(path: Option<String>) -> Result<PathBuf> {
+    let mut config = load_config();
+
+    // Resolve from the persisted config, never `base_dir()`: a runtime override
+    // (CLI `--skills-root`) is not where the app's library lives. Changing the
+    // path twice before a restart still migrates from where the data really is.
+    let data_location = live_base_from(&config);
+
+    let (next, persist_repo_path) = match path {
+        Some(raw) => (normalize_path(&raw)?, true),
+        None => (default_base_dir(), false),
+    };
+
+    config.repo_path = if persist_repo_path {
+        Some(next.to_string_lossy().to_string())
+    } else {
+        None
+    };
+    config.pending_migration_from = if next != data_location {
+        Some(data_location.to_string_lossy().to_string())
+    } else {
+        None
+    };
+    save_config(&config)?;
+    Ok(next)
+}
+
+fn directory_has_entries(path: &Path) -> Result<bool> {
+    if !path.exists() {
+        return Ok(false);
+    }
+    Ok(fs::read_dir(path)?.next().is_some())
+}
+
+fn copy_dir_recursive(source: &Path, target: &Path) -> Result<()> {
+    for entry in WalkDir::new(source) {
+        let entry = entry?;
+        let relative = entry.path().strip_prefix(source)?;
+        let destination = target.join(relative);
+        if entry.file_type().is_symlink() {
+            copy_symlink(entry.path(), &destination)?;
+        } else if entry.file_type().is_dir() {
+            fs::create_dir_all(&destination)?;
+        } else {
+            if let Some(parent) = destination.parent() {
+                fs::create_dir_all(parent)?;
+            }
+            fs::copy(entry.path(), &destination).with_context(|| {
+                format!(
+                    "Failed to copy {} to {}",
+                    entry.path().display(),
+                    destination.display()
+                )
+            })?;
+        }
     }
     Ok(())
 }
 
-/// Publish the bundled CLI to the bridge path, replacing whatever is there.
-///
-/// Best-effort by contract: every failure leaves the stamp absent and is
-/// logged, and the caller carries on. The app must start whether or not an
-/// agent can drive it.
-pub fn ensure_bridge(app_version: &str) {
-    match ensure_bridge_inner(app_version) {
-        Ok(path) => log::info!("cli bridge: ready at {}", path.display()),
-        Err(e) => log::warn!("cli bridge: not available: {e:#}"),
+/// Recreate a link as a link. Following it would turn a file link into a copy
+/// and fail outright on a directory link, aborting a cross-volume move.
+fn copy_symlink(source: &Path, destination: &Path) -> Result<()> {
+    let link = fs::read_link(source)?;
+    if let Some(parent) = destination.parent() {
+        fs::create_dir_all(parent)?;
     }
-}
-
-fn ensure_bridge_inner(app_version: &str) -> Result<PathBuf> {
-    // Fast path: this version already published and still present. Checked
-    // before anything is removed so an ordinary launch does not spend 15 MB of
-    // copying, and so a running agent's binary is not disturbed for no reason.
-    if read_stamp().as_deref() == Some(app_version) && bridge_path().is_file() {
-        return Ok(bridge_path());
-    }
-    publish_from(&bundled_cli()?, app_version)
-}
-
-fn publish_from(source: &Path, app_version: &str) -> Result<PathBuf> {
-    let target = bridge_path();
-
-    // From here the bridge is not to be trusted until the new copy lands.
-    invalidate_bridge()?;
-
-    let dir = bridge_dir();
-    std::fs::create_dir_all(&dir)
-        .with_context(|| format!("could not create {}", dir.display()))?;
-
-    // Copy beside the target so the rename stays on one filesystem.
-    let staged = dir.join(format!(".{BRIDGE_BIN_NAME}.staged"));
-    let _ = std::fs::remove_file(&staged);
-    std::fs::copy(source, &staged)
-        .with_context(|| format!("could not copy {} to {}", source.display(), staged.display()))?;
-
     #[cfg(unix)]
+    std::os::unix::fs::symlink(&link, destination)?;
+    #[cfg(windows)]
     {
-        use std::os::unix::fs::PermissionsExt;
-        std::fs::set_permissions(&staged, std::fs::Permissions::from_mode(0o755))
-            .context("could not make the staged CLI executable")?;
-    }
-
-    if let Err(e) = verify(&staged, app_version) {
-        let _ = std::fs::remove_file(&staged);
-        return Err(e);
-    }
-
-    // On Windows this fails while the old binary is running or held open by a
-    // scanner. That is the case the stamp exists for: the stale binary stays,
-    // unusable, rather than being silently presented as current.
-    rename_retrying_sharing_violation(&staged, &target)
-        .with_context(|| format!("could not replace {} (it may be in use)", target.display()))?;
-
-    std::fs::write(stamp_path(), app_version)
-        .with_context(|| format!("could not write {}", stamp_path().display()))?;
-
-    log::info!(
-        "cli bridge: published {app_version} to {}",
-        target.display()
-    );
-    Ok(target)
-}
-
-/// #487: right after `verify` ran the staged exe, Windows can still hold it
-/// for a moment (scanners inspect a freshly executed binary), so the rename
-/// fails with a sharing violation. Wait that out, ~2 s at most; any other
-/// error, or a lock that outlasts it, is reported as before.
-fn rename_retrying_sharing_violation(from: &Path, to: &Path) -> std::io::Result<()> {
-    const ERROR_SHARING_VIOLATION: i32 = 32;
-    let mut attempts = 0;
-    loop {
-        match std::fs::rename(from, to) {
-            Err(e)
-                if cfg!(windows)
-                    && e.raw_os_error() == Some(ERROR_SHARING_VIOLATION)
-                    && attempts < 10 =>
-            {
-                attempts += 1;
-                std::thread::sleep(std::time::Duration::from_millis(200));
-            }
-            result => return result,
+        if fs::metadata(source).map(|m| m.is_dir()).unwrap_or(false) {
+            std::os::windows::fs::symlink_dir(&link, destination)?;
+        } else {
+            std::os::windows::fs::symlink_file(&link, destination)?;
         }
     }
+    Ok(())
+}
+
+/// Files the app recreates on its own. A target holding nothing else is not a
+/// library: it is what an earlier session or the CLI bridge left behind.
+const REGENERABLE_ROOT_FILES: &[&str] = &[".skills-manager.lock", "git-askpass.sh"];
+/// OS metadata, debris wherever it appears.
+const OS_METADATA_FILES: &[&str] = &[".DS_Store", "Thumbs.db", "desktop.ini"];
+
+/// Whether `path` can be dropped safely: a regenerable file, the CLI bridge's
+/// files in the default home's `bin/` (republished at every launch, so they
+/// must not block moving the library back home), or a directory holding only
+/// such things. Links are never followed or counted as debris, and anything
+/// that cannot be inspected is kept.
+fn is_regenerable(path: &Path, target: &Path) -> bool {
+    let Ok(meta) = fs::symlink_metadata(path) else {
+        return false;
+    };
+    let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
+    if meta.is_file() {
+        let parent = path.parent();
+        let in_bridge_dir = parent == Some(super::cli_bridge::bridge_dir().as_path());
+        return OS_METADATA_FILES.contains(&name)
+            || (parent == Some(target) && REGENERABLE_ROOT_FILES.contains(&name))
+            || (in_bridge_dir && super::cli_bridge::is_bridge_file(name));
+    }
+    if !meta.is_dir() {
+        return false;
+    }
+    let Ok(entries) = fs::read_dir(path) else {
+        return false;
+    };
+    entries
+        .into_iter()
+        .all(|entry| entry.is_ok_and(|entry| is_regenerable(&entry.path(), target)))
+}
+
+/// Remove debris from a migration target so the move can proceed. All-or-
+/// nothing: if anything in it is not known debris, nothing is touched.
+fn clear_regenerable_target(target: &Path) -> Result<()> {
+    let Ok(entries) = fs::read_dir(target) else {
+        return Ok(());
+    };
+    let Ok(entries) = entries
+        .map(|entry| entry.map(|e| e.path()))
+        .collect::<std::io::Result<Vec<PathBuf>>>()
+    else {
+        return Ok(());
+    };
+    if !entries.iter().all(|path| is_regenerable(path, target)) {
+        return Ok(());
+    }
+    for path in entries {
+        if fs::symlink_metadata(&path)?.is_dir() {
+            fs::remove_dir_all(&path)?;
+        } else {
+            fs::remove_file(&path)?;
+        }
+    }
+    Ok(())
+}
+
+/// Whether two paths resolve to the same directory. Falls back to a lexical
+/// comparison when either side can't be canonicalized (e.g. the target does not
+/// exist yet), so a purely cosmetic difference (case, `8.3` names, a symlink)
+/// isn't mistaken for a real relocation.
+fn paths_are_same_dir(a: &Path, b: &Path) -> bool {
+    if a == b {
+        return true;
+    }
+    match (fs::canonicalize(a), fs::canonicalize(b)) {
+        (Ok(ca), Ok(cb)) => ca == cb,
+        _ => false,
+    }
+}
+
+/// Move by copying into the (empty) target, for when a rename can't (another
+/// volume). On failure the partial copy is removed — everything in the target
+/// is ours, and left behind it would block every retry as "not empty". On
+/// success the old copy is kept but set aside: left in place it looks like the
+/// live library and blocks ever moving back to that path.
+fn move_by_copy(source: &Path, target: &Path) -> Result<()> {
+    if let Err(err) = copy_dir_recursive(source, target) {
+        if let Ok(entries) = fs::read_dir(target) {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                let _ = if entry.file_type().is_ok_and(|t| t.is_dir()) {
+                    fs::remove_dir_all(&path)
+                } else {
+                    fs::remove_file(&path)
+                };
+            }
+        }
+        return Err(err);
+    }
+    let aside = source.with_file_name(format!(
+        "{}.moved-{}",
+        source.file_name().and_then(|n| n.to_str()).unwrap_or("library"),
+        chrono::Local::now().format("%Y%m%d-%H%M%S")
+    ));
+    if let Err(err) = fs::rename(source, &aside) {
+        record_startup_error(format!(
+            "central repo: copied the library to {}, but cannot set the old copy at {} aside ({err})",
+            target.display(),
+            source.display()
+        ));
+    }
+    Ok(())
+}
+
+/// What the caller should do after attempting a pending central-repo move.
+enum MigrationOutcome {
+    /// No move was pending, or it completed. Run against the configured base.
+    Proceed,
+    /// The move could not complete safely. The marker stays, so `base_dir()`
+    /// keeps resolving to the intact source; the next launch retries.
+    UseSource,
+}
+
+/// Try to satisfy a pending central-repository relocation.
+///
+/// This runs before the logger, the panic hook, and the window exist (see
+/// `run()` in lib.rs), so it must never return an error that would panic the
+/// process into a windowless death (#252). Every failure instead records a
+/// startup warning + a deferred log line and falls back to the source, where
+/// the user's data is known to be intact. It mutates `config` in place but
+/// does NOT persist it — the caller saves once, which also keeps this unit
+/// testable without touching the real config file.
+fn migrate_repo_if_needed(config: &mut RepoPathConfig, current_base: &Path) -> MigrationOutcome {
+    let Some(source_raw) = config.pending_migration_from.clone() else {
+        return MigrationOutcome::Proceed;
+    };
+    let source = match normalize_path(&source_raw) {
+        Ok(path) => path,
+        Err(err) => {
+            // The stored path is unusable, so the move can never proceed. Drop
+            // the marker to stop retrying every launch and run against target.
+            record_startup_error(format!(
+                "central repo: pending migration source {source_raw:?} is invalid ({err}); dropping it"
+            ));
+            config.pending_migration_from = None;
+            return MigrationOutcome::Proceed;
+        }
+    };
+
+    // Nothing left to move: the source is gone (moved already, or the old
+    // location was removed), or source and target are the same directory.
+    // Compare canonically, not just lexically — on a case-insensitive volume
+    // `D:\Skills` and `d:\skills` are one directory (likewise 8.3 vs long, or a
+    // symlink), and a lexical mismatch would otherwise loop forever on
+    // `migration_incomplete`, telling the user to empty their own library.
+    if !source.exists() || paths_are_same_dir(&source, current_base) {
+        // A source that is gone while the target exists is a move that
+        // finished but was never recorded (crash or failed config save right
+        // after the rename): its links and DB paths still need repointing.
+        if !source.exists() && current_base.is_dir() {
+            config.repoint_from = Some(source.to_string_lossy().to_string());
+        }
+        config.pending_migration_from = None;
+        return MigrationOutcome::Proceed;
+    }
+
+    // A target nested inside the source can never be a valid destination.
+    if current_base.starts_with(&source) {
+        record_startup_error(format!(
+            "central repo: migration target {} is inside source {}; keeping data at the source",
+            current_base.display(),
+            source.display()
+        ));
+        push_startup_warning("migration_incomplete");
+        return MigrationOutcome::UseSource;
+    }
+
+    // Only ever move into an absent/empty target — never blind-merge. A
+    // non-empty target is either a real library we must not overwrite or debris
+    // from a failed attempt we cannot tell apart; keeping the user on their
+    // intact source is lossless, overwriting is not. A fresh target also means
+    // the recursive copy only ever creates new files, so it can never hit the
+    // read-only git pack files that overwriting bricked startup on (#252).
+    if let Err(err) = clear_regenerable_target(current_base) {
+        record_startup_error(format!(
+            "central repo: cannot clear leftovers in migration target {} ({err})",
+            current_base.display()
+        ));
+    }
+    let target_empty = match directory_has_entries(current_base) {
+        Ok(has_entries) => !has_entries,
+        Err(err) => {
+            record_startup_error(format!(
+                "central repo: cannot inspect migration target {} ({err}); keeping data at source {}",
+                current_base.display(),
+                source.display()
+            ));
+            push_startup_warning("migration_incomplete");
+            return MigrationOutcome::UseSource;
+        }
+    };
+    if !target_empty {
+        record_startup_error(format!(
+            "central repo: migration target {} is not empty; keeping data at source {}",
+            current_base.display(),
+            source.display()
+        ));
+        push_startup_warning("migration_incomplete");
+        return MigrationOutcome::UseSource;
+    }
+
+    if let Some(parent) = current_base.parent() {
+        if let Err(err) = fs::create_dir_all(parent) {
+            record_startup_error(format!(
+                "central repo: cannot create migration target parent {} ({err}); keeping data at source {}",
+                parent.display(),
+                source.display()
+            ));
+            push_startup_warning("migration_incomplete");
+            return MigrationOutcome::UseSource;
+        }
+    }
+
+    // Same volume: an atomic rename moves the whole tree cheaply. Cross volume
+    // (or a rename the OS refuses): copy into the empty target. Because the
+    // target is empty, no existing file is ever overwritten.
+    if fs::rename(&source, current_base).is_err() {
+        if let Err(err) = move_by_copy(&source, current_base) {
+            record_startup_error(format!(
+                "central repo: migration copy from {} to {} failed ({err:#}); keeping data at source",
+                source.display(),
+                current_base.display()
+            ));
+            push_startup_warning("migration_incomplete");
+            return MigrationOutcome::UseSource;
+        }
+    }
+
+    config.pending_migration_from = None;
+    config.repoint_from = Some(source.to_string_lossy().to_string());
+    MigrationOutcome::Proceed
+}
+
+/// Every process using the app's library holds this lease shared for its
+/// whole life; moving the library takes it exclusively. So a move happens only
+/// while nothing else has the library open (a running app, an agent's CLI call,
+/// a second launch), and whoever starts mid-move waits for it to finish. The
+/// file lives next to the config, which never moves with the library.
+static LIBRARY_LEASE: OnceLock<Mutex<Option<fs::File>>> = OnceLock::new();
+
+fn lease_slot() -> std::sync::MutexGuard<'static, Option<fs::File>> {
+    LIBRARY_LEASE
+        .get_or_init(|| Mutex::new(None))
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+}
+
+/// Take the lease for the rest of this process. Returns whether it is held
+/// exclusively — only then may this process move the library. Without a lock
+/// file (unwritable config dir) nobody moves anything, which is safe.
+fn take_library_lease(try_exclusive: bool) -> bool {
+    use fs2::FileExt;
+    let mut slot = lease_slot();
+    if slot.is_some() {
+        return false;
+    }
+    let path = config_file_path().with_file_name("library.lock");
+    let file = path
+        .parent()
+        .and_then(|parent| fs::create_dir_all(parent).ok())
+        .and_then(|_| {
+            fs::OpenOptions::new()
+                .create(true)
+                .truncate(false)
+                .write(true)
+                .open(&path)
+                .ok()
+        });
+    let Some(file) = file else {
+        return false;
+    };
+    // Fully qualified: newer std `File` has inherent lock methods of the same
+    // names; keep every call on one implementation.
+    let exclusive = try_exclusive && FileExt::try_lock_exclusive(&file).is_ok();
+    if !exclusive {
+        // Blocks only while another process is moving the library.
+        let _ = FileExt::lock_shared(&file);
+    }
+    *slot = Some(file);
+    exclusive
+}
+
+/// After a move, go back to sharing the library with other processes.
+fn downgrade_library_lease() {
+    use fs2::FileExt;
+    if let Some(file) = lease_slot().as_ref() {
+        let _ = FileExt::unlock(file);
+        let _ = FileExt::lock_shared(file);
+    }
+}
+
+/// Take the pre-move location recorded by a completed move, if links and DB
+/// paths pointing there still need rewriting. Call [`clear_repoint_from`] once
+/// that is done, so a crash in between retries at the next launch.
+pub fn take_repoint_from() -> Option<(PathBuf, PathBuf)> {
+    if base_dir_override_active() {
+        return None;
+    }
+    let config = load_config();
+    let from = normalize_path(config.repoint_from.as_deref()?).ok()?;
+    Some((from, base_dir()))
+}
+
+pub fn clear_repoint_from() -> Result<()> {
+    let mut config = load_config();
+    if config.repoint_from.take().is_some() {
+        save_config(&config)?;
+    }
+    Ok(())
+}
+
+/// `allow_migration`: whether this process may carry out a pending move. Only
+/// the app at startup and an explicit CLI `repo set-path` do; everything else
+/// keeps running against the library where it is.
+pub fn ensure_central_repo(allow_migration: bool) -> Result<()> {
+    // A config file that exists but cannot be used means the app is about to
+    // run against the default location even though the user configured (and
+    // populated) another one. Never let that pass silently — it presents as
+    // "the library was rebuilt empty, all skills lost" (#228 review).
+    let mut config = match load_config_state() {
+        ConfigState::Valid(config) => {
+            if let Some(raw) = config.repo_path.as_deref() {
+                if let Err(err) = normalize_path(raw) {
+                    log::error!(
+                        "central repo: configured repo_path {raw:?} is invalid ({err}); \
+                         falling back to the default location"
+                    );
+                    push_startup_warning("repo_path_invalid");
+                }
+            }
+            config
+        }
+        ConfigState::Missing => RepoPathConfig::default(),
+        ConfigState::Invalid(detail) => {
+            log::error!(
+                "central repo: config is unreadable ({detail}); \
+                 falling back to the default location"
+            );
+            push_startup_warning("config_unreadable");
+            RepoPathConfig::default()
+        }
+    };
+
+    // Only auto-migrate the app's own config-driven base. When a runtime base
+    // override is active (CLI `--skills-root` / `--path`), the pending marker in
+    // the shared config belongs to a different library and must not be applied
+    // to — or override — the explicitly chosen root. The app's own startup never
+    // sets an override before this point, so the #252 path is unaffected.
+    // A `--skills-root` run keeps its state under the default home too, so it
+    // shares the lease; it just never moves the app's library.
+    let override_active = base_dir_override_active();
+    let may_move = take_library_lease(
+        allow_migration && !override_active && config.pending_migration_from.is_some(),
+    );
+    if may_move {
+        // Re-read: another process may have finished a move while we waited.
+        config = load_config();
+        let pending_before = config.pending_migration_from.clone();
+        let target = requested_base_from(&config);
+        let _ = migrate_repo_if_needed(&mut config, &target);
+        if config.pending_migration_from != pending_before {
+            if let Err(err) = save_config(&config) {
+                record_startup_error(format!(
+                    "central repo: failed to persist migration state ({err}); it may retry next launch"
+                ));
+            }
+        }
+        downgrade_library_lease();
+    }
+    // Re-resolve: a completed move changed the base.
+    let current_base = base_dir();
+
+    // Legacy `.agent-skills` migration must run before create_dir_all below:
+    // it renames entries into `current_base` and skips ones that already
+    // exist, so pre-created empty dirs would silently swallow it (the old
+    // ordering made this branch dead code).
+    let legacy_path = dirs::home_dir().map(|home| home.join(".agent-skills"));
+    if let Some(old_path) = legacy_path {
+        if old_path.exists() && !current_base.join("skills").exists() {
+            log::info!("Migrating from old path {:?}", old_path);
+            fs::create_dir_all(&current_base)?;
+            if let Ok(entries) = fs::read_dir(&old_path) {
+                for entry in entries.flatten() {
+                    let dest = current_base.join(entry.file_name());
+                    if !dest.exists() {
+                        let _ = fs::rename(entry.path(), &dest);
+                    }
+                }
+            }
+        }
+    }
+
+    let dirs = [skills_dir(), scenarios_dir(), cache_dir(), logs_dir()];
+    for d in &dirs {
+        fs::create_dir_all(d)?;
+    }
+
+    Ok(())
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tempfile::tempdir;
 
-    /// A fake "bundled CLI" that reports the version it is told to. The copy,
-    /// verify, rename and stamp sequence is what this module owns; which real
-    /// binary it copies is not.
-    #[cfg(unix)]
-    fn fake_cli(dir: &Path, reports: &str) -> PathBuf {
-        use std::os::unix::fs::PermissionsExt;
-        let path = dir.join("skills-manager-cli");
-        std::fs::write(&path, format!("#!/bin/sh\necho 'skills-manager-cli {reports}'\n")).unwrap();
-        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o755)).unwrap();
-        path
+    // ── migrate_repo_if_needed (#252) ──
+
+    fn config_migrating(source: &Path, target: &Path) -> RepoPathConfig {
+        RepoPathConfig {
+            repo_path: Some(target.to_string_lossy().to_string()),
+            pending_migration_from: Some(source.to_string_lossy().to_string()),
+            ..Default::default()
+        }
     }
 
-    #[cfg(unix)]
     #[test]
-    fn publishing_stamps_only_after_the_copy_runs() {
-        let _lock = central_repo::test_base_dir_lock();
-        let tmp = tempdir().unwrap();
-        central_repo::set_test_home_dir_override(Some(tmp.path().to_path_buf()));
-        let src_dir = tmp.path().join("bundle");
-        std::fs::create_dir_all(&src_dir).unwrap();
+    fn migration_into_empty_target_moves_and_clears_marker() {
+        let src = tempfile::tempdir().unwrap();
+        let dst = tempfile::tempdir().unwrap(); // exists but empty
+        fs::create_dir_all(src.path().join("skills")).unwrap();
+        fs::write(src.path().join("skills/s.md"), b"skill").unwrap();
 
-        let source = fake_cli(&src_dir, "9.9.9");
-        publish_from(&source, "9.9.9").expect("a runnable copy must publish");
+        let mut config = config_migrating(src.path(), dst.path());
+        let outcome = migrate_repo_if_needed(&mut config, dst.path());
 
-        assert!(bridge_path().is_file());
-        assert_eq!(read_stamp().as_deref(), Some("9.9.9"));
-
-        central_repo::set_test_home_dir_override(None);
+        assert!(matches!(outcome, MigrationOutcome::Proceed));
+        assert_eq!(config.pending_migration_from, None);
+        assert_eq!(fs::read(dst.path().join("skills/s.md")).unwrap(), b"skill");
     }
 
-    /// The publish must abandon rather than proceed when the old bridge cannot
-    /// be made untrusted — otherwise it would leave a stamp vouching for a
-    /// binary that is no longer the one the app ships.
-    ///
-    /// Calls `invalidate_bridge` directly: going through `publish_from` would
-    /// also fail at the staged copy, and an assertion that cannot tell the two
-    /// apart proves nothing about the step under test.
-    #[cfg(unix)]
     #[test]
-    fn a_bridge_that_cannot_be_invalidated_blocks_the_publish() {
-        use std::os::unix::fs::PermissionsExt;
-        let _lock = central_repo::test_base_dir_lock();
-        let tmp = tempdir().unwrap();
-        central_repo::set_test_home_dir_override(Some(tmp.path().to_path_buf()));
-        let src_dir = tmp.path().join("bundle");
-        std::fs::create_dir_all(&src_dir).unwrap();
-
-        publish_from(&fake_cli(&src_dir, "9.9.9"), "9.9.9").unwrap();
-        let stamp = bridge_dir().join(".version");
-
-        // Nothing here can be removed (the directory denies writes) and the
-        // stamp itself cannot be rewritten, so all three fallbacks are closed.
-        std::fs::set_permissions(&stamp, std::fs::Permissions::from_mode(0o400)).unwrap();
-        std::fs::set_permissions(bridge_dir(), std::fs::Permissions::from_mode(0o500)).unwrap();
-
-        let result = invalidate_bridge();
-        let published_still_there = bridge_path().is_file() && stamp.is_file();
-
-        std::fs::set_permissions(bridge_dir(), std::fs::Permissions::from_mode(0o700)).unwrap();
-        std::fs::set_permissions(&stamp, std::fs::Permissions::from_mode(0o600)).unwrap();
-
-        result.expect_err("invalidation must fail when no fallback can take effect");
-        assert!(
-            published_still_there,
-            "precondition: the stale pair is what could not be removed"
-        );
-        // And the publish that would follow must not run.
-        std::fs::set_permissions(bridge_dir(), std::fs::Permissions::from_mode(0o500)).unwrap();
-        let publish = publish_from(&fake_cli(&src_dir, "9.9.10"), "9.9.10");
-        std::fs::set_permissions(bridge_dir(), std::fs::Permissions::from_mode(0o700)).unwrap();
-        publish.expect_err("publishing must abandon rather than leave a lying stamp");
-
-        central_repo::set_test_home_dir_override(None);
-    }
-
-    /// The invariant the stamp exists for: when a replace cannot complete, the
-    /// binary left behind is not merely old, it may be one that deletes a
-    /// user's directory where the current one refuses (#363). It must not be
-    /// reported as usable, and the schema gate cannot catch this because such
-    /// a fix carries no migration.
-    #[cfg(unix)]
-    #[test]
-    fn a_failed_republish_leaves_the_previous_bridge_unusable() {
-        let _lock = central_repo::test_base_dir_lock();
-        let tmp = tempdir().unwrap();
-        central_repo::set_test_home_dir_override(Some(tmp.path().to_path_buf()));
-        let src_dir = tmp.path().join("bundle");
-        std::fs::create_dir_all(&src_dir).unwrap();
-
-        publish_from(&fake_cli(&src_dir, "9.9.9"), "9.9.9").unwrap();
+    fn live_base_is_the_move_source_until_the_move_happens() {
+        // Saving a new path must not switch the running session: everything
+        // it wrote would land in the target and block the move at the next
+        // launch (#449 #469 #393).
+        let src = tempfile::tempdir().unwrap();
+        let dst = tempfile::tempdir().unwrap();
+        let config = config_migrating(src.path(), &dst.path().join("lib"));
         assert_eq!(
-            read_stamp().as_deref(),
-            Some("9.9.9"),
-            "precondition: a good bridge exists"
+            live_base_from(&config),
+            normalize_path(&src.path().to_string_lossy()).unwrap()
+        );
+        assert_eq!(
+            requested_base_from(&config),
+            normalize_path(&dst.path().join("lib").to_string_lossy()).unwrap()
         );
 
-        // The new app version ships a CLI that cannot run — a truncated copy,
-        // a blocked binary, the wrong architecture.
-        let broken = src_dir.join("broken-cli");
-        std::fs::write(&broken, "not executable").unwrap();
-        publish_from(&broken, "9.9.10").expect_err("an unrunnable copy must not publish");
-
-        assert!(
-            read_stamp().is_none(),
-            "a bridge that failed to republish must be left unstamped, so the \
-             skill refuses it even though a binary is still on disk"
-        );
-        assert!(
-            bridge_path().is_file(),
-            "the old binary may well be unremovable; the stamp is what gates it"
-        );
-
-        central_repo::set_test_home_dir_override(None);
+        // Once the source is gone (moved), the requested location is live.
+        let moved = config_migrating(&src.path().join("gone"), &dst.path().join("lib"));
+        assert_eq!(live_base_from(&moved), requested_base_from(&moved));
     }
 
+    #[test]
+    fn migration_clears_regenerable_leftovers_and_records_repoint() {
+        // What an earlier session and the CLI bridge leave in a target: a
+        // lock file, empty skeleton dirs, OS metadata, the bridge's `bin/`.
+        let _guard = test_base_dir_lock();
+        let src = tempfile::tempdir().unwrap();
+        let home = tempfile::tempdir().unwrap();
+        set_test_home_dir_override(Some(home.path().to_path_buf()));
+        let dst = home_base_dir(); // moving back to the default home
+        fs::write(src.path().join("a.txt"), b"src").unwrap();
+        fs::create_dir_all(&dst).unwrap();
+        fs::write(dst.join(".skills-manager.lock"), b"pid=1").unwrap();
+        fs::write(dst.join(".DS_Store"), b"").unwrap();
+        fs::create_dir_all(dst.join("skills")).unwrap();
+        fs::create_dir_all(dst.join("cache/repos")).unwrap();
+        let bridge = super::super::cli_bridge::bridge_path();
+        fs::create_dir_all(bridge.parent().unwrap()).unwrap();
+        fs::write(&bridge, b"bin").unwrap();
+        fs::write(bridge.with_file_name(".version"), b"1.0").unwrap();
+
+        let mut config = config_migrating(src.path(), &dst);
+        let outcome = migrate_repo_if_needed(&mut config, &dst);
+        set_test_home_dir_override(None);
+
+        assert!(matches!(outcome, MigrationOutcome::Proceed));
+        assert_eq!(config.pending_migration_from, None);
+        assert!(config.repoint_from.is_some());
+        assert_eq!(fs::read(dst.join("a.txt")).unwrap(), b"src");
+    }
+
+    #[test]
+    fn app_file_names_count_as_debris_only_at_the_target_root() {
+        let src = tempfile::tempdir().unwrap();
+        let dst = tempfile::tempdir().unwrap();
+        fs::write(src.path().join("a.txt"), b"src").unwrap();
+        fs::create_dir_all(dst.path().join("tools")).unwrap();
+        fs::write(dst.path().join("tools/git-askpass.sh"), b"mine").unwrap();
+
+        let mut config = config_migrating(src.path(), dst.path());
+        let outcome = migrate_repo_if_needed(&mut config, dst.path());
+
+        assert!(matches!(outcome, MigrationOutcome::UseSource));
+        assert!(dst.path().join("tools/git-askpass.sh").exists());
+    }
+
+    #[test]
+    fn move_by_copy_sets_the_old_copy_aside() {
+        let tmp = tempfile::tempdir().unwrap();
+        let src = tmp.path().join("lib");
+        let dst = tmp.path().join("new");
+        fs::create_dir_all(&src).unwrap();
+        fs::write(src.join("a.txt"), b"src").unwrap();
+
+        move_by_copy(&src, &dst).unwrap();
+
+        assert_eq!(fs::read(dst.join("a.txt")).unwrap(), b"src");
+        assert!(!src.exists(), "the path is free to move back to");
+        let aside: Vec<_> = fs::read_dir(tmp.path())
+            .unwrap()
+            .flatten()
+            .filter(|e| e.file_name().to_string_lossy().starts_with("lib.moved-"))
+            .collect();
+        assert_eq!(aside.len(), 1, "the old copy is kept");
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn move_by_copy_failure_leaves_the_target_empty() {
+        use std::os::unix::fs::PermissionsExt;
+        let tmp = tempfile::tempdir().unwrap();
+        let src = tmp.path().join("lib");
+        let dst = tmp.path().join("new");
+        fs::create_dir_all(src.join("a")).unwrap();
+        fs::write(src.join("a/ok.txt"), b"x").unwrap();
+        fs::write(src.join("z-unreadable"), b"x").unwrap();
+        fs::set_permissions(src.join("z-unreadable"), fs::Permissions::from_mode(0o000)).unwrap();
+        if fs::read(src.join("z-unreadable")).is_ok() {
+            return; // running as root: can't provoke the failure
+        }
+
+        assert!(move_by_copy(&src, &dst).is_err());
+
+        assert!(!directory_has_entries(&dst).unwrap(), "retry must see an empty target");
+        assert!(src.join("a/ok.txt").exists(), "source untouched");
+        fs::set_permissions(src.join("z-unreadable"), fs::Permissions::from_mode(0o644)).unwrap();
+    }
+
+    #[test]
+    fn a_bin_dir_outside_the_default_home_is_not_debris() {
+        // Only the default home's `bin/` holds the bridge; elsewhere a file
+        // with the bridge's name is the user's.
+        let src = tempfile::tempdir().unwrap();
+        let dst = tempfile::tempdir().unwrap();
+        fs::write(src.path().join("a.txt"), b"src").unwrap();
+        fs::create_dir_all(dst.path().join("bin")).unwrap();
+        fs::write(dst.path().join("bin/skills-manager-cli"), b"mine").unwrap();
+
+        let mut config = config_migrating(src.path(), dst.path());
+        let outcome = migrate_repo_if_needed(&mut config, dst.path());
+
+        assert!(matches!(outcome, MigrationOutcome::UseSource));
+        assert!(dst.path().join("bin/skills-manager-cli").exists());
+    }
+
+    #[test]
+    fn a_move_that_finished_unrecorded_still_repoints() {
+        // Crash (or failed config save) right after the rename: the source is
+        // gone, the target holds the library, the marker is still pending.
+        let dst = tempfile::tempdir().unwrap();
+        let gone = dst.path().join("moved-away");
+        let mut config = config_migrating(&gone, dst.path());
+
+        let outcome = migrate_repo_if_needed(&mut config, dst.path());
+
+        assert!(matches!(outcome, MigrationOutcome::Proceed));
+        assert_eq!(config.pending_migration_from, None);
+        assert_eq!(config.repoint_from.as_deref(), Some(gone.to_string_lossy().as_ref()));
+    }
+
+    #[test]
+    fn migration_leaves_a_target_with_real_content_untouched() {
+        // One real file among the leftovers: nothing is removed.
+        let src = tempfile::tempdir().unwrap();
+        let dst = tempfile::tempdir().unwrap();
+        fs::write(src.path().join("a.txt"), b"src").unwrap();
+        fs::write(dst.path().join(".skills-manager.lock"), b"").unwrap();
+        fs::create_dir_all(dst.path().join("skills/mine")).unwrap();
+        fs::write(dst.path().join("skills/mine/SKILL.md"), b"x").unwrap();
+
+        let mut config = config_migrating(src.path(), dst.path());
+        let outcome = migrate_repo_if_needed(&mut config, dst.path());
+
+        assert!(matches!(outcome, MigrationOutcome::UseSource));
+        assert!(dst.path().join(".skills-manager.lock").exists());
+        assert!(dst.path().join("skills/mine/SKILL.md").exists());
+        assert_eq!(config.repoint_from, None);
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn migration_does_not_follow_a_link_disguised_as_a_skeleton_dir() {
+        let src = tempfile::tempdir().unwrap();
+        let dst = tempfile::tempdir().unwrap();
+        let outside = tempfile::tempdir().unwrap();
+        fs::write(src.path().join("a.txt"), b"src").unwrap();
+        std::os::unix::fs::symlink(outside.path(), dst.path().join("skills")).unwrap();
+
+        let mut config = config_migrating(src.path(), dst.path());
+        let outcome = migrate_repo_if_needed(&mut config, dst.path());
+
+        assert!(matches!(outcome, MigrationOutcome::UseSource));
+        assert!(outside.path().exists());
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn copy_dir_recursive_keeps_links_as_links() {
+        let src = tempfile::tempdir().unwrap();
+        let dst = tempfile::tempdir().unwrap();
+        fs::create_dir_all(src.path().join("real")).unwrap();
+        fs::write(src.path().join("real/f"), b"x").unwrap();
+        std::os::unix::fs::symlink("real", src.path().join("dir-link")).unwrap();
+        std::os::unix::fs::symlink("real/f", src.path().join("file-link")).unwrap();
+
+        copy_dir_recursive(src.path(), &dst.path().join("out")).unwrap();
+
+        let out = dst.path().join("out");
+        assert_eq!(fs::read_link(out.join("dir-link")).unwrap(), Path::new("real"));
+        assert_eq!(fs::read_link(out.join("file-link")).unwrap(), Path::new("real/f"));
+    }
+
+    #[test]
+    fn migration_into_nonempty_target_keeps_source_and_marker() {
+        // The whole point of #252's safety: never blind-merge over a
+        // non-empty target (real data or failed-attempt debris we can't tell
+        // apart). Fall back to the intact source and keep retrying.
+        let src = tempfile::tempdir().unwrap();
+        let dst = tempfile::tempdir().unwrap();
+        fs::write(src.path().join("a.txt"), b"src").unwrap();
+        fs::write(dst.path().join("existing.txt"), b"dst-data").unwrap();
+
+        let mut config = config_migrating(src.path(), dst.path());
+        let outcome = migrate_repo_if_needed(&mut config, dst.path());
+
+        assert!(matches!(outcome, MigrationOutcome::UseSource));
+        assert_eq!(
+            live_base_from(&config),
+            normalize_path(&src.path().to_string_lossy()).unwrap()
+        );
+        assert!(config.pending_migration_from.is_some(), "marker kept for retry");
+        assert_eq!(fs::read(dst.path().join("existing.txt")).unwrap(), b"dst-data");
+        assert_eq!(fs::read(src.path().join("a.txt")).unwrap(), b"src");
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn migration_same_dir_via_symlink_clears_marker() {
+        // A cosmetic path difference that resolves to the same directory (here
+        // a symlink; on Windows, case / 8.3 names) must not be mistaken for a
+        // real relocation — otherwise it loops forever on `migration_incomplete`
+        // telling the user to empty their own library.
+        let real = tempfile::tempdir().unwrap();
+        fs::create_dir_all(real.path().join("skills")).unwrap();
+        let link_parent = tempfile::tempdir().unwrap();
+        let link = link_parent.path().join("aliased");
+        std::os::unix::fs::symlink(real.path(), &link).unwrap();
+
+        let mut config = config_migrating(real.path(), &link);
+        let outcome = migrate_repo_if_needed(&mut config, &link);
+
+        assert!(matches!(outcome, MigrationOutcome::Proceed));
+        assert_eq!(config.pending_migration_from, None, "same-dir move clears marker");
+        // The real library is untouched.
+        assert!(real.path().join("skills").exists());
+    }
+
+    #[test]
+    fn migration_with_missing_source_clears_marker() {
+        let dst = tempfile::tempdir().unwrap();
+        let missing = dst.path().join("does-not-exist");
+        let mut config = config_migrating(&missing, dst.path());
+
+        let outcome = migrate_repo_if_needed(&mut config, dst.path());
+        assert!(matches!(outcome, MigrationOutcome::Proceed));
+        assert_eq!(config.pending_migration_from, None);
+    }
+
+    #[test]
+    fn no_pending_migration_is_a_noop() {
+        let dst = tempfile::tempdir().unwrap();
+        let mut config = RepoPathConfig {
+            repo_path: Some(dst.path().to_string_lossy().to_string()),
+            pending_migration_from: None,
+            ..Default::default()
+        };
+        let outcome = migrate_repo_if_needed(&mut config, dst.path());
+        assert!(matches!(outcome, MigrationOutcome::Proceed));
+        assert_eq!(config.pending_migration_from, None);
+    }
+
+    #[test]
+    fn copy_dir_recursive_copies_read_only_source_files() {
+        // git pack files (.idx/.pack/.rev) are read-only. Copying them into a
+        // fresh target must succeed — the #252 brick only happened when
+        // OVERWRITING an existing read-only file, which migration now avoids by
+        // only ever moving into an empty target.
+        let src = tempfile::tempdir().unwrap();
+        let dst = tempfile::tempdir().unwrap();
+        let pack = src.path().join("pack.idx");
+        fs::write(&pack, b"packdata").unwrap();
+        let mut perms = fs::metadata(&pack).unwrap().permissions();
+        perms.set_readonly(true);
+        fs::set_permissions(&pack, perms).unwrap();
+
+        let target = dst.path().join("out");
+        copy_dir_recursive(src.path(), &target).unwrap();
+        assert_eq!(fs::read(target.join("pack.idx")).unwrap(), b"packdata");
+    }
+
+    // ── load_config_state_from ──
+
+    #[test]
+    fn config_state_missing_file_is_missing() {
+        let tmp = tempfile::tempdir().unwrap();
+        let state = load_config_state_from(&tmp.path().join("repo-config.json"));
+        assert!(matches!(state, ConfigState::Missing));
+    }
+
+    #[test]
+    fn config_state_valid_json_is_valid() {
+        let tmp = tempfile::tempdir().unwrap();
+        let path = tmp.path().join("repo-config.json");
+        fs::write(&path, r#"{ "repo_path": "/tmp/lib", "pending_migration_from": null }"#)
+            .unwrap();
+        match load_config_state_from(&path) {
+            ConfigState::Valid(config) => {
+                assert_eq!(config.repo_path.as_deref(), Some("/tmp/lib"));
+            }
+            other => panic!("expected Valid, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn config_state_corrupt_json_is_invalid_not_fresh_install() {
+        // A corrupt config must never be treated like a missing one — that is
+        // the "library rebuilt empty, all skills lost" failure mode (#228).
+        let tmp = tempfile::tempdir().unwrap();
+        let path = tmp.path().join("repo-config.json");
+        fs::write(&path, "{ not json").unwrap();
+        let state = load_config_state_from(&path);
+        assert!(matches!(state, ConfigState::Invalid(_)), "{state:?}");
+    }
+
+    #[test]
+    fn external_base_dir_lives_under_default_base_external() {
+        let dir = external_base_dir(Path::new("/tmp/some/my-skills"));
+        let prefix = default_base_dir().join("external");
+        assert!(
+            dir.starts_with(&prefix),
+            "expected {} to start with {}",
+            dir.display(),
+            prefix.display()
+        );
+    }
+
+    #[test]
+    fn external_base_dir_is_stable_for_same_path() {
+        let a = external_base_dir(Path::new("/tmp/some/my-skills"));
+        let b = external_base_dir(Path::new("/tmp/some/my-skills"));
+        assert_eq!(a, b);
+    }
+
+    #[test]
+    fn external_base_dir_differs_for_different_paths() {
+        let a = external_base_dir(Path::new("/tmp/one/my-skills"));
+        let b = external_base_dir(Path::new("/tmp/two/my-skills"));
+        assert_ne!(a, b);
+    }
+
+    #[test]
+    fn external_base_dir_does_not_pollute_skills_root_or_its_parent() {
+        let skills_root = Path::new("/tmp/external-test/my-skills");
+        let dir = external_base_dir(skills_root);
+        assert!(!dir.starts_with(skills_root));
+        assert!(!dir.starts_with(skills_root.parent().unwrap()));
+    }
+
+    #[test]
+    fn sanitize_dir_name_replaces_unsafe_characters() {
+        assert_eq!(sanitize_dir_name("my skills"), "my-skills");
+        assert_eq!(sanitize_dir_name("a/b\\c:d"), "a-b-c-d");
+        assert_eq!(sanitize_dir_name(""), "external");
+    }
+
+    #[test]
+    fn external_base_dir_relative_path_is_stable_against_absolute_form() {
+        // For a not-yet-existing target, a relative path should namespace the
+        // same as its cwd-absolutized form. We simulate by passing both forms
+        // and asserting they match.
+        let cwd = std::env::current_dir().unwrap();
+        let rel = Path::new("nonexistent-skills-target-xyz");
+        let abs = cwd.join(rel);
+        assert_eq!(external_base_dir(rel), external_base_dir(&abs));
+    }
+
+    #[test]
+    fn external_base_dir_normalizes_redundant_segments() {
+        // `./x`, `x`, and `a/../x` should all hash to the same namespace when
+        // none of them exist on disk.
+        let plain = external_base_dir(Path::new("nonexistent-norm-target"));
+        let dot = external_base_dir(Path::new("./nonexistent-norm-target"));
+        let parent = external_base_dir(Path::new("a/../nonexistent-norm-target"));
+        assert_eq!(plain, dot);
+        assert_eq!(plain, parent);
+    }
+
+    #[test]
+    fn lexically_normalize_handles_basic_cases() {
+        assert_eq!(
+            lexically_normalize(Path::new("/a/./b/../c")),
+            PathBuf::from("/a/c")
+        );
+        assert_eq!(
+            lexically_normalize(Path::new("./a/b")),
+            PathBuf::from("a/b")
+        );
+        assert_eq!(lexically_normalize(Path::new("/..")), PathBuf::from("/"));
+    }
 }
 ````
 
@@ -46586,46 +50603,255 @@ mod tests {
 }
 ````
 
-## File: src-tauri/src/core/mod.rs
+## File: src-tauri/tests/company/recovery.rs
 ````rust
-pub mod app_state;
-pub mod company;
-pub mod audit_log;
-pub mod auto_backup;
-pub mod central_repo;
-pub mod cli_bridge;
-pub mod content_hash;
-pub mod crypto;
-pub mod error;
-pub mod file_manager;
-pub mod file_watcher;
-pub mod git2_engine;
-pub mod git_backup;
-pub mod git_credentials;
-pub mod git_fetcher;
-pub mod github_api;
-pub mod install_cancel;
-pub mod installer;
-pub mod log_sanitize;
-pub mod merge;
-pub mod migrations;
-pub mod panic_log;
-pub mod path_guard;
-pub mod project_scanner;
-pub mod removals;
-pub mod repo_lock;
-pub mod scanner;
-pub mod scenario_service;
-pub mod skill_auto_updater;
-pub mod skill_metadata;
-pub mod skill_store;
-pub mod skillssh_api;
-pub mod sync_engine;
-pub mod sync_metadata;
-pub mod timing;
-pub mod tool_adapters;
-pub mod tool_service;
-pub mod well_known;
+use app_lib::core::company::{
+    aipro_paths::{global_target, stage_path},
+    config::CompanyConfig,
+    installation_repository::CompanyRepository,
+    installation_service::CompanyService,
+    mcp_check::{check_config, parse_requirements},
+    package_store::{copy_tree, prepare_archive},
+    session::MemoryCredentials,
+    types::*,
+};
+use sha2::{Digest, Sha256};
+use std::{fs, path::PathBuf, sync::Arc};
+
+fn pending_fixture(
+    owned: bool,
+) -> (
+    tempfile::TempDir,
+    CompanyConfig,
+    InstallJournal,
+    PathBuf,
+    PathBuf,
+    PathBuf,
+) {
+    let root = tempfile::tempdir().unwrap();
+    let config = CompanyConfig::for_test(
+        "http://127.0.0.1:4318",
+        root.path().join("profile"),
+        root.path().join("data"),
+    )
+    .unwrap();
+    fs::create_dir_all(&config.data_root).unwrap();
+    let archive = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .unwrap()
+        .join("fixtures/company-store/packages/jira-project-summary.zip");
+    let bytes = fs::read(&archive).unwrap();
+    let meta = PackageMeta {
+        format: "zip".into(),
+        size_bytes: bytes.len() as u64,
+        sha256: hex::encode(Sha256::digest(bytes)),
+        etag: "\"fixture\"".into(),
+    };
+    let package = prepare_archive(
+        &archive,
+        &meta,
+        "jira-project-summary",
+        &config.data_root.join("packages"),
+    )
+    .unwrap();
+    let target = global_target(&config.profile_root, "jira-project-summary").unwrap();
+    let id = uuid::Uuid::new_v4().to_string();
+    let stage = stage_path(&target, &id).unwrap();
+    let view = OperationView {
+        id: id.clone(),
+        state: OperationState::Committing,
+        target: target.display().to_string(),
+        mcp: check_config(&parse_requirements("MCP bắt buộc: không"), b"{}"),
+        mcp_path: String::new(),
+        skill: None,
+        progress_bytes: meta.size_bytes,
+        total_bytes: meta.size_bytes,
+        error: None,
+        kind: OperationKind::Install, preview_ready: false, customized: false, changes: Vec::new(),
+    };
+    let installation = Installation {
+        id,
+        skill_id: "skl_001".into(),
+        slug: "jira-project-summary".into(),
+        name: "Jira".into(),
+        target: target.display().to_string(),
+        package_hash: meta.sha256.clone(),
+        content_hash: package.content_hash,
+        description_snapshot: "MCP bắt buộc: không".into(),
+        installed_at: "2026-10-12T00:00:00Z".into(),
+        mcp_bypassed: false,
+        project_id: None,
+        content_state: ContentState::Original,
+        store_state: StoreState::Unknown, checked_at: None, store_error: None,
+    };
+    let journal = InstallJournal {
+        view,
+        installation,
+        full_hash: package.full_hash.clone(),
+        stage_owned: owned,
+    };
+    let repository = CompanyRepository::open(&config.data_root.join("manager.db")).unwrap();
+    repository
+        .save_package(
+            &meta,
+            &journal.installation.content_hash,
+            &package.full_hash,
+        )
+        .unwrap();
+    repository.prepare(&journal).unwrap();
+    (root, config, journal, target, stage, package.original_root)
+}
+
+#[test]
+fn company_flow03c_recovery_commits_complete_owned_target_after_rename() {
+    let (_root, config, _journal, target, _stage, original) = pending_fixture(true);
+    copy_tree(&original, &target).unwrap();
+    let app = CompanyService::new(config, Arc::new(MemoryCredentials::default())).unwrap();
+    assert_eq!(app.installations().unwrap().len(), 1);
+    assert!(app.recovery_warnings().is_empty());
+    assert!(target.join("SKILL.md").is_file());
+}
+
+#[test]
+fn company_flow03c_recovery_cancels_before_rename_and_preserves_unowned_stage() {
+    for owned in [true, false] {
+        let (_root, config, _journal, target, stage, original) = pending_fixture(owned);
+        copy_tree(&original, &stage).unwrap();
+        let app = CompanyService::new(config, Arc::new(MemoryCredentials::default())).unwrap();
+        assert!(app.installations().unwrap().is_empty());
+        assert!(!target.exists());
+        assert_eq!(stage.exists(), !owned);
+        assert_eq!(app.recovery_warnings().is_empty(), owned);
+    }
+}
+
+#[test]
+fn company_flow03c_recovery_does_not_adopt_foreign_target_even_when_bytes_match() {
+    let (_root, config, _journal, target, _stage, original) = pending_fixture(false);
+    copy_tree(&original, &target).unwrap();
+    let before = fs::read(target.join("SKILL.md")).unwrap();
+    let app = CompanyService::new(config, Arc::new(MemoryCredentials::default())).unwrap();
+    assert!(app.installations().unwrap().is_empty());
+    assert!(!app.recovery_warnings().is_empty());
+    assert_eq!(fs::read(target.join("SKILL.md")).unwrap(), before);
+}
+
+#[test]
+fn company_flow03c_recovery_preserves_modified_owned_staging() {
+    let (_root, config, _journal, target, stage, original) = pending_fixture(true);
+    copy_tree(&original, &stage).unwrap();
+    fs::write(stage.join("external-note.txt"), "keep this change").unwrap();
+    let app = CompanyService::new(config, Arc::new(MemoryCredentials::default())).unwrap();
+    assert!(app.installations().unwrap().is_empty());
+    assert!(!target.exists());
+    assert!(!app.recovery_warnings().is_empty());
+    assert_eq!(
+        fs::read_to_string(stage.join("external-note.txt")).unwrap(),
+        "keep this change"
+    );
+}
+
+#[test]
+fn company_flow03c_unresolved_recovery_blocks_only_its_target() {
+    let server = super::support::MockServer::start("normal");
+    let (_root, mut config, _journal, _target, stage, original) = pending_fixture(true);
+    config.store_url = server.url.clone();
+    copy_tree(&original, &stage).unwrap();
+    fs::write(stage.join("external-note.txt"), "keep this change").unwrap();
+    let app = CompanyService::new(config, Arc::new(MemoryCredentials::default())).unwrap();
+    app.login("employee01", "demo-password").unwrap();
+    assert_eq!(
+        app.prepare_install("skl_001").unwrap_err().code,
+        "RECOVERY_REQUIRED"
+    );
+    assert!(app.prepare_install("skl_003").is_ok());
+    assert_eq!(
+        fs::read_to_string(stage.join("external-note.txt")).unwrap(),
+        "keep this change"
+    );
+}
+
+#[cfg(windows)]
+#[test]
+fn company_flow03c_recovery_keeps_foreign_junction_and_starts_with_warning() {
+    let (_root, config, _journal, target, _stage, original) = pending_fixture(true);
+    fs::create_dir_all(target.parent().unwrap()).unwrap();
+    junction::create(&original, &target).unwrap();
+    let app = CompanyService::new(config, Arc::new(MemoryCredentials::default()))
+        .expect("unsafe target must not prevent opening local data");
+    assert!(!app.recovery_warnings().is_empty());
+    assert!(junction::exists(&target).unwrap());
+    assert!(original.join("SKILL.md").is_file());
+}
+````
+
+## File: COMPANY_APP_README.md
+````markdown
+# Company Skills Manager — mốc L1–L5
+
+App Windows dùng React/Tauri/Rust; các luồng hiện có: đăng nhập và giữ phiên trong Windows Credential Manager, tìm kiếm/phân trang Store, xem description đầy đủ, cài ZIP/7z vào AIPRO Global hoặc dự án, cảnh báo MCP dừng/bỏ qua, bản cài độc lập, phát hiện tùy chỉnh, cập nhật từng đích có backup và phục hồi thao tác dở.
+
+Catalog đã tải được lưu theo Store/tài khoản/truy vấn với thời điểm lấy. Khi mất mạng, app chỉ hiển thị dữ liệu đã lưu và không cài từ cache; đăng xuất xóa cache tài khoản. Hết phiên giữ skill đang chọn để đọc lại detail sau đăng nhập, không tự chạy lại thao tác cài.
+
+## Chạy demo
+
+Cần Node 22.12+ (hoặc Node 24), Rust stable MSVC, Microsoft C++ Build Tools và WebView2. Cài dependencies bằng `npm ci`, sau đó:
+
+```powershell
+npm run company:demo
+```
+
+Tài khoản giả lập: `employee01`, mật khẩu `demo-password`. App có nhãn **Dữ liệu giả lập**. Demo dùng profile riêng `%LOCALAPPDATA%\CompanySkillsManagerDemo\profile`, dữ liệu riêng ở `...\data`, Store HTTP tại `127.0.0.1:4318`; không cài vào profile AIPRO thật của người dùng.
+
+1. Đăng nhập và tìm skill Jira/Excel/Rà soát tài liệu.
+2. Thêm thư mục ở Dự án nếu cần, rồi mở chi tiết skill và chọn Global hoặc dự án trước khi cài.
+3. Demo ban đầu có mcpServers rỗng. Chọn Dừng rồi sửa `profile\.aipro\mcp.json` thủ công và thử lại, hoặc chọn Bỏ qua và cài tiếp.
+4. Xem Skill đã cài và đường dẫn đích; đóng/mở app để kiểm tra phiên và dữ liệu cục bộ.
+
+## Dự án và cập nhật
+
+Thêm dự án chỉ ghi nhận thư mục, không tạo `.aipro` hoặc yêu cầu Git. Cài cùng skill cho Global và các dự án tạo các bản sao độc lập. Mở SKILL.md/thư mục để chỉnh sửa bằng công cụ trên máy; Làm mới nội dung phân biệt Nguyên bản, Đã tùy chỉnh, Không tìm thấy và Chưa kiểm tra được. Nếu bản cài bị chuyển/xóa và đích vẫn trống, Cài lại từ Store giữ ID quản lý cũ và kiểm tra MCP lại.
+
+Kiểm tra gói mới so SHA-256 archive với baseline riêng từng bản cài. Chọn một hoặc nhiều đích để xem cập nhật; mỗi đích có kết quả và retry riêng. Tải để xem thay đổi chưa thay file cài. Xem file thêm/sửa/xóa và mở bản sao preview; file text được mở bằng Notepad, file nhị phân/thực thi chỉ có thông tin và mở thư mục. Chỉnh sửa preview không được áp dụng vào bản cài. Bản tùy chỉnh yêu cầu xác nhận rõ trước Backup và cập nhật.
+
+App lưu đầy đủ nội dung và metadata/baseline cũ tại `data\\backups\\<installation-id>\\<backup-id>\\` trước khi đổi đích. Nút Bản lưu hiển thị vị trí và lịch sử; không tự xóa backup. Nội dung sửa sau preview, file đang khóa hoặc backup lỗi làm thao tác dừng, không tự merge. Khi crash giữa rename/DB, startup trả lại bản cũ hoặc giữ bản mới đã commit; dữ liệu không xác định được giữ và đích bị khóa để kiểm tra. Khôi phục thủ công qua UI/gỡ/dọn dung lượng là L6–L7 tiếp theo.
+
+Mock mặc định giữ gói cũ. Để thử cập nhật bằng demo, tạo file có nội dung `1`, chạy Store với `--revision-file <đường-dẫn-file>` rồi đổi nội dung thành `2` sau khi cài gói đầu. Mock chuyển Jira sang fixture `jira-project-summary-v2.zip`; năm endpoint production vẫn giữ nguyên. Smoke L4–L5 tự điều khiển revision và dùng thư mục tạm riêng.
+
+Gói Excel là 7z thật, decoder được đóng cùng app; người dùng app không cần cài 7-Zip. Nguồn fixture và archive đã được commit; 7-Zip chỉ được dùng khi tạo fixture ở giai đoạn phát triển.
+
+## Kết nối Store nội bộ
+
+Bản app bình thường đọc `%LOCALAPPDATA%\CompanySkillsManager\store.json`:
+
+```json
+{ "baseUrl": "https://your-internal-store-host" }
+```
+
+Thay hostname minh họa bằng dịch vụ nội bộ thật cung cấp năm endpoint của API draft v0.1 dưới `/api/v1`. Rust thực hiện HTTP, token không đưa ra frontend. HTTPS được xác minh bằng hệ thống chứng chỉ Windows; redirect bị từ chối. Bản release không nhận override debug/mock.
+
+Các gói/description dùng hash và strong ETag theo contract. Nếu gói hoặc description thay khi đang tải, thao tác lỗi 412; chọn **Xem thông tin mới** để đọc lại detail rồi quyết định MCP cho lần cài mới. Không tái dùng quyền bỏ qua cũ. App chỉ xét tên MCP trong mcp.json, không kiểm tra kết nối/token/runtime và không sửa file này.
+
+## Kiểm chứng
+
+```powershell
+npm run test:company
+node --test scripts/company-mock-store.test.mjs
+cargo test --manifest-path src-tauri/Cargo.toml --test company_flows
+npm run lint
+npm run build
+npm run tauri:build -- --debug
+node scripts/company-native-smoke.mjs
+node scripts/company-native-workspace-smoke.mjs
+```
+
+API giả lập hỗ trợ `--scenario normal`, `session-expired`, `unavailable`, `package-changed`, `corrupt-download`, `forbidden-download`. Gói hỏng/unsafe, hash/size sai, conflict đích, file khóa hoặc journal không xác định không được báo cài thành công.
+
+Native smoke mở app Windows đã build, dùng WebView2/IPC thật và profile tạm riêng; kiểm tra Credential Manager qua restart, đăng xuất, dừng/bỏ qua MCP, file ZIP/7z và dữ liệu bản cài. Recovery chỉ tự dọn staging hoàn chỉnh khớp manifest; nội dung không xác định hoặc bị sửa được giữ lại và báo đường dẫn cần kiểm tra.
+
+Smoke L4–L5 kiểm chứng tạo dự án, ba bản cài độc lập, tùy chỉnh, preview/backup/update một đích và restart qua WebView2/IPC thật. Schema 4 giữ dữ liệu Global schema 2, chuẩn hóa ownership paths và thêm projects/backups/replacement journals. App không mở database của phiên bản mới hơn để ghi đè.
+
+L6–L7 sẽ bổ sung UI khôi phục/gỡ và quản lý dung lượng. API thật, cách AIPRO nạp/ưu tiên skill, ký/phân phối installer do IT là phần nghiệm thu môi trường L8. Mốc L1–L5 xác nhận đặt file và quản lý bản cài, không chứng minh MCP hoặc AIPRO đã nạp/chạy skill.
 ````
 
 ## File: src/views/MySkills.tsx
@@ -53757,1313 +57983,6 @@ mod tests {
 }
 ````
 
-## File: src-tauri/src/core/central_repo.rs
-````rust
-use anyhow::{Context, Result, anyhow};
-use serde::{Deserialize, Serialize};
-use sha2::{Digest, Sha256};
-use std::fs;
-use std::path::{Component, Path, PathBuf};
-use std::sync::{Mutex, OnceLock};
-use walkdir::WalkDir;
-
-const CONFIG_FILE_NAME: &str = "repo-config.json";
-
-static BASE_DIR_OVERRIDE: OnceLock<Mutex<Option<PathBuf>>> = OnceLock::new();
-/// Test-only redirection of the home directory, so a test can exercise paths
-/// that are deliberately *not* relocatable by the user (see `cli_bridge`).
-static HOME_DIR_OVERRIDE: OnceLock<Mutex<Option<PathBuf>>> = OnceLock::new();
-static SKILLS_DIR_OVERRIDE: OnceLock<Mutex<Option<PathBuf>>> = OnceLock::new();
-static STARTUP_WARNINGS: OnceLock<Mutex<Vec<String>>> = OnceLock::new();
-static STARTUP_ERROR_LOG: OnceLock<Mutex<Vec<String>>> = OnceLock::new();
-
-fn push_startup_warning(code: &str) {
-    let mut warnings = STARTUP_WARNINGS
-        .get_or_init(|| Mutex::new(Vec::new()))
-        .lock()
-        .unwrap_or_else(|e| e.into_inner());
-    if !warnings.iter().any(|w| w == code) {
-        warnings.push(code.to_string());
-    }
-}
-
-/// Warning codes recorded while resolving the central repository at startup.
-/// The frontend maps them to localized banner text (`settings.repoWarning_*`).
-pub fn startup_warnings() -> Vec<String> {
-    STARTUP_WARNINGS
-        .get_or_init(|| Mutex::new(Vec::new()))
-        .lock()
-        .unwrap_or_else(|e| e.into_inner())
-        .clone()
-}
-
-/// Record a detailed startup error for later logging. `ensure_central_repo`
-/// runs before `tauri_plugin_log` is installed (see `run()` in lib.rs), so a
-/// `log::error!` here is swallowed by the default no-op logger. Stash the
-/// detail and let `setup` flush it once the real logger exists.
-pub(crate) fn record_startup_error(message: String) {
-    STARTUP_ERROR_LOG
-        .get_or_init(|| Mutex::new(Vec::new()))
-        .lock()
-        .unwrap_or_else(|e| e.into_inner())
-        .push(message);
-}
-
-/// Drain the startup errors stashed by [`record_startup_error`]. Called from
-/// `tauri::Builder::setup` once the logger is up so the detail lands in the log
-/// file that a support bundle collects.
-pub fn take_startup_errors() -> Vec<String> {
-    let mut guard = STARTUP_ERROR_LOG
-        .get_or_init(|| Mutex::new(Vec::new()))
-        .lock()
-        .unwrap_or_else(|e| e.into_inner());
-    std::mem::take(&mut guard)
-}
-
-/// Global mutex shared by every test that mutates the base-dir override via
-/// [`set_test_base_dir_override`]. The override is process-wide static state,
-/// so any two tests holding their own per-module locks can still race. Tests
-/// must take this guard before calling `set_test_base_dir_override` and keep
-/// it alive until they restore the previous value.
-#[cfg(test)]
-static TEST_BASE_DIR_GUARD: OnceLock<Mutex<()>> = OnceLock::new();
-
-#[cfg(test)]
-pub(crate) fn test_base_dir_lock() -> std::sync::MutexGuard<'static, ()> {
-    TEST_BASE_DIR_GUARD
-        .get_or_init(|| Mutex::new(()))
-        .lock()
-        .unwrap_or_else(|e| e.into_inner())
-}
-
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
-struct RepoPathConfig {
-    repo_path: Option<String>,
-    pending_migration_from: Option<String>,
-    /// Where the library lived before a move that has completed. Links and DB
-    /// paths still pointing there are rewritten once the store is open, then
-    /// this is cleared (see [`take_repoint_from`]).
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    repoint_from: Option<String>,
-}
-
-fn default_base_dir() -> PathBuf {
-    home_base_dir()
-}
-
-/// `~/.skills-manager`, ignoring any configured relocation.
-///
-/// The library can be moved anywhere the user likes, but a few things must
-/// stay where another program can find them without being told — the CLI
-/// bridge an agent runs, above all. Those use this rather than [`base_dir`].
-pub fn home_base_dir() -> PathBuf {
-    if let Some(path) = HOME_DIR_OVERRIDE
-        .get_or_init(|| Mutex::new(None))
-        .lock()
-        .unwrap()
-        .clone()
-    {
-        return path.join(".skills-manager");
-    }
-    dirs::home_dir()
-        .expect("Cannot determine home directory")
-        .join(".skills-manager")
-}
-
-#[cfg(test)]
-pub(crate) fn set_test_home_dir_override(path: Option<PathBuf>) {
-    *HOME_DIR_OVERRIDE
-        .get_or_init(|| Mutex::new(None))
-        .lock()
-        .unwrap() = path;
-}
-
-fn config_file_path() -> PathBuf {
-    dirs::config_dir()
-        .unwrap_or_else(default_base_dir)
-        .join("skills-manager")
-        .join(CONFIG_FILE_NAME)
-}
-
-/// Distinguishes "no config file" (normal fresh install) from "config file
-/// exists but cannot be used" (must never be silently treated as a fresh
-/// install — that is how a configured library turns into an empty default
-/// one and users report "all my skills are gone", issue #228 review).
-#[derive(Debug)]
-enum ConfigState {
-    Missing,
-    Valid(RepoPathConfig),
-    Invalid(String),
-}
-
-fn load_config_state_from(path: &Path) -> ConfigState {
-    let raw = match fs::read_to_string(path) {
-        Ok(raw) => raw,
-        Err(err) if err.kind() == std::io::ErrorKind::NotFound => return ConfigState::Missing,
-        Err(err) => {
-            return ConfigState::Invalid(format!("cannot read {}: {err}", path.display()));
-        }
-    };
-    match serde_json::from_str(&raw) {
-        Ok(config) => ConfigState::Valid(config),
-        Err(err) => ConfigState::Invalid(format!("corrupt JSON in {}: {err}", path.display())),
-    }
-}
-
-fn load_config_state() -> ConfigState {
-    load_config_state_from(&config_file_path())
-}
-
-fn load_config() -> RepoPathConfig {
-    match load_config_state() {
-        ConfigState::Valid(config) => config,
-        ConfigState::Missing | ConfigState::Invalid(_) => RepoPathConfig::default(),
-    }
-}
-
-fn save_config(config: &RepoPathConfig) -> Result<()> {
-    let path = config_file_path();
-    if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent)?;
-    }
-    fs::write(path, serde_json::to_vec_pretty(config)?)?;
-    Ok(())
-}
-
-fn normalize_path(raw: &str) -> Result<PathBuf> {
-    let trimmed = raw.trim();
-    if trimmed.is_empty() {
-        return Err(anyhow!("Path cannot be empty"));
-    }
-
-    let expanded = if trimmed == "~" {
-        dirs::home_dir().ok_or_else(|| anyhow!("Cannot determine home directory"))?
-    } else if trimmed.starts_with("~/") || trimmed.starts_with("~\\") {
-        dirs::home_dir()
-            .ok_or_else(|| anyhow!("Cannot determine home directory"))?
-            .join(&trimmed[2..])
-    } else {
-        PathBuf::from(trimmed)
-    };
-
-    if !expanded.is_absolute() {
-        return Err(anyhow!("Central repository path must be absolute"));
-    }
-
-    let mut normalized = PathBuf::new();
-    for component in expanded.components() {
-        match component {
-            Component::CurDir => {}
-            Component::ParentDir => {
-                normalized.pop();
-            }
-            other => normalized.push(other.as_os_str()),
-        }
-    }
-    Ok(normalized)
-}
-
-pub fn configured_base_dir() -> Option<PathBuf> {
-    load_config()
-        .repo_path
-        .and_then(|path| normalize_path(&path).ok())
-}
-
-/// Where the user asked the library to live (takes effect at the next launch).
-fn requested_base_from(config: &RepoPathConfig) -> PathBuf {
-    config
-        .repo_path
-        .as_deref()
-        .and_then(|path| normalize_path(path).ok())
-        .unwrap_or_else(default_base_dir)
-}
-
-/// Where the library actually is: the source of a move that hasn't happened
-/// yet, otherwise the requested location. Saving a new path therefore never
-/// switches a running session — the move happens at the next launch.
-fn live_base_from(config: &RepoPathConfig) -> PathBuf {
-    if let Some(source) = config
-        .pending_migration_from
-        .as_deref()
-        .and_then(|path| normalize_path(path).ok())
-    {
-        if source.is_dir() {
-            return source;
-        }
-    }
-    requested_base_from(config)
-}
-
-pub fn base_dir() -> PathBuf {
-    if let Some(path) = BASE_DIR_OVERRIDE
-        .get_or_init(|| Mutex::new(None))
-        .lock()
-        .unwrap()
-        .clone()
-    {
-        return path;
-    }
-
-    live_base_from(&load_config())
-}
-
-/// The location a pending move will go to at the next launch, if any.
-pub fn pending_base_dir() -> Option<PathBuf> {
-    if base_dir_override_active() {
-        return None;
-    }
-    let config = load_config();
-    let requested = requested_base_from(&config);
-    (live_base_from(&config) != requested).then_some(requested)
-}
-
-/// Whether an explicit runtime base-dir override is active (CLI `--skills-root`
-/// / `--path`). Startup migration is skipped when it is — the caller chose a
-/// specific library and the app's shared pending-migration marker doesn't apply.
-fn base_dir_override_active() -> bool {
-    BASE_DIR_OVERRIDE
-        .get_or_init(|| Mutex::new(None))
-        .lock()
-        .unwrap_or_else(|e| e.into_inner())
-        .is_some()
-}
-
-pub fn set_runtime_base_dir_override(path: Option<PathBuf>) {
-    *BASE_DIR_OVERRIDE
-        .get_or_init(|| Mutex::new(None))
-        .lock()
-        .unwrap() = path;
-}
-
-pub fn set_runtime_skills_dir_override(path: Option<PathBuf>) {
-    *SKILLS_DIR_OVERRIDE
-        .get_or_init(|| Mutex::new(None))
-        .lock()
-        .unwrap() = path;
-}
-
-#[cfg(test)]
-pub(crate) fn set_test_base_dir_override(path: Option<PathBuf>) {
-    set_runtime_base_dir_override(path);
-    set_runtime_skills_dir_override(None);
-}
-
-pub fn skills_dir() -> PathBuf {
-    if let Some(path) = SKILLS_DIR_OVERRIDE
-        .get_or_init(|| Mutex::new(None))
-        .lock()
-        .unwrap()
-        .clone()
-    {
-        return path;
-    }
-    base_dir().join("skills")
-}
-
-/// Derive a stable per-skills-root state directory under the user's default base.
-///
-/// CLI's `--skills-root` lets agents operate on an external skills checkout
-/// (e.g. a freshly cloned `my-skills`) without touching the app's default repo.
-/// The manager still needs a home for its DB, scenarios, cache, and logs — but
-/// putting that state inside the external checkout would pollute the user's
-/// repo, and putting it in the parent directory would silently litter wherever
-/// the user happened to clone. Instead, namespace the state under
-/// `<default-base>/external/<sanitized-name>-<short-hash>/`, keyed by the
-/// canonical path of the skills root so repeat invocations reuse the same DB.
-pub fn external_base_dir(skills_root: &Path) -> PathBuf {
-    // canonicalize() requires the path to exist. For not-yet-cloned targets we
-    // still want a stable namespace, so fall back to absolutizing + lexically
-    // normalizing the path. Without this, `./my-skills`, `my-skills`, and
-    // `a/../my-skills` would hash to different namespaces despite resolving
-    // to the same location.
-    let canonical = match skills_root.canonicalize() {
-        Ok(p) => p,
-        Err(_) => {
-            let absolute = if skills_root.is_absolute() {
-                skills_root.to_path_buf()
-            } else {
-                std::env::current_dir()
-                    .map(|cwd| cwd.join(skills_root))
-                    .unwrap_or_else(|_| skills_root.to_path_buf())
-            };
-            lexically_normalize(&absolute)
-        }
-    };
-    let name = canonical
-        .file_name()
-        .and_then(|n| n.to_str())
-        .unwrap_or("external");
-    let mut hasher = Sha256::new();
-    hasher.update(canonical.to_string_lossy().as_bytes());
-    let digest = hasher.finalize();
-    let short_hash: String = digest.iter().take(5).map(|b| format!("{:02x}", b)).collect();
-    default_base_dir()
-        .join("external")
-        .join(format!("{}-{}", sanitize_dir_name(name), short_hash))
-}
-
-/// Lexically normalize `.` and `..` segments without touching the filesystem.
-/// `..` over a normal segment cancels it; `..` over a root or another `..`
-/// is preserved (so we don't pretend to escape the filesystem root).
-fn lexically_normalize(path: &Path) -> PathBuf {
-    use std::path::Component;
-    let mut out: Vec<Component> = Vec::new();
-    for comp in path.components() {
-        match comp {
-            Component::CurDir => {}
-            Component::ParentDir => match out.last() {
-                Some(Component::Normal(_)) => {
-                    out.pop();
-                }
-                Some(Component::RootDir) | Some(Component::Prefix(_)) => {
-                    // can't go above root — drop the `..`
-                }
-                _ => out.push(comp),
-            },
-            other => out.push(other),
-        }
-    }
-    out.iter().collect()
-}
-
-fn sanitize_dir_name(name: &str) -> String {
-    let cleaned: String = name
-        .chars()
-        .map(|c| {
-            if c.is_ascii_alphanumeric() || c == '-' || c == '_' || c == '.' {
-                c
-            } else {
-                '-'
-            }
-        })
-        .collect();
-    if cleaned.is_empty() {
-        "external".to_string()
-    } else {
-        cleaned
-    }
-}
-
-pub fn scenarios_dir() -> PathBuf {
-    base_dir().join("scenarios")
-}
-
-pub fn cache_dir() -> PathBuf {
-    base_dir().join("cache")
-}
-
-pub fn logs_dir() -> PathBuf {
-    base_dir().join("logs")
-}
-
-pub fn db_path() -> PathBuf {
-    base_dir().join("skills-manager.db")
-}
-
-pub fn set_base_dir_override(path: Option<String>) -> Result<PathBuf> {
-    let mut config = load_config();
-
-    // Resolve from the persisted config, never `base_dir()`: a runtime override
-    // (CLI `--skills-root`) is not where the app's library lives. Changing the
-    // path twice before a restart still migrates from where the data really is.
-    let data_location = live_base_from(&config);
-
-    let (next, persist_repo_path) = match path {
-        Some(raw) => (normalize_path(&raw)?, true),
-        None => (default_base_dir(), false),
-    };
-
-    config.repo_path = if persist_repo_path {
-        Some(next.to_string_lossy().to_string())
-    } else {
-        None
-    };
-    config.pending_migration_from = if next != data_location {
-        Some(data_location.to_string_lossy().to_string())
-    } else {
-        None
-    };
-    save_config(&config)?;
-    Ok(next)
-}
-
-fn directory_has_entries(path: &Path) -> Result<bool> {
-    if !path.exists() {
-        return Ok(false);
-    }
-    Ok(fs::read_dir(path)?.next().is_some())
-}
-
-fn copy_dir_recursive(source: &Path, target: &Path) -> Result<()> {
-    for entry in WalkDir::new(source) {
-        let entry = entry?;
-        let relative = entry.path().strip_prefix(source)?;
-        let destination = target.join(relative);
-        if entry.file_type().is_symlink() {
-            copy_symlink(entry.path(), &destination)?;
-        } else if entry.file_type().is_dir() {
-            fs::create_dir_all(&destination)?;
-        } else {
-            if let Some(parent) = destination.parent() {
-                fs::create_dir_all(parent)?;
-            }
-            fs::copy(entry.path(), &destination).with_context(|| {
-                format!(
-                    "Failed to copy {} to {}",
-                    entry.path().display(),
-                    destination.display()
-                )
-            })?;
-        }
-    }
-    Ok(())
-}
-
-/// Recreate a link as a link. Following it would turn a file link into a copy
-/// and fail outright on a directory link, aborting a cross-volume move.
-fn copy_symlink(source: &Path, destination: &Path) -> Result<()> {
-    let link = fs::read_link(source)?;
-    if let Some(parent) = destination.parent() {
-        fs::create_dir_all(parent)?;
-    }
-    #[cfg(unix)]
-    std::os::unix::fs::symlink(&link, destination)?;
-    #[cfg(windows)]
-    {
-        if fs::metadata(source).map(|m| m.is_dir()).unwrap_or(false) {
-            std::os::windows::fs::symlink_dir(&link, destination)?;
-        } else {
-            std::os::windows::fs::symlink_file(&link, destination)?;
-        }
-    }
-    Ok(())
-}
-
-/// Files the app recreates on its own. A target holding nothing else is not a
-/// library: it is what an earlier session or the CLI bridge left behind.
-const REGENERABLE_ROOT_FILES: &[&str] = &[".skills-manager.lock", "git-askpass.sh"];
-/// OS metadata, debris wherever it appears.
-const OS_METADATA_FILES: &[&str] = &[".DS_Store", "Thumbs.db", "desktop.ini"];
-
-/// Whether `path` can be dropped safely: a regenerable file, the CLI bridge's
-/// files in the default home's `bin/` (republished at every launch, so they
-/// must not block moving the library back home), or a directory holding only
-/// such things. Links are never followed or counted as debris, and anything
-/// that cannot be inspected is kept.
-fn is_regenerable(path: &Path, target: &Path) -> bool {
-    let Ok(meta) = fs::symlink_metadata(path) else {
-        return false;
-    };
-    let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
-    if meta.is_file() {
-        let parent = path.parent();
-        let in_bridge_dir = parent == Some(super::cli_bridge::bridge_dir().as_path());
-        return OS_METADATA_FILES.contains(&name)
-            || (parent == Some(target) && REGENERABLE_ROOT_FILES.contains(&name))
-            || (in_bridge_dir && super::cli_bridge::is_bridge_file(name));
-    }
-    if !meta.is_dir() {
-        return false;
-    }
-    let Ok(entries) = fs::read_dir(path) else {
-        return false;
-    };
-    entries
-        .into_iter()
-        .all(|entry| entry.is_ok_and(|entry| is_regenerable(&entry.path(), target)))
-}
-
-/// Remove debris from a migration target so the move can proceed. All-or-
-/// nothing: if anything in it is not known debris, nothing is touched.
-fn clear_regenerable_target(target: &Path) -> Result<()> {
-    let Ok(entries) = fs::read_dir(target) else {
-        return Ok(());
-    };
-    let Ok(entries) = entries
-        .map(|entry| entry.map(|e| e.path()))
-        .collect::<std::io::Result<Vec<PathBuf>>>()
-    else {
-        return Ok(());
-    };
-    if !entries.iter().all(|path| is_regenerable(path, target)) {
-        return Ok(());
-    }
-    for path in entries {
-        if fs::symlink_metadata(&path)?.is_dir() {
-            fs::remove_dir_all(&path)?;
-        } else {
-            fs::remove_file(&path)?;
-        }
-    }
-    Ok(())
-}
-
-/// Whether two paths resolve to the same directory. Falls back to a lexical
-/// comparison when either side can't be canonicalized (e.g. the target does not
-/// exist yet), so a purely cosmetic difference (case, `8.3` names, a symlink)
-/// isn't mistaken for a real relocation.
-fn paths_are_same_dir(a: &Path, b: &Path) -> bool {
-    if a == b {
-        return true;
-    }
-    match (fs::canonicalize(a), fs::canonicalize(b)) {
-        (Ok(ca), Ok(cb)) => ca == cb,
-        _ => false,
-    }
-}
-
-/// Move by copying into the (empty) target, for when a rename can't (another
-/// volume). On failure the partial copy is removed — everything in the target
-/// is ours, and left behind it would block every retry as "not empty". On
-/// success the old copy is kept but set aside: left in place it looks like the
-/// live library and blocks ever moving back to that path.
-fn move_by_copy(source: &Path, target: &Path) -> Result<()> {
-    if let Err(err) = copy_dir_recursive(source, target) {
-        if let Ok(entries) = fs::read_dir(target) {
-            for entry in entries.flatten() {
-                let path = entry.path();
-                let _ = if entry.file_type().is_ok_and(|t| t.is_dir()) {
-                    fs::remove_dir_all(&path)
-                } else {
-                    fs::remove_file(&path)
-                };
-            }
-        }
-        return Err(err);
-    }
-    let aside = source.with_file_name(format!(
-        "{}.moved-{}",
-        source.file_name().and_then(|n| n.to_str()).unwrap_or("library"),
-        chrono::Local::now().format("%Y%m%d-%H%M%S")
-    ));
-    if let Err(err) = fs::rename(source, &aside) {
-        record_startup_error(format!(
-            "central repo: copied the library to {}, but cannot set the old copy at {} aside ({err})",
-            target.display(),
-            source.display()
-        ));
-    }
-    Ok(())
-}
-
-/// What the caller should do after attempting a pending central-repo move.
-enum MigrationOutcome {
-    /// No move was pending, or it completed. Run against the configured base.
-    Proceed,
-    /// The move could not complete safely. The marker stays, so `base_dir()`
-    /// keeps resolving to the intact source; the next launch retries.
-    UseSource,
-}
-
-/// Try to satisfy a pending central-repository relocation.
-///
-/// This runs before the logger, the panic hook, and the window exist (see
-/// `run()` in lib.rs), so it must never return an error that would panic the
-/// process into a windowless death (#252). Every failure instead records a
-/// startup warning + a deferred log line and falls back to the source, where
-/// the user's data is known to be intact. It mutates `config` in place but
-/// does NOT persist it — the caller saves once, which also keeps this unit
-/// testable without touching the real config file.
-fn migrate_repo_if_needed(config: &mut RepoPathConfig, current_base: &Path) -> MigrationOutcome {
-    let Some(source_raw) = config.pending_migration_from.clone() else {
-        return MigrationOutcome::Proceed;
-    };
-    let source = match normalize_path(&source_raw) {
-        Ok(path) => path,
-        Err(err) => {
-            // The stored path is unusable, so the move can never proceed. Drop
-            // the marker to stop retrying every launch and run against target.
-            record_startup_error(format!(
-                "central repo: pending migration source {source_raw:?} is invalid ({err}); dropping it"
-            ));
-            config.pending_migration_from = None;
-            return MigrationOutcome::Proceed;
-        }
-    };
-
-    // Nothing left to move: the source is gone (moved already, or the old
-    // location was removed), or source and target are the same directory.
-    // Compare canonically, not just lexically — on a case-insensitive volume
-    // `D:\Skills` and `d:\skills` are one directory (likewise 8.3 vs long, or a
-    // symlink), and a lexical mismatch would otherwise loop forever on
-    // `migration_incomplete`, telling the user to empty their own library.
-    if !source.exists() || paths_are_same_dir(&source, current_base) {
-        // A source that is gone while the target exists is a move that
-        // finished but was never recorded (crash or failed config save right
-        // after the rename): its links and DB paths still need repointing.
-        if !source.exists() && current_base.is_dir() {
-            config.repoint_from = Some(source.to_string_lossy().to_string());
-        }
-        config.pending_migration_from = None;
-        return MigrationOutcome::Proceed;
-    }
-
-    // A target nested inside the source can never be a valid destination.
-    if current_base.starts_with(&source) {
-        record_startup_error(format!(
-            "central repo: migration target {} is inside source {}; keeping data at the source",
-            current_base.display(),
-            source.display()
-        ));
-        push_startup_warning("migration_incomplete");
-        return MigrationOutcome::UseSource;
-    }
-
-    // Only ever move into an absent/empty target — never blind-merge. A
-    // non-empty target is either a real library we must not overwrite or debris
-    // from a failed attempt we cannot tell apart; keeping the user on their
-    // intact source is lossless, overwriting is not. A fresh target also means
-    // the recursive copy only ever creates new files, so it can never hit the
-    // read-only git pack files that overwriting bricked startup on (#252).
-    if let Err(err) = clear_regenerable_target(current_base) {
-        record_startup_error(format!(
-            "central repo: cannot clear leftovers in migration target {} ({err})",
-            current_base.display()
-        ));
-    }
-    let target_empty = match directory_has_entries(current_base) {
-        Ok(has_entries) => !has_entries,
-        Err(err) => {
-            record_startup_error(format!(
-                "central repo: cannot inspect migration target {} ({err}); keeping data at source {}",
-                current_base.display(),
-                source.display()
-            ));
-            push_startup_warning("migration_incomplete");
-            return MigrationOutcome::UseSource;
-        }
-    };
-    if !target_empty {
-        record_startup_error(format!(
-            "central repo: migration target {} is not empty; keeping data at source {}",
-            current_base.display(),
-            source.display()
-        ));
-        push_startup_warning("migration_incomplete");
-        return MigrationOutcome::UseSource;
-    }
-
-    if let Some(parent) = current_base.parent() {
-        if let Err(err) = fs::create_dir_all(parent) {
-            record_startup_error(format!(
-                "central repo: cannot create migration target parent {} ({err}); keeping data at source {}",
-                parent.display(),
-                source.display()
-            ));
-            push_startup_warning("migration_incomplete");
-            return MigrationOutcome::UseSource;
-        }
-    }
-
-    // Same volume: an atomic rename moves the whole tree cheaply. Cross volume
-    // (or a rename the OS refuses): copy into the empty target. Because the
-    // target is empty, no existing file is ever overwritten.
-    if fs::rename(&source, current_base).is_err() {
-        if let Err(err) = move_by_copy(&source, current_base) {
-            record_startup_error(format!(
-                "central repo: migration copy from {} to {} failed ({err:#}); keeping data at source",
-                source.display(),
-                current_base.display()
-            ));
-            push_startup_warning("migration_incomplete");
-            return MigrationOutcome::UseSource;
-        }
-    }
-
-    config.pending_migration_from = None;
-    config.repoint_from = Some(source.to_string_lossy().to_string());
-    MigrationOutcome::Proceed
-}
-
-/// Every process using the app's library holds this lease shared for its
-/// whole life; moving the library takes it exclusively. So a move happens only
-/// while nothing else has the library open (a running app, an agent's CLI call,
-/// a second launch), and whoever starts mid-move waits for it to finish. The
-/// file lives next to the config, which never moves with the library.
-static LIBRARY_LEASE: OnceLock<Mutex<Option<fs::File>>> = OnceLock::new();
-
-fn lease_slot() -> std::sync::MutexGuard<'static, Option<fs::File>> {
-    LIBRARY_LEASE
-        .get_or_init(|| Mutex::new(None))
-        .lock()
-        .unwrap_or_else(|e| e.into_inner())
-}
-
-/// Take the lease for the rest of this process. Returns whether it is held
-/// exclusively — only then may this process move the library. Without a lock
-/// file (unwritable config dir) nobody moves anything, which is safe.
-fn take_library_lease(try_exclusive: bool) -> bool {
-    use fs2::FileExt;
-    let mut slot = lease_slot();
-    if slot.is_some() {
-        return false;
-    }
-    let path = config_file_path().with_file_name("library.lock");
-    let file = path
-        .parent()
-        .and_then(|parent| fs::create_dir_all(parent).ok())
-        .and_then(|_| {
-            fs::OpenOptions::new()
-                .create(true)
-                .truncate(false)
-                .write(true)
-                .open(&path)
-                .ok()
-        });
-    let Some(file) = file else {
-        return false;
-    };
-    // Fully qualified: newer std `File` has inherent lock methods of the same
-    // names; keep every call on one implementation.
-    let exclusive = try_exclusive && FileExt::try_lock_exclusive(&file).is_ok();
-    if !exclusive {
-        // Blocks only while another process is moving the library.
-        let _ = FileExt::lock_shared(&file);
-    }
-    *slot = Some(file);
-    exclusive
-}
-
-/// After a move, go back to sharing the library with other processes.
-fn downgrade_library_lease() {
-    use fs2::FileExt;
-    if let Some(file) = lease_slot().as_ref() {
-        let _ = FileExt::unlock(file);
-        let _ = FileExt::lock_shared(file);
-    }
-}
-
-/// Take the pre-move location recorded by a completed move, if links and DB
-/// paths pointing there still need rewriting. Call [`clear_repoint_from`] once
-/// that is done, so a crash in between retries at the next launch.
-pub fn take_repoint_from() -> Option<(PathBuf, PathBuf)> {
-    if base_dir_override_active() {
-        return None;
-    }
-    let config = load_config();
-    let from = normalize_path(config.repoint_from.as_deref()?).ok()?;
-    Some((from, base_dir()))
-}
-
-pub fn clear_repoint_from() -> Result<()> {
-    let mut config = load_config();
-    if config.repoint_from.take().is_some() {
-        save_config(&config)?;
-    }
-    Ok(())
-}
-
-/// `allow_migration`: whether this process may carry out a pending move. Only
-/// the app at startup and an explicit CLI `repo set-path` do; everything else
-/// keeps running against the library where it is.
-pub fn ensure_central_repo(allow_migration: bool) -> Result<()> {
-    // A config file that exists but cannot be used means the app is about to
-    // run against the default location even though the user configured (and
-    // populated) another one. Never let that pass silently — it presents as
-    // "the library was rebuilt empty, all skills lost" (#228 review).
-    let mut config = match load_config_state() {
-        ConfigState::Valid(config) => {
-            if let Some(raw) = config.repo_path.as_deref() {
-                if let Err(err) = normalize_path(raw) {
-                    log::error!(
-                        "central repo: configured repo_path {raw:?} is invalid ({err}); \
-                         falling back to the default location"
-                    );
-                    push_startup_warning("repo_path_invalid");
-                }
-            }
-            config
-        }
-        ConfigState::Missing => RepoPathConfig::default(),
-        ConfigState::Invalid(detail) => {
-            log::error!(
-                "central repo: config is unreadable ({detail}); \
-                 falling back to the default location"
-            );
-            push_startup_warning("config_unreadable");
-            RepoPathConfig::default()
-        }
-    };
-
-    // Only auto-migrate the app's own config-driven base. When a runtime base
-    // override is active (CLI `--skills-root` / `--path`), the pending marker in
-    // the shared config belongs to a different library and must not be applied
-    // to — or override — the explicitly chosen root. The app's own startup never
-    // sets an override before this point, so the #252 path is unaffected.
-    // A `--skills-root` run keeps its state under the default home too, so it
-    // shares the lease; it just never moves the app's library.
-    let override_active = base_dir_override_active();
-    let may_move = take_library_lease(
-        allow_migration && !override_active && config.pending_migration_from.is_some(),
-    );
-    if may_move {
-        // Re-read: another process may have finished a move while we waited.
-        config = load_config();
-        let pending_before = config.pending_migration_from.clone();
-        let target = requested_base_from(&config);
-        let _ = migrate_repo_if_needed(&mut config, &target);
-        if config.pending_migration_from != pending_before {
-            if let Err(err) = save_config(&config) {
-                record_startup_error(format!(
-                    "central repo: failed to persist migration state ({err}); it may retry next launch"
-                ));
-            }
-        }
-        downgrade_library_lease();
-    }
-    // Re-resolve: a completed move changed the base.
-    let current_base = base_dir();
-
-    // Legacy `.agent-skills` migration must run before create_dir_all below:
-    // it renames entries into `current_base` and skips ones that already
-    // exist, so pre-created empty dirs would silently swallow it (the old
-    // ordering made this branch dead code).
-    let legacy_path = dirs::home_dir().map(|home| home.join(".agent-skills"));
-    if let Some(old_path) = legacy_path {
-        if old_path.exists() && !current_base.join("skills").exists() {
-            log::info!("Migrating from old path {:?}", old_path);
-            fs::create_dir_all(&current_base)?;
-            if let Ok(entries) = fs::read_dir(&old_path) {
-                for entry in entries.flatten() {
-                    let dest = current_base.join(entry.file_name());
-                    if !dest.exists() {
-                        let _ = fs::rename(entry.path(), &dest);
-                    }
-                }
-            }
-        }
-    }
-
-    let dirs = [skills_dir(), scenarios_dir(), cache_dir(), logs_dir()];
-    for d in &dirs {
-        fs::create_dir_all(d)?;
-    }
-
-    Ok(())
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    // ── migrate_repo_if_needed (#252) ──
-
-    fn config_migrating(source: &Path, target: &Path) -> RepoPathConfig {
-        RepoPathConfig {
-            repo_path: Some(target.to_string_lossy().to_string()),
-            pending_migration_from: Some(source.to_string_lossy().to_string()),
-            ..Default::default()
-        }
-    }
-
-    #[test]
-    fn migration_into_empty_target_moves_and_clears_marker() {
-        let src = tempfile::tempdir().unwrap();
-        let dst = tempfile::tempdir().unwrap(); // exists but empty
-        fs::create_dir_all(src.path().join("skills")).unwrap();
-        fs::write(src.path().join("skills/s.md"), b"skill").unwrap();
-
-        let mut config = config_migrating(src.path(), dst.path());
-        let outcome = migrate_repo_if_needed(&mut config, dst.path());
-
-        assert!(matches!(outcome, MigrationOutcome::Proceed));
-        assert_eq!(config.pending_migration_from, None);
-        assert_eq!(fs::read(dst.path().join("skills/s.md")).unwrap(), b"skill");
-    }
-
-    #[test]
-    fn live_base_is_the_move_source_until_the_move_happens() {
-        // Saving a new path must not switch the running session: everything
-        // it wrote would land in the target and block the move at the next
-        // launch (#449 #469 #393).
-        let src = tempfile::tempdir().unwrap();
-        let dst = tempfile::tempdir().unwrap();
-        let config = config_migrating(src.path(), &dst.path().join("lib"));
-        assert_eq!(
-            live_base_from(&config),
-            normalize_path(&src.path().to_string_lossy()).unwrap()
-        );
-        assert_eq!(
-            requested_base_from(&config),
-            normalize_path(&dst.path().join("lib").to_string_lossy()).unwrap()
-        );
-
-        // Once the source is gone (moved), the requested location is live.
-        let moved = config_migrating(&src.path().join("gone"), &dst.path().join("lib"));
-        assert_eq!(live_base_from(&moved), requested_base_from(&moved));
-    }
-
-    #[test]
-    fn migration_clears_regenerable_leftovers_and_records_repoint() {
-        // What an earlier session and the CLI bridge leave in a target: a
-        // lock file, empty skeleton dirs, OS metadata, the bridge's `bin/`.
-        let _guard = test_base_dir_lock();
-        let src = tempfile::tempdir().unwrap();
-        let home = tempfile::tempdir().unwrap();
-        set_test_home_dir_override(Some(home.path().to_path_buf()));
-        let dst = home_base_dir(); // moving back to the default home
-        fs::write(src.path().join("a.txt"), b"src").unwrap();
-        fs::create_dir_all(&dst).unwrap();
-        fs::write(dst.join(".skills-manager.lock"), b"pid=1").unwrap();
-        fs::write(dst.join(".DS_Store"), b"").unwrap();
-        fs::create_dir_all(dst.join("skills")).unwrap();
-        fs::create_dir_all(dst.join("cache/repos")).unwrap();
-        let bridge = super::super::cli_bridge::bridge_path();
-        fs::create_dir_all(bridge.parent().unwrap()).unwrap();
-        fs::write(&bridge, b"bin").unwrap();
-        fs::write(bridge.with_file_name(".version"), b"1.0").unwrap();
-
-        let mut config = config_migrating(src.path(), &dst);
-        let outcome = migrate_repo_if_needed(&mut config, &dst);
-        set_test_home_dir_override(None);
-
-        assert!(matches!(outcome, MigrationOutcome::Proceed));
-        assert_eq!(config.pending_migration_from, None);
-        assert!(config.repoint_from.is_some());
-        assert_eq!(fs::read(dst.join("a.txt")).unwrap(), b"src");
-    }
-
-    #[test]
-    fn app_file_names_count_as_debris_only_at_the_target_root() {
-        let src = tempfile::tempdir().unwrap();
-        let dst = tempfile::tempdir().unwrap();
-        fs::write(src.path().join("a.txt"), b"src").unwrap();
-        fs::create_dir_all(dst.path().join("tools")).unwrap();
-        fs::write(dst.path().join("tools/git-askpass.sh"), b"mine").unwrap();
-
-        let mut config = config_migrating(src.path(), dst.path());
-        let outcome = migrate_repo_if_needed(&mut config, dst.path());
-
-        assert!(matches!(outcome, MigrationOutcome::UseSource));
-        assert!(dst.path().join("tools/git-askpass.sh").exists());
-    }
-
-    #[test]
-    fn move_by_copy_sets_the_old_copy_aside() {
-        let tmp = tempfile::tempdir().unwrap();
-        let src = tmp.path().join("lib");
-        let dst = tmp.path().join("new");
-        fs::create_dir_all(&src).unwrap();
-        fs::write(src.join("a.txt"), b"src").unwrap();
-
-        move_by_copy(&src, &dst).unwrap();
-
-        assert_eq!(fs::read(dst.join("a.txt")).unwrap(), b"src");
-        assert!(!src.exists(), "the path is free to move back to");
-        let aside: Vec<_> = fs::read_dir(tmp.path())
-            .unwrap()
-            .flatten()
-            .filter(|e| e.file_name().to_string_lossy().starts_with("lib.moved-"))
-            .collect();
-        assert_eq!(aside.len(), 1, "the old copy is kept");
-    }
-
-    #[test]
-    #[cfg(unix)]
-    fn move_by_copy_failure_leaves_the_target_empty() {
-        use std::os::unix::fs::PermissionsExt;
-        let tmp = tempfile::tempdir().unwrap();
-        let src = tmp.path().join("lib");
-        let dst = tmp.path().join("new");
-        fs::create_dir_all(src.join("a")).unwrap();
-        fs::write(src.join("a/ok.txt"), b"x").unwrap();
-        fs::write(src.join("z-unreadable"), b"x").unwrap();
-        fs::set_permissions(src.join("z-unreadable"), fs::Permissions::from_mode(0o000)).unwrap();
-        if fs::read(src.join("z-unreadable")).is_ok() {
-            return; // running as root: can't provoke the failure
-        }
-
-        assert!(move_by_copy(&src, &dst).is_err());
-
-        assert!(!directory_has_entries(&dst).unwrap(), "retry must see an empty target");
-        assert!(src.join("a/ok.txt").exists(), "source untouched");
-        fs::set_permissions(src.join("z-unreadable"), fs::Permissions::from_mode(0o644)).unwrap();
-    }
-
-    #[test]
-    fn a_bin_dir_outside_the_default_home_is_not_debris() {
-        // Only the default home's `bin/` holds the bridge; elsewhere a file
-        // with the bridge's name is the user's.
-        let src = tempfile::tempdir().unwrap();
-        let dst = tempfile::tempdir().unwrap();
-        fs::write(src.path().join("a.txt"), b"src").unwrap();
-        fs::create_dir_all(dst.path().join("bin")).unwrap();
-        fs::write(dst.path().join("bin/skills-manager-cli"), b"mine").unwrap();
-
-        let mut config = config_migrating(src.path(), dst.path());
-        let outcome = migrate_repo_if_needed(&mut config, dst.path());
-
-        assert!(matches!(outcome, MigrationOutcome::UseSource));
-        assert!(dst.path().join("bin/skills-manager-cli").exists());
-    }
-
-    #[test]
-    fn a_move_that_finished_unrecorded_still_repoints() {
-        // Crash (or failed config save) right after the rename: the source is
-        // gone, the target holds the library, the marker is still pending.
-        let dst = tempfile::tempdir().unwrap();
-        let gone = dst.path().join("moved-away");
-        let mut config = config_migrating(&gone, dst.path());
-
-        let outcome = migrate_repo_if_needed(&mut config, dst.path());
-
-        assert!(matches!(outcome, MigrationOutcome::Proceed));
-        assert_eq!(config.pending_migration_from, None);
-        assert_eq!(config.repoint_from.as_deref(), Some(gone.to_string_lossy().as_ref()));
-    }
-
-    #[test]
-    fn migration_leaves_a_target_with_real_content_untouched() {
-        // One real file among the leftovers: nothing is removed.
-        let src = tempfile::tempdir().unwrap();
-        let dst = tempfile::tempdir().unwrap();
-        fs::write(src.path().join("a.txt"), b"src").unwrap();
-        fs::write(dst.path().join(".skills-manager.lock"), b"").unwrap();
-        fs::create_dir_all(dst.path().join("skills/mine")).unwrap();
-        fs::write(dst.path().join("skills/mine/SKILL.md"), b"x").unwrap();
-
-        let mut config = config_migrating(src.path(), dst.path());
-        let outcome = migrate_repo_if_needed(&mut config, dst.path());
-
-        assert!(matches!(outcome, MigrationOutcome::UseSource));
-        assert!(dst.path().join(".skills-manager.lock").exists());
-        assert!(dst.path().join("skills/mine/SKILL.md").exists());
-        assert_eq!(config.repoint_from, None);
-    }
-
-    #[test]
-    #[cfg(unix)]
-    fn migration_does_not_follow_a_link_disguised_as_a_skeleton_dir() {
-        let src = tempfile::tempdir().unwrap();
-        let dst = tempfile::tempdir().unwrap();
-        let outside = tempfile::tempdir().unwrap();
-        fs::write(src.path().join("a.txt"), b"src").unwrap();
-        std::os::unix::fs::symlink(outside.path(), dst.path().join("skills")).unwrap();
-
-        let mut config = config_migrating(src.path(), dst.path());
-        let outcome = migrate_repo_if_needed(&mut config, dst.path());
-
-        assert!(matches!(outcome, MigrationOutcome::UseSource));
-        assert!(outside.path().exists());
-    }
-
-    #[test]
-    #[cfg(unix)]
-    fn copy_dir_recursive_keeps_links_as_links() {
-        let src = tempfile::tempdir().unwrap();
-        let dst = tempfile::tempdir().unwrap();
-        fs::create_dir_all(src.path().join("real")).unwrap();
-        fs::write(src.path().join("real/f"), b"x").unwrap();
-        std::os::unix::fs::symlink("real", src.path().join("dir-link")).unwrap();
-        std::os::unix::fs::symlink("real/f", src.path().join("file-link")).unwrap();
-
-        copy_dir_recursive(src.path(), &dst.path().join("out")).unwrap();
-
-        let out = dst.path().join("out");
-        assert_eq!(fs::read_link(out.join("dir-link")).unwrap(), Path::new("real"));
-        assert_eq!(fs::read_link(out.join("file-link")).unwrap(), Path::new("real/f"));
-    }
-
-    #[test]
-    fn migration_into_nonempty_target_keeps_source_and_marker() {
-        // The whole point of #252's safety: never blind-merge over a
-        // non-empty target (real data or failed-attempt debris we can't tell
-        // apart). Fall back to the intact source and keep retrying.
-        let src = tempfile::tempdir().unwrap();
-        let dst = tempfile::tempdir().unwrap();
-        fs::write(src.path().join("a.txt"), b"src").unwrap();
-        fs::write(dst.path().join("existing.txt"), b"dst-data").unwrap();
-
-        let mut config = config_migrating(src.path(), dst.path());
-        let outcome = migrate_repo_if_needed(&mut config, dst.path());
-
-        assert!(matches!(outcome, MigrationOutcome::UseSource));
-        assert_eq!(
-            live_base_from(&config),
-            normalize_path(&src.path().to_string_lossy()).unwrap()
-        );
-        assert!(config.pending_migration_from.is_some(), "marker kept for retry");
-        assert_eq!(fs::read(dst.path().join("existing.txt")).unwrap(), b"dst-data");
-        assert_eq!(fs::read(src.path().join("a.txt")).unwrap(), b"src");
-    }
-
-    #[test]
-    #[cfg(unix)]
-    fn migration_same_dir_via_symlink_clears_marker() {
-        // A cosmetic path difference that resolves to the same directory (here
-        // a symlink; on Windows, case / 8.3 names) must not be mistaken for a
-        // real relocation — otherwise it loops forever on `migration_incomplete`
-        // telling the user to empty their own library.
-        let real = tempfile::tempdir().unwrap();
-        fs::create_dir_all(real.path().join("skills")).unwrap();
-        let link_parent = tempfile::tempdir().unwrap();
-        let link = link_parent.path().join("aliased");
-        std::os::unix::fs::symlink(real.path(), &link).unwrap();
-
-        let mut config = config_migrating(real.path(), &link);
-        let outcome = migrate_repo_if_needed(&mut config, &link);
-
-        assert!(matches!(outcome, MigrationOutcome::Proceed));
-        assert_eq!(config.pending_migration_from, None, "same-dir move clears marker");
-        // The real library is untouched.
-        assert!(real.path().join("skills").exists());
-    }
-
-    #[test]
-    fn migration_with_missing_source_clears_marker() {
-        let dst = tempfile::tempdir().unwrap();
-        let missing = dst.path().join("does-not-exist");
-        let mut config = config_migrating(&missing, dst.path());
-
-        let outcome = migrate_repo_if_needed(&mut config, dst.path());
-        assert!(matches!(outcome, MigrationOutcome::Proceed));
-        assert_eq!(config.pending_migration_from, None);
-    }
-
-    #[test]
-    fn no_pending_migration_is_a_noop() {
-        let dst = tempfile::tempdir().unwrap();
-        let mut config = RepoPathConfig {
-            repo_path: Some(dst.path().to_string_lossy().to_string()),
-            pending_migration_from: None,
-            ..Default::default()
-        };
-        let outcome = migrate_repo_if_needed(&mut config, dst.path());
-        assert!(matches!(outcome, MigrationOutcome::Proceed));
-        assert_eq!(config.pending_migration_from, None);
-    }
-
-    #[test]
-    fn copy_dir_recursive_copies_read_only_source_files() {
-        // git pack files (.idx/.pack/.rev) are read-only. Copying them into a
-        // fresh target must succeed — the #252 brick only happened when
-        // OVERWRITING an existing read-only file, which migration now avoids by
-        // only ever moving into an empty target.
-        let src = tempfile::tempdir().unwrap();
-        let dst = tempfile::tempdir().unwrap();
-        let pack = src.path().join("pack.idx");
-        fs::write(&pack, b"packdata").unwrap();
-        let mut perms = fs::metadata(&pack).unwrap().permissions();
-        perms.set_readonly(true);
-        fs::set_permissions(&pack, perms).unwrap();
-
-        let target = dst.path().join("out");
-        copy_dir_recursive(src.path(), &target).unwrap();
-        assert_eq!(fs::read(target.join("pack.idx")).unwrap(), b"packdata");
-    }
-
-    // ── load_config_state_from ──
-
-    #[test]
-    fn config_state_missing_file_is_missing() {
-        let tmp = tempfile::tempdir().unwrap();
-        let state = load_config_state_from(&tmp.path().join("repo-config.json"));
-        assert!(matches!(state, ConfigState::Missing));
-    }
-
-    #[test]
-    fn config_state_valid_json_is_valid() {
-        let tmp = tempfile::tempdir().unwrap();
-        let path = tmp.path().join("repo-config.json");
-        fs::write(&path, r#"{ "repo_path": "/tmp/lib", "pending_migration_from": null }"#)
-            .unwrap();
-        match load_config_state_from(&path) {
-            ConfigState::Valid(config) => {
-                assert_eq!(config.repo_path.as_deref(), Some("/tmp/lib"));
-            }
-            other => panic!("expected Valid, got {other:?}"),
-        }
-    }
-
-    #[test]
-    fn config_state_corrupt_json_is_invalid_not_fresh_install() {
-        // A corrupt config must never be treated like a missing one — that is
-        // the "library rebuilt empty, all skills lost" failure mode (#228).
-        let tmp = tempfile::tempdir().unwrap();
-        let path = tmp.path().join("repo-config.json");
-        fs::write(&path, "{ not json").unwrap();
-        let state = load_config_state_from(&path);
-        assert!(matches!(state, ConfigState::Invalid(_)), "{state:?}");
-    }
-
-    #[test]
-    fn external_base_dir_lives_under_default_base_external() {
-        let dir = external_base_dir(Path::new("/tmp/some/my-skills"));
-        let prefix = default_base_dir().join("external");
-        assert!(
-            dir.starts_with(&prefix),
-            "expected {} to start with {}",
-            dir.display(),
-            prefix.display()
-        );
-    }
-
-    #[test]
-    fn external_base_dir_is_stable_for_same_path() {
-        let a = external_base_dir(Path::new("/tmp/some/my-skills"));
-        let b = external_base_dir(Path::new("/tmp/some/my-skills"));
-        assert_eq!(a, b);
-    }
-
-    #[test]
-    fn external_base_dir_differs_for_different_paths() {
-        let a = external_base_dir(Path::new("/tmp/one/my-skills"));
-        let b = external_base_dir(Path::new("/tmp/two/my-skills"));
-        assert_ne!(a, b);
-    }
-
-    #[test]
-    fn external_base_dir_does_not_pollute_skills_root_or_its_parent() {
-        let skills_root = Path::new("/tmp/external-test/my-skills");
-        let dir = external_base_dir(skills_root);
-        assert!(!dir.starts_with(skills_root));
-        assert!(!dir.starts_with(skills_root.parent().unwrap()));
-    }
-
-    #[test]
-    fn sanitize_dir_name_replaces_unsafe_characters() {
-        assert_eq!(sanitize_dir_name("my skills"), "my-skills");
-        assert_eq!(sanitize_dir_name("a/b\\c:d"), "a-b-c-d");
-        assert_eq!(sanitize_dir_name(""), "external");
-    }
-
-    #[test]
-    fn external_base_dir_relative_path_is_stable_against_absolute_form() {
-        // For a not-yet-existing target, a relative path should namespace the
-        // same as its cwd-absolutized form. We simulate by passing both forms
-        // and asserting they match.
-        let cwd = std::env::current_dir().unwrap();
-        let rel = Path::new("nonexistent-skills-target-xyz");
-        let abs = cwd.join(rel);
-        assert_eq!(external_base_dir(rel), external_base_dir(&abs));
-    }
-
-    #[test]
-    fn external_base_dir_normalizes_redundant_segments() {
-        // `./x`, `x`, and `a/../x` should all hash to the same namespace when
-        // none of them exist on disk.
-        let plain = external_base_dir(Path::new("nonexistent-norm-target"));
-        let dot = external_base_dir(Path::new("./nonexistent-norm-target"));
-        let parent = external_base_dir(Path::new("a/../nonexistent-norm-target"));
-        assert_eq!(plain, dot);
-        assert_eq!(plain, parent);
-    }
-
-    #[test]
-    fn lexically_normalize_handles_basic_cases() {
-        assert_eq!(
-            lexically_normalize(Path::new("/a/./b/../c")),
-            PathBuf::from("/a/c")
-        );
-        assert_eq!(
-            lexically_normalize(Path::new("./a/b")),
-            PathBuf::from("a/b")
-        );
-        assert_eq!(lexically_normalize(Path::new("/..")), PathBuf::from("/"));
-    }
-}
-````
-
 ## File: src-tauri/src/core/scenario_service.rs
 ````rust
 use serde::Serialize;
@@ -56911,6 +59830,1151 @@ mod skip_check_mode_tests {
         assert!(skip_check_mode("garbage", SyncMode::Symlink).is_none());
         assert!(skip_check_mode("", SyncMode::Copy).is_none());
     }
+}
+````
+
+## File: src-tauri/src/lib.rs
+````rust
+use std::collections::HashSet;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
+use std::time::{Duration, Instant};
+use tauri::{Emitter, Manager};
+use tauri_plugin_window_state::{AppHandleExt, StateFlags, WindowExt};
+
+pub mod commands;
+pub mod core;
+pub mod company_app;
+
+/// Shared flag: when true, CloseRequested should NOT be prevented.
+pub static QUITTING: AtomicBool = AtomicBool::new(false);
+
+/// Guards concurrent preset apply/remove from the tray so a quick double-click
+/// can't fire two batches at once. Intentionally separate from the
+/// `TRAY_CHECK_UPDATES_RUNNING` flag — update checks only touch
+/// `update_status` while preset apply touches `skill_targets`, so the two are
+/// orthogonal and shouldn't block each other. Sharing the lock would silently
+/// drop preset clicks during long-running update checks.
+static TRAY_PRESET_APPLY_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+/// Tracks whether a manual "Check for skill updates" is currently running so the
+/// tray menu can render a disabled "Checking for updates..." label.
+static TRAY_CHECK_UPDATES_RUNNING: AtomicBool = AtomicBool::new(false);
+
+const MAIN_TRAY_ID: &str = "main-tray";
+const TRAY_PRESET_ADD_PREFIX: &str = "tray-preset-add:";
+const TRAY_PRESET_REMOVE_PREFIX: &str = "tray-preset-remove:";
+const TRAY_OPEN_UPDATES_ID: &str = "tray-open-updates";
+const TRAY_OPEN_FOLDER_ID: &str = "tray-open-folder";
+const TRAY_CHECK_UPDATES_ID: &str = "tray-check-updates";
+const TRAY_OPEN_UPDATES_EVENT: &str = "tray-open-updates";
+
+#[cfg(target_os = "macos")]
+const CUSTOM_TRAY_ICON_BYTES: &[u8] = include_bytes!("../icons/tray/tray-icon-32.png");
+#[cfg(not(target_os = "macos"))]
+const CUSTOM_TRAY_ICON_BYTES: &[u8] = include_bytes!("../icons/tray/tray-icon-color-32.png");
+
+fn parse_bool_setting(value: Option<String>, default: bool) -> bool {
+    match value.as_deref().map(str::trim).map(str::to_ascii_lowercase) {
+        Some(v) if matches!(v.as_str(), "true" | "1" | "yes" | "on") => true,
+        Some(v) if matches!(v.as_str(), "false" | "0" | "no" | "off") => false,
+        _ => default,
+    }
+}
+
+fn is_tray_icon_enabled(store: &Arc<core::skill_store::SkillStore>) -> bool {
+    let value = store.get_setting("show_tray_icon").ok().flatten();
+    parse_bool_setting(value, true)
+}
+
+fn restore_main_window(app: &tauri::AppHandle) {
+    let app_for_main = app.clone();
+    if let Err(err) = app.run_on_main_thread(move || {
+        #[cfg(target_os = "macos")]
+        {
+            if let Err(err) = app_for_main.set_dock_visibility(true) {
+                log::error!("Failed to show Dock icon on macOS: {err}");
+            }
+            if let Err(err) = app_for_main.set_activation_policy(tauri::ActivationPolicy::Regular) {
+                log::error!("Failed to set activation policy to Regular on macOS: {err}");
+            }
+            if let Err(err) = app_for_main.show() {
+                log::error!("Failed to show app on macOS: {err}");
+            }
+        }
+
+        if let Some(w) = app_for_main.get_webview_window("main") {
+            if let Err(err) = w.show() {
+                log::error!("Failed to show main window: {err}");
+            }
+            if let Err(err) = w.unminimize() {
+                log::error!("Failed to unminimize main window: {err}");
+            }
+            if let Err(err) = w.set_focus() {
+                log::error!("Failed to focus main window: {err}");
+            }
+        } else {
+            log::error!("Main window not found while restoring from tray");
+        }
+    }) {
+        log::error!("Failed to schedule restore_main_window on main thread: {err}");
+    }
+}
+
+fn request_quit(app: &tauri::AppHandle) {
+    let app_for_main = app.clone();
+    if let Err(err) = app.run_on_main_thread(move || {
+        quit_app(&app_for_main);
+    }) {
+        log::error!("Failed to schedule quit on main thread: {err}");
+        // Fallback: attempt quit anyway.
+        quit_app(app);
+    }
+}
+
+fn load_custom_tray_icon() -> Option<tauri::image::Image<'static>> {
+    let img = image::load_from_memory_with_format(CUSTOM_TRAY_ICON_BYTES, image::ImageFormat::Png)
+        .ok()?;
+    let rgba = img.to_rgba8();
+    let (width, height) = rgba.dimensions();
+    Some(tauri::image::Image::new_owned(
+        rgba.into_raw(),
+        width,
+        height,
+    ))
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum TrayPresetStatus {
+    Empty,
+    Inactive,
+    Partial,
+    Active,
+}
+
+#[derive(Debug, Clone)]
+struct TrayPresetEntry {
+    id: String,
+    name: String,
+    skill_count: usize,
+    synced_pairs: usize,
+    total_pairs: usize,
+}
+
+impl TrayPresetEntry {
+    fn status(&self) -> TrayPresetStatus {
+        if self.total_pairs == 0 {
+            TrayPresetStatus::Empty
+        } else if self.synced_pairs == 0 {
+            TrayPresetStatus::Inactive
+        } else if self.synced_pairs >= self.total_pairs {
+            TrayPresetStatus::Active
+        } else {
+            TrayPresetStatus::Partial
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+struct TrayMenuData {
+    total_skills: usize,
+    coding_agent_count: usize,
+    update_count: usize,
+    presets: Vec<TrayPresetEntry>,
+    check_updates_running: bool,
+}
+
+fn collect_tray_menu_data(store: &core::skill_store::SkillStore) -> TrayMenuData {
+    let all_skills = store.get_all_skills().unwrap_or_default();
+    let total_skills = all_skills.len();
+    let update_count = all_skills
+        .iter()
+        .filter(|s| s.update_status == "update_available")
+        .count();
+
+    let coding_keys: Vec<String> = core::tool_adapters::enabled_installed_adapters(store)
+        .into_iter()
+        .filter(|adapter| matches!(adapter.category, core::tool_adapters::ToolCategory::Coding))
+        .map(|adapter| adapter.key)
+        .collect();
+    let coding_agent_count = coding_keys.len();
+    let coding_set: HashSet<&str> = coding_keys.iter().map(String::as_str).collect();
+
+    let synced_pairs_set: HashSet<(String, String)> = store
+        .get_all_targets()
+        .unwrap_or_default()
+        .into_iter()
+        .filter(|target| coding_set.contains(target.tool.as_str()))
+        .map(|target| (target.skill_id, target.tool))
+        .collect();
+
+    let scenarios = store.get_all_scenarios().unwrap_or_default();
+    let mut presets = Vec::with_capacity(scenarios.len());
+    for scenario in scenarios {
+        let skill_ids = store
+            .get_skill_ids_for_scenario(&scenario.id)
+            .unwrap_or_default();
+        let skill_count = skill_ids.len();
+        let total_pairs = skill_count * coding_agent_count;
+        let mut synced_pairs = 0usize;
+        if total_pairs > 0 {
+            for sid in &skill_ids {
+                for tk in &coding_keys {
+                    if synced_pairs_set.contains(&(sid.clone(), tk.clone())) {
+                        synced_pairs += 1;
+                    }
+                }
+            }
+        }
+        presets.push(TrayPresetEntry {
+            id: scenario.id,
+            name: scenario.name,
+            skill_count,
+            synced_pairs,
+            total_pairs,
+        });
+    }
+
+    TrayMenuData {
+        total_skills,
+        coding_agent_count,
+        update_count,
+        presets,
+        check_updates_running: TRAY_CHECK_UPDATES_RUNNING.load(Ordering::SeqCst),
+    }
+}
+
+fn format_status_line(data: &TrayMenuData) -> String {
+    let skill_label = if data.total_skills == 1 { "skill" } else { "skills" };
+    let agent_label = if data.coding_agent_count == 1 { "agent" } else { "agents" };
+    format!(
+        "{} {} · {} {} connected",
+        data.total_skills, skill_label, data.coding_agent_count, agent_label
+    )
+}
+
+fn format_tooltip(data: &TrayMenuData) -> String {
+    if data.update_count > 0 {
+        format!(
+            "Skills Manager · {} skills · {} agents · {} updates",
+            data.total_skills, data.coding_agent_count, data.update_count
+        )
+    } else {
+        format!(
+            "Skills Manager · {} skills · {} agents",
+            data.total_skills, data.coding_agent_count
+        )
+    }
+}
+
+fn preset_menu_item_id(preset: &TrayPresetEntry) -> (String, &'static str) {
+    // E1 semantics: only a fully-active preset removes on click. Partial
+    // and inactive both fill missing pairs up to fully active.
+    match preset.status() {
+        TrayPresetStatus::Active => (
+            format!("{TRAY_PRESET_REMOVE_PREFIX}{}", preset.id),
+            "remove",
+        ),
+        _ => (format!("{TRAY_PRESET_ADD_PREFIX}{}", preset.id), "add"),
+    }
+}
+
+fn preset_menu_label(preset: &TrayPresetEntry) -> String {
+    let unit = if preset.skill_count == 1 { "skill" } else { "skills" };
+    match preset.status() {
+        TrayPresetStatus::Active => format!("✓ {} ({} {unit})", preset.name, preset.skill_count),
+        TrayPresetStatus::Partial => format!(
+            "{} ({}/{} synced)",
+            preset.name, preset.synced_pairs, preset.total_pairs
+        ),
+        _ => format!("{} ({} {unit})", preset.name, preset.skill_count),
+    }
+}
+
+fn preset_id_from_menu_id(menu_id: &str) -> Option<(&str, scenario_service_alias::BatchApplyMode)> {
+    if let Some(id) = menu_id.strip_prefix(TRAY_PRESET_ADD_PREFIX) {
+        return Some((id, scenario_service_alias::BatchApplyMode::Add));
+    }
+    if let Some(id) = menu_id.strip_prefix(TRAY_PRESET_REMOVE_PREFIX) {
+        return Some((id, scenario_service_alias::BatchApplyMode::Remove));
+    }
+    None
+}
+
+mod scenario_service_alias {
+    pub use crate::core::scenario_service::BatchApplyMode;
+}
+
+fn build_tray_menu<R: tauri::Runtime>(
+    app: &tauri::AppHandle<R>,
+    store: &Arc<core::skill_store::SkillStore>,
+) -> tauri::Result<(tauri::menu::Menu<R>, String)> {
+    let data = collect_tray_menu_data(store);
+    build_tray_menu_from_data(app, &data)
+}
+
+fn build_tray_menu_from_data<R: tauri::Runtime>(
+    app: &tauri::AppHandle<R>,
+    data: &TrayMenuData,
+) -> tauri::Result<(tauri::menu::Menu<R>, String)> {
+    use tauri::menu::{Menu, MenuItem, PredefinedMenuItem, Submenu};
+
+    let menu = Menu::new(app)?;
+
+    let app_name = MenuItem::with_id(app, "tray-app-name", "Skills Manager", false, None::<&str>)?;
+    menu.append(&app_name)?;
+
+    let status_line = MenuItem::with_id(
+        app,
+        "tray-status-line",
+        format_status_line(data),
+        false,
+        None::<&str>,
+    )?;
+    menu.append(&status_line)?;
+
+    if data.update_count > 0 {
+        let updates_label = if data.update_count == 1 {
+            "1 skill update available".to_string()
+        } else {
+            format!("{} skill updates available", data.update_count)
+        };
+        let updates_item =
+            MenuItem::with_id(app, TRAY_OPEN_UPDATES_ID, updates_label, true, None::<&str>)?;
+        menu.append(&updates_item)?;
+    }
+
+    menu.append(&PredefinedMenuItem::separator(app)?)?;
+
+    let presets_submenu = Submenu::new(app, "Presets", true)?;
+    if data.coding_agent_count == 0 {
+        let no_agents = MenuItem::with_id(
+            app,
+            "tray-presets-no-agents",
+            "No coding agents connected",
+            false,
+            None::<&str>,
+        )?;
+        presets_submenu.append(&no_agents)?;
+    } else {
+        let visible: Vec<_> = data
+            .presets
+            .iter()
+            .filter(|p| !matches!(p.status(), TrayPresetStatus::Empty))
+            .collect();
+        if visible.is_empty() {
+            let empty = MenuItem::with_id(
+                app,
+                "tray-presets-empty",
+                "No presets with skills",
+                false,
+                None::<&str>,
+            )?;
+            presets_submenu.append(&empty)?;
+        } else {
+            for preset in visible {
+                let (id, _action) = preset_menu_item_id(preset);
+                let label = preset_menu_label(preset);
+                let item = MenuItem::with_id(app, id, label, true, None::<&str>)?;
+                presets_submenu.append(&item)?;
+            }
+        }
+    }
+    menu.append(&presets_submenu)?;
+
+    menu.append(&PredefinedMenuItem::separator(app)?)?;
+
+    let show_item = MenuItem::with_id(app, "show", "Open Skills Manager", true, None::<&str>)?;
+    menu.append(&show_item)?;
+
+    let check_label = if data.check_updates_running {
+        "Checking for updates..."
+    } else {
+        "Check for skill updates"
+    };
+    let check_item = MenuItem::with_id(
+        app,
+        TRAY_CHECK_UPDATES_ID,
+        check_label,
+        !data.check_updates_running,
+        None::<&str>,
+    )?;
+    menu.append(&check_item)?;
+
+    let folder_item = MenuItem::with_id(
+        app,
+        TRAY_OPEN_FOLDER_ID,
+        "Open Skills Folder",
+        true,
+        None::<&str>,
+    )?;
+    menu.append(&folder_item)?;
+
+    menu.append(&PredefinedMenuItem::separator(app)?)?;
+
+    let quit_item = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
+    menu.append(&quit_item)?;
+
+    Ok((menu, format_tooltip(data)))
+}
+
+pub(crate) fn refresh_tray_menu<R: tauri::Runtime>(
+    app: &tauri::AppHandle<R>,
+) -> Result<(), String> {
+    if app.tray_by_id(MAIN_TRAY_ID).is_none() {
+        return Ok(());
+    }
+    let store = app
+        .state::<Arc<core::skill_store::SkillStore>>()
+        .inner()
+        .clone();
+    // Collect data off the main thread (DB reads are cheap, no FFI). The
+    // actual `Menu::new`, `set_menu`, `set_tooltip` calls hit native macOS
+    // (NSMenu / NSStatusItem) APIs and MUST run on the main thread — calling
+    // them from a worker thread is UB and crashed the app with a
+    // `slice::from_raw_parts` alignment panic during repeated tray actions.
+    let data = collect_tray_menu_data(&store);
+    let app_for_main = app.clone();
+    app.run_on_main_thread(move || {
+        let Some(tray) = app_for_main.tray_by_id(MAIN_TRAY_ID) else {
+            return;
+        };
+        match build_tray_menu_from_data(&app_for_main, &data) {
+            Ok((menu, tooltip)) => {
+                if let Err(err) = tray.set_menu(Some(menu)) {
+                    log::warn!("tray set_menu failed: {err}");
+                }
+                if let Err(err) = tray.set_tooltip(Some(&tooltip)) {
+                    log::warn!("tray set_tooltip failed: {err}");
+                }
+            }
+            Err(err) => log::warn!("build_tray_menu_from_data failed: {err}"),
+        }
+    })
+    .map_err(|e| e.to_string())
+}
+
+/// Coalesce bursts into at most one tray rebuild per 300 ms window. Avoids
+/// rebuilding the menu N times when `PresetBar` loops `skill × agent` calls
+/// through `sync_skill_to_tool`. The first request schedules the rebuild;
+/// any further requests during the wait window are absorbed.
+static TRAY_REFRESH_PENDING: AtomicBool = AtomicBool::new(false);
+const TRAY_REFRESH_DEBOUNCE: Duration = Duration::from_millis(300);
+
+pub(crate) fn schedule_tray_refresh(app: &tauri::AppHandle) {
+    if TRAY_REFRESH_PENDING.swap(true, Ordering::SeqCst) {
+        return;
+    }
+    let app = app.clone();
+    tauri::async_runtime::spawn(async move {
+        tokio::time::sleep(TRAY_REFRESH_DEBOUNCE).await;
+        TRAY_REFRESH_PENDING.store(false, Ordering::SeqCst);
+        if let Err(err) = refresh_tray_menu(&app) {
+            log::debug!("debounced tray refresh failed: {err}");
+        }
+    });
+}
+
+fn apply_preset_from_tray<R: tauri::Runtime>(
+    app: &tauri::AppHandle<R>,
+    preset_id: &str,
+    mode: core::scenario_service::BatchApplyMode,
+) {
+    let store = app
+        .state::<Arc<core::skill_store::SkillStore>>()
+        .inner()
+        .clone();
+    let app = app.clone();
+    let preset_id = preset_id.to_string();
+
+    tauri::async_runtime::spawn(async move {
+        let store_for_task = store.clone();
+        let preset_id_for_task = preset_id.clone();
+        // Result variants:
+        //   Ok(true)  — the batch actually ran (do success-side effects)
+        //   Ok(false) — skipped because another apply is in-flight or the
+        //               preset/agent set was empty (no real work happened, so
+        //               do NOT emit app-files-changed: that would lie to the
+        //               frontend about state changes that didn't occur)
+        //   Err(_)    — failure inside the batch
+        let result = tauri::async_runtime::spawn_blocking(move || -> Result<bool, String> {
+            let _guard = match TRAY_PRESET_APPLY_LOCK.try_lock() {
+                Ok(guard) => guard,
+                Err(_) => {
+                    log::debug!(
+                        "Another preset apply in flight, ignoring tray click for {preset_id_for_task}"
+                    );
+                    return Ok(false);
+                }
+            };
+            core::scenario_service::ensure_scenario_exists(&store_for_task, &preset_id_for_task)
+                .map_err(|e| e.to_string())?;
+            let skill_ids = store_for_task
+                .get_skill_ids_for_scenario(&preset_id_for_task)
+                .map_err(|e| e.to_string())?;
+            if skill_ids.is_empty() {
+                return Ok(false);
+            }
+            let tool_keys: Vec<String> =
+                core::tool_adapters::enabled_installed_adapters(&store_for_task)
+                    .into_iter()
+                    .filter(|adapter| {
+                        matches!(adapter.category, core::tool_adapters::ToolCategory::Coding)
+                    })
+                    .map(|adapter| adapter.key)
+                    .collect();
+            if tool_keys.is_empty() {
+                return Ok(false);
+            }
+            core::scenario_service::apply_skills_to_tools(
+                &store_for_task,
+                &skill_ids,
+                &tool_keys,
+                mode,
+            )
+            .map_err(|e| e.to_string())?;
+            Ok(true)
+        })
+        .await;
+
+        match result {
+            Ok(Ok(true)) => {
+                if let Err(err) = refresh_tray_menu(&app) {
+                    log::warn!("Failed to refresh tray menu after preset apply: {err}");
+                }
+                if let Err(err) = app.emit("app-files-changed", ()) {
+                    log::warn!("Failed to emit app-files-changed after tray preset apply: {err}");
+                }
+            }
+            Ok(Ok(false)) => {
+                // Refresh the menu so the user still sees fresh status (no
+                // app-files-changed because nothing actually changed on disk).
+                if let Err(err) = refresh_tray_menu(&app) {
+                    log::debug!("Failed to refresh tray menu after skipped preset apply: {err}");
+                }
+            }
+            Ok(Err(err)) => log::error!("Tray preset apply failed for {preset_id}: {err}"),
+            Err(err) => log::error!("Tray preset apply task panicked: {err}"),
+        }
+    });
+}
+
+fn check_updates_from_tray<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
+    if TRAY_CHECK_UPDATES_RUNNING
+        .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
+        .is_err()
+    {
+        log::debug!("Skill update check already running, ignoring tray trigger");
+        return;
+    }
+    if let Err(err) = refresh_tray_menu(app) {
+        log::warn!("Failed to refresh tray menu before update check: {err}");
+    }
+
+    let store = app
+        .state::<Arc<core::skill_store::SkillStore>>()
+        .inner()
+        .clone();
+    let app_handle = app.clone();
+
+    tauri::async_runtime::spawn(async move {
+        let store_for_task = store.clone();
+        // Note: this intentionally does NOT take TRAY_PRESET_APPLY_LOCK.
+        // Update checks only mutate `update_status` columns; preset apply
+        // mutates `skill_targets`. They're orthogonal, and sharing a lock
+        // would silently drop preset clicks made during a long-running check.
+        let result = tauri::async_runtime::spawn_blocking(move || {
+            let proxy_url = store_for_task.proxy_url();
+            let ids: Vec<String> = store_for_task
+                .get_all_skills()
+                .map_err(|e| e.to_string())?
+                .into_iter()
+                .map(|skill| skill.id)
+                .collect();
+            for skill_id in ids {
+                // Yield the lock between checks so a waiting user-initiated
+                // operation isn't starved by this loop re-acquiring it
+                // immediately (mirrors the auto-updater's FOREGROUND_YIELD).
+                std::thread::sleep(std::time::Duration::from_millis(200));
+                // Resolve off the lock, then take it only for the status
+                // write — the lock must never span a network round-trip (#315).
+                let prefetched = commands::skills::prefetch_skill_remote(
+                    &store_for_task,
+                    &skill_id,
+                    true,
+                    proxy_url.as_deref(),
+                );
+                let _repo_lock = match core::repo_lock::RepoLock::acquire("tray check skill update")
+                {
+                    Ok(lock) => lock,
+                    Err(err) => {
+                        log::warn!("Tray update check: failed to acquire repo lock for {skill_id}: {err}");
+                        continue;
+                    }
+                };
+                if let Err(err) = commands::skills::check_skill_update_internal_with_remote(
+                    &store_for_task,
+                    &skill_id,
+                    true,
+                    prefetched,
+                ) {
+                    log::warn!("Tray update check failed for {skill_id}: {err}");
+                }
+            }
+            Ok::<(), String>(())
+        })
+        .await;
+
+        TRAY_CHECK_UPDATES_RUNNING.store(false, Ordering::SeqCst);
+
+        match result {
+            Ok(Ok(())) => {
+                // Route through the shared completion helper so the manual
+                // tray check writes `auto_update_last_run_at`, emits the same
+                // `AutoUpdatePayload { ran_at }` the Settings listener
+                // expects, and prevents the background scheduler from firing
+                // a redundant round immediately after.
+                core::skill_auto_updater::record_round_completion(&app_handle, &store);
+            }
+            Ok(Err(err)) => {
+                log::error!("Tray update check failed: {err}");
+                if let Err(err) = refresh_tray_menu(&app_handle) {
+                    log::warn!("Failed to refresh tray menu after failed update check: {err}");
+                }
+            }
+            Err(err) => {
+                log::error!("Tray update check task panicked: {err}");
+                if let Err(err) = refresh_tray_menu(&app_handle) {
+                    log::warn!("Failed to refresh tray menu after update check panic: {err}");
+                }
+            }
+        }
+    });
+}
+
+fn open_skills_folder_from_tray<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
+    let app_handle = app.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let repo_path = core::central_repo::base_dir();
+
+        match core::file_manager::open_dir(&repo_path) {
+            Ok(status) if core::file_manager::exit_is_failure(status.success()) => {
+                log::warn!("Tray open folder: file manager exited with status: {status}");
+            }
+            Ok(_) => {}
+            Err(err) => log::warn!("Tray open folder failed: {err}"),
+        }
+        let _ = app_handle;
+    });
+}
+
+fn open_updates_from_tray(app: &tauri::AppHandle) {
+    restore_main_window(app);
+    if let Err(err) = app.emit(TRAY_OPEN_UPDATES_EVENT, ()) {
+        log::warn!("Failed to emit {TRAY_OPEN_UPDATES_EVENT}: {err}");
+    }
+}
+
+fn ensure_tray_icon(app: &tauri::AppHandle) -> tauri::Result<()> {
+    if app.tray_by_id(MAIN_TRAY_ID).is_some() {
+        return Ok(());
+    }
+
+    use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
+
+    let store = app
+        .state::<Arc<core::skill_store::SkillStore>>()
+        .inner()
+        .clone();
+    let (menu, tooltip) = build_tray_menu(app, &store)?;
+
+    let mut builder = TrayIconBuilder::with_id(MAIN_TRAY_ID)
+        .tooltip(tooltip)
+        .menu(&menu)
+        .on_menu_event(|app, event| {
+            let id = event.id.as_ref();
+            match id {
+                "show" => {
+                    log::debug!("Tray menu clicked: show");
+                    restore_main_window(app)
+                }
+                "quit" => {
+                    log::debug!("Tray menu clicked: quit");
+                    request_quit(app)
+                }
+                TRAY_OPEN_UPDATES_ID => {
+                    log::debug!("Tray menu clicked: open updates");
+                    open_updates_from_tray(app);
+                }
+                TRAY_OPEN_FOLDER_ID => {
+                    log::debug!("Tray menu clicked: open skills folder");
+                    open_skills_folder_from_tray(app);
+                }
+                TRAY_CHECK_UPDATES_ID => {
+                    log::debug!("Tray menu clicked: check for updates");
+                    check_updates_from_tray(app);
+                }
+                other => {
+                    if let Some((preset_id, mode)) = preset_id_from_menu_id(other) {
+                        log::debug!("Tray menu clicked: preset {preset_id} mode {:?}", mode);
+                        apply_preset_from_tray(app, preset_id, mode);
+                    }
+                }
+            }
+        });
+
+    if let Some(icon) = load_custom_tray_icon().or_else(|| app.default_window_icon().cloned()) {
+        builder = builder.icon(icon);
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        // Render the original white PNG directly for maximum brightness.
+        builder = builder.icon_as_template(false);
+    }
+
+    // On macOS, left-click on tray icon opens the menu by default;
+    // on Windows/Linux, left-click restores the window directly.
+    if !cfg!(target_os = "macos") {
+        builder = builder
+            .show_menu_on_left_click(false)
+            .on_tray_icon_event(|tray, event| {
+                if let TrayIconEvent::Click {
+                    button: MouseButton::Left,
+                    button_state: MouseButtonState::Up,
+                    ..
+                } = event
+                {
+                    restore_main_window(tray.app_handle());
+                }
+            });
+    }
+
+    let _tray = builder.build(app)?;
+    log::debug!("Tray icon created");
+    Ok(())
+}
+
+pub fn set_tray_icon_enabled(app: &tauri::AppHandle, enabled: bool) -> Result<(), String> {
+    let app_for_main = app.clone();
+    let (tx, rx) = std::sync::mpsc::channel();
+    app.run_on_main_thread(move || {
+        let result = if enabled {
+            ensure_tray_icon(&app_for_main).map_err(|e| e.to_string())
+        } else {
+            let _ = app_for_main.remove_tray_by_id(MAIN_TRAY_ID);
+            log::debug!("Tray icon removed");
+            Ok(())
+        };
+        let _ = tx.send(result);
+    })
+    .map_err(|e| e.to_string())?;
+
+    rx.recv()
+        .map_err(|e| format!("Failed to receive tray update result: {e}"))?
+}
+
+/// Quit the application cleanly: destroy the main window, then exit.
+///
+/// Do NOT signal our process group here (e.g. `kill(-pgid, SIGTERM)`).
+/// On Linux the app inherits the launcher's pgid — that may be the user's
+/// desktop session (issue #47, tearing down GNOME) or the developer's shell
+/// (terminating the parent terminal and its sibling jobs). Either is
+/// catastrophic and not worth the convenience of auto-cleaning a stray
+/// `tauri dev` vite process.
+pub fn quit_app(app: &tauri::AppHandle) {
+    teardown_before_exit(app);
+    app.exit(0);
+}
+
+/// Restart the process, running the same teardown `quit_app` does.
+///
+/// Called after an in-app update has replaced the bundle on disk. Reuses
+/// `teardown_before_exit` rather than restarting outright: skipping it would
+/// drop the exit-time local backup commit, so a user who restarts instead of
+/// quitting would silently lose it.
+///
+/// `request_restart`, not `restart`: on the main thread the latter spawns the
+/// replacement process and exits without ever emitting `RunEvent::Exit`, and
+/// `tauri-plugin-single-instance` removes its socket only on that event. The
+/// old process usually exits before the new one gets far enough to connect —
+/// leaving a stale socket file the next launch cleans up on `ConnectionRefused`
+/// — but nothing enforces that ordering, and losing the race means the new
+/// instance sees a live singleton and exits immediately, taking the app down
+/// instead of restarting it. Going through the exit event closes the window.
+pub fn restart_app(app: &tauri::AppHandle) {
+    teardown_before_exit(app);
+    app.request_restart();
+}
+
+fn teardown_before_exit(app: &tauri::AppHandle) {
+    QUITTING.store(true, Ordering::SeqCst);
+    let _ = app.save_window_state(
+        StateFlags::SIZE
+            | StateFlags::POSITION
+            | StateFlags::MAXIMIZED
+            | StateFlags::FULLSCREEN,
+    );
+    if let Some(w) = app.get_webview_window("main") {
+        if let Err(err) = w.destroy() {
+            log::error!("Failed to destroy main window while quitting: {err}");
+        }
+    }
+    // 退出前 auto-backup (§3.4): local commit only, fail-fast on a busy lock,
+    // after the window is gone so quitting feels instant.
+    if let Some(store) = app.try_state::<Arc<core::skill_store::SkillStore>>() {
+        core::auto_backup::commit_on_exit(&store);
+    }
+}
+
+#[cfg_attr(mobile, tauri::mobile_entry_point)]
+pub fn run() {
+    let pre_builder_start = Instant::now();
+    let (store, startup_timings) =
+        core::app_state::initialize_store().expect("Failed to initialize app state");
+    let pre_builder_ms = pre_builder_start.elapsed().as_millis();
+    let store_for_setup = store.clone();
+
+    let cancel_registry = Arc::new(core::install_cancel::InstallCancelRegistry::new());
+
+    let builder_start = Instant::now();
+    tauri::Builder::default()
+        .manage(store)
+        .manage(cancel_registry)
+        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+            restore_main_window(app);
+        }))
+        .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_clipboard_manager::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(
+            tauri_plugin_window_state::Builder::default()
+                .with_state_flags(
+                    StateFlags::SIZE
+                        | StateFlags::POSITION
+                        | StateFlags::MAXIMIZED
+                        | StateFlags::FULLSCREEN,
+                )
+                .build(),
+        )
+        .setup(move |app| {
+            // Snapshot the builder->setup gap BEFORE doing any work in setup,
+            // so the label reflects only the time Tauri spent constructing
+            // the App between Builder::default() and invoking this callback.
+            let builder_to_setup_ms = builder_start.elapsed().as_millis();
+            let setup_start = Instant::now();
+            app.handle().plugin(
+                tauri_plugin_log::Builder::default()
+                    .level(log::LevelFilter::Info)
+                    .level_for("tao", log::LevelFilter::Warn)
+                    .level_for("wry", log::LevelFilter::Warn)
+                    .level_for("hyper", log::LevelFilter::Warn)
+                    .level_for("reqwest", log::LevelFilter::Warn)
+                    .level_for("rustls", log::LevelFilter::Warn)
+                    .max_file_size(5 * 1024 * 1024)
+                    .rotation_strategy(tauri_plugin_log::RotationStrategy::KeepSome(3))
+                    .timezone_strategy(tauri_plugin_log::TimezoneStrategy::UseLocal)
+                    .format(|out, message, record| {
+                        out.finish(format_args!(
+                            "{} {:5} [{}] {}",
+                            chrono::Local::now().format("%Y-%m-%dT%H:%M:%S%.3f%:z"),
+                            record.level(),
+                            record.target(),
+                            message
+                        ))
+                    })
+                    .build(),
+            )?;
+
+            core::panic_log::install_panic_hook(app.handle().clone());
+            log::info!(
+                "app start: version={} os={} arch={}",
+                app.config().version.clone().unwrap_or_default(),
+                std::env::consts::OS,
+                std::env::consts::ARCH
+            );
+            log::info!(
+                "startup: pre_builder {} ms, builder_to_setup {} ms",
+                pre_builder_ms,
+                builder_to_setup_ms
+            );
+            startup_timings.log();
+
+            // Flush any errors stashed while resolving the central repo — that
+            // ran before this logger existed, so its own log calls were no-ops
+            // (e.g. a central-library migration that fell back to the source).
+            for detail in core::central_repo::take_startup_errors() {
+                log::error!("{detail}");
+            }
+
+            // One-time repair for skills uploaded before sync targets were
+            // registered on import: they have a center record but no target,
+            // leaving them button-less in the workspace. This scans and hashes
+            // every agent's local skills, so it must NOT block the window
+            // (#248: it ran ~8s synchronously here on every launch). Run it in
+            // the background after the UI is up; the function itself skips the
+            // scan when the stranded set is unchanged from the last attempt.
+            let store_for_backfill = store_for_setup.clone();
+            tauri::async_runtime::spawn_blocking(move || {
+                let step = Instant::now();
+                let repaired =
+                    commands::agent_workspace::backfill_stranded_agent_targets(&store_for_backfill);
+                if repaired > 0 {
+                    log::info!(
+                        "startup: backfilled {} stranded agent skill target(s) in {} ms",
+                        repaired,
+                        step.elapsed().as_millis()
+                    );
+                }
+            });
+
+            // Publish the CLI that ships in this bundle to a fixed path so
+            // agents can drive Skills Manager without it being on PATH. A
+            // ~15 MB copy plus one `--version` run, so never on the UI thread.
+            // The crate version, not `tauri.conf.json`'s: it is what the CLI
+            // reports about itself, and the bridge verifies the copy by asking
+            // it. Reading the app config here would silently disable the
+            // bridge for everyone if the two ever drifted apart.
+            tauri::async_runtime::spawn_blocking(|| {
+                let step = Instant::now();
+                core::cli_bridge::ensure_bridge(env!("CARGO_PKG_VERSION"));
+                log::info!(
+                    "startup: cli bridge step done in {} ms",
+                    step.elapsed().as_millis()
+                );
+            });
+
+            let step = Instant::now();
+            if is_tray_icon_enabled(&store_for_setup) {
+                ensure_tray_icon(app.handle())?;
+                log::info!(
+                    "startup: ensure_tray_icon done in {} ms",
+                    step.elapsed().as_millis()
+                );
+            } else {
+                log::info!("startup: tray icon disabled");
+            }
+
+            let step = Instant::now();
+            core::file_watcher::start_file_watcher(app.handle().clone(), store_for_setup.clone());
+            log::info!(
+                "startup: start_file_watcher done in {} ms",
+                step.elapsed().as_millis()
+            );
+
+            let step = Instant::now();
+            core::skill_auto_updater::start(app.handle().clone(), store_for_setup.clone());
+            log::info!(
+                "startup: skill auto-updater spawned in {} ms",
+                step.elapsed().as_millis()
+            );
+
+            // Object-merge crash recovery (merge-engine design §5): finish or
+            // roll back an interrupted sync apply before any background work
+            // can touch the repo. Best-effort, never blocks startup.
+            let store_for_merge_recovery = store_for_setup.clone();
+            tauri::async_runtime::spawn_blocking(move || {
+                core::merge::recover_on_startup(
+                    &store_for_merge_recovery,
+                    &core::central_repo::skills_dir(),
+                );
+            });
+
+            // Automatic backup (§3.4): debounced commit+push after central-repo
+            // changes; the first round also uploads whatever the exit-time
+            // commit captured last session.
+            core::auto_backup::start(app.handle().clone(), store_for_setup.clone());
+
+            // One-time (idempotent) security migration: move credentials
+            // embedded in the backup remote URL into the OS keychain so no
+            // token stays in `.git/config`. Best-effort in the background —
+            // offline machines retry on the next launch.
+            let store_for_cred_migration = store_for_setup.clone();
+            tauri::async_runtime::spawn_blocking(move || {
+                match commands::git_backup::migrate_embedded_credentials(&store_for_cred_migration)
+                {
+                    Ok(Some(_)) => log::info!("startup: migrated backup token to OS keychain"),
+                    Ok(None) => {}
+                    Err(e) => log::warn!("startup: backup credential migration skipped: {e:#}"),
+                }
+            });
+
+            // Intercept window close — let frontend decide (close vs hide to tray)
+            // When QUITTING is set, allow the close to proceed so the process fully exits.
+            let step = Instant::now();
+            let win = app.get_webview_window("main").unwrap();
+            let win_for_event = win.clone();
+            win.on_window_event(move |event| {
+                if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                    if QUITTING.load(Ordering::SeqCst) {
+                        return; // allow close
+                    }
+                    win_for_event.emit("window-close-requested", ()).ok();
+                    api.prevent_close();
+                }
+            });
+            // A failed restore still shows the window at its default geometry.
+            if let Err(err) = win.restore_state(
+                StateFlags::SIZE
+                    | StateFlags::POSITION
+                    | StateFlags::MAXIMIZED
+                    | StateFlags::FULLSCREEN,
+            ) {
+                log::warn!("Failed to restore saved window state: {err}");
+            }
+            win.show()?;
+            log::info!(
+                "startup: window handle + close hook + state restore in {} ms",
+                step.elapsed().as_millis()
+            );
+
+            log::info!(
+                "startup: setup() body total {} ms",
+                setup_start.elapsed().as_millis()
+            );
+
+            Ok(())
+        })
+        .invoke_handler(tauri::generate_handler![
+            // Tools
+            commands::tools::get_tool_status,
+            commands::tools::set_tool_enabled,
+            commands::tools::set_all_tools_enabled,
+            commands::tools::get_tool_order_cmd,
+            commands::tools::set_tool_order_cmd,
+            commands::tools::set_custom_tool_path,
+            commands::tools::reset_custom_tool_path,
+            commands::tools::set_custom_tool_project_path,
+            commands::tools::reset_custom_tool_project_path,
+            commands::tools::add_custom_tool,
+            commands::tools::remove_custom_tool,
+            // Skills
+            commands::skills::get_managed_skills,
+            commands::skills::get_skills_for_preset,
+            commands::skills::get_skill_document,
+            commands::skills::get_source_skill_document,
+            commands::skills::get_skill_source_diff,
+            commands::skills::delete_managed_skill,
+            commands::skills::delete_managed_skills,
+            commands::skills::install_local,
+            commands::skills::install_git,
+            commands::skills::preview_git_install,
+            commands::skills::confirm_git_install,
+            commands::skills::cancel_git_preview,
+            commands::skills::install_from_skillssh,
+            commands::skills::check_skill_update,
+            commands::skills::check_all_skill_updates,
+            commands::skills::update_skill,
+            commands::skills::batch_update_skills,
+            commands::skills::reimport_local_skill,
+            commands::skills::relink_local_skill_source,
+            commands::skills::detach_local_skill_source,
+            commands::skills::get_all_tags,
+            commands::skills::set_skill_tags,
+            commands::skills::rename_tag,
+            commands::skills::delete_tag,
+            commands::skills::cancel_install,
+            commands::skills::batch_import_folder,
+            // Sync
+            commands::sync::sync_skill_to_tool,
+            commands::sync::unsync_skill_from_tool,
+            commands::sync::get_skill_tool_toggles,
+            commands::sync::set_skill_tool_toggle,
+            // Scan
+            commands::scan::scan_local_skills,
+            commands::scan::import_existing_skill,
+            commands::scan::import_all_discovered,
+            // Browse
+            commands::browse::fetch_leaderboard,
+            commands::browse::search_skillssh,
+            // Settings
+            commands::settings::get_settings,
+            commands::settings::set_settings,
+            commands::settings::get_central_repo_path,
+            commands::settings::get_central_repo_path_override,
+            commands::settings::get_central_repo_pending_path,
+            commands::settings::get_central_repo_warnings,
+            commands::settings::set_central_repo_path,
+            commands::settings::open_central_repo_folder,
+            commands::settings::check_app_update,
+            commands::settings::update_install_blocker,
+            commands::settings::get_diagnostic_info,
+            commands::settings::get_recent_log_excerpt,
+            commands::settings::export_logs_zip,
+            commands::settings::log_startup_event,
+            commands::settings::check_last_panic,
+            commands::settings::clear_last_panic,
+            commands::settings::app_exit,
+            commands::settings::restart_app,
+            commands::settings::hide_to_tray,
+            // Git Backup
+            commands::git_backup::git_backup_fetch,
+            commands::git_backup::git_backup_status,
+            commands::git_backup::git_backup_init,
+            commands::git_backup::git_backup_set_remote,
+            commands::git_backup::github_backup_connect,
+            commands::git_backup::github_device_flow_start,
+            commands::git_backup::github_device_flow_poll,
+            commands::git_backup::git_backup_sanitize_remote_url,
+            commands::git_backup::git_backup_migrate_credentials,
+            commands::git_backup::git_backup_size_report,
+            commands::git_backup::git_backup_remove_remote,
+            commands::git_backup::git_backup_commit,
+            commands::git_backup::git_backup_push,
+            commands::git_backup::git_backup_pull,
+            commands::git_backup::git_backup_clone,
+            commands::git_backup::git_backup_reclone,
+            commands::git_backup::git_backup_create_snapshot,
+            commands::git_backup::git_backup_list_versions,
+            commands::git_backup::git_backup_restore_version,
+            commands::git_backup::backup_device_name,
+            commands::git_backup::backup_set_device_name,
+            commands::git_backup::git_backup_pending_conflicts,
+            commands::git_backup::git_backup_resolve_conflict,
+            commands::git_backup::git_backup_sync,
+            // Projects
+            commands::projects::get_projects,
+            commands::projects::add_project,
+            commands::projects::add_linked_workspace,
+            commands::projects::remove_project,
+            commands::projects::reveal_project_folder,
+            commands::projects::scan_projects,
+            commands::projects::get_project_agent_targets,
+            commands::projects::get_project_skills,
+            commands::projects::get_project_skill_document,
+            commands::projects::import_project_skill_to_center,
+            commands::projects::export_skill_to_project,
+            commands::projects::update_project_skill_to_center,
+            commands::projects::update_project_skill_from_center,
+            commands::projects::toggle_project_skill,
+            commands::projects::delete_project_skill,
+            commands::projects::slugify_skill_names,
+            // Agent local workspace
+            commands::agent_workspace::get_global_local_skills,
+            commands::agent_workspace::get_global_local_skill_document,
+            commands::agent_workspace::import_global_local_skill_to_center,
+            commands::agent_workspace::update_global_local_skill_from_center,
+            commands::agent_workspace::delete_global_local_skill,
+            // Presets
+            commands::presets::get_presets,
+            commands::presets::get_active_preset,
+            commands::presets::create_preset,
+            commands::presets::update_preset,
+            commands::presets::delete_preset,
+            commands::presets::switch_preset,
+            commands::presets::apply_preset_to_default,
+            commands::presets::apply_preset_to_coding_agents,
+            commands::presets::add_skill_to_preset,
+            commands::presets::remove_skill_from_preset,
+            commands::presets::reorder_presets,
+            commands::projects::reorder_projects,
+            commands::presets::get_preset_skill_order,
+            commands::presets::reorder_preset_skills,
+        ])
+        .run(tauri::generate_context!())
+        .expect("error while running tauri application");
 }
 ````
 
@@ -60737,1151 +64801,6 @@ mod tests {
         assert_eq!(audit[0].action, "deploy");
         assert_eq!(audit[0].skill_id.as_deref(), Some("skill-demo"));
     }
-}
-````
-
-## File: src-tauri/src/lib.rs
-````rust
-use std::collections::HashSet;
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::Arc;
-use std::time::{Duration, Instant};
-use tauri::{Emitter, Manager};
-use tauri_plugin_window_state::{AppHandleExt, StateFlags, WindowExt};
-
-pub mod commands;
-pub mod core;
-pub mod company_app;
-
-/// Shared flag: when true, CloseRequested should NOT be prevented.
-pub static QUITTING: AtomicBool = AtomicBool::new(false);
-
-/// Guards concurrent preset apply/remove from the tray so a quick double-click
-/// can't fire two batches at once. Intentionally separate from the
-/// `TRAY_CHECK_UPDATES_RUNNING` flag — update checks only touch
-/// `update_status` while preset apply touches `skill_targets`, so the two are
-/// orthogonal and shouldn't block each other. Sharing the lock would silently
-/// drop preset clicks during long-running update checks.
-static TRAY_PRESET_APPLY_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
-
-/// Tracks whether a manual "Check for skill updates" is currently running so the
-/// tray menu can render a disabled "Checking for updates..." label.
-static TRAY_CHECK_UPDATES_RUNNING: AtomicBool = AtomicBool::new(false);
-
-const MAIN_TRAY_ID: &str = "main-tray";
-const TRAY_PRESET_ADD_PREFIX: &str = "tray-preset-add:";
-const TRAY_PRESET_REMOVE_PREFIX: &str = "tray-preset-remove:";
-const TRAY_OPEN_UPDATES_ID: &str = "tray-open-updates";
-const TRAY_OPEN_FOLDER_ID: &str = "tray-open-folder";
-const TRAY_CHECK_UPDATES_ID: &str = "tray-check-updates";
-const TRAY_OPEN_UPDATES_EVENT: &str = "tray-open-updates";
-
-#[cfg(target_os = "macos")]
-const CUSTOM_TRAY_ICON_BYTES: &[u8] = include_bytes!("../icons/tray/tray-icon-32.png");
-#[cfg(not(target_os = "macos"))]
-const CUSTOM_TRAY_ICON_BYTES: &[u8] = include_bytes!("../icons/tray/tray-icon-color-32.png");
-
-fn parse_bool_setting(value: Option<String>, default: bool) -> bool {
-    match value.as_deref().map(str::trim).map(str::to_ascii_lowercase) {
-        Some(v) if matches!(v.as_str(), "true" | "1" | "yes" | "on") => true,
-        Some(v) if matches!(v.as_str(), "false" | "0" | "no" | "off") => false,
-        _ => default,
-    }
-}
-
-fn is_tray_icon_enabled(store: &Arc<core::skill_store::SkillStore>) -> bool {
-    let value = store.get_setting("show_tray_icon").ok().flatten();
-    parse_bool_setting(value, true)
-}
-
-fn restore_main_window(app: &tauri::AppHandle) {
-    let app_for_main = app.clone();
-    if let Err(err) = app.run_on_main_thread(move || {
-        #[cfg(target_os = "macos")]
-        {
-            if let Err(err) = app_for_main.set_dock_visibility(true) {
-                log::error!("Failed to show Dock icon on macOS: {err}");
-            }
-            if let Err(err) = app_for_main.set_activation_policy(tauri::ActivationPolicy::Regular) {
-                log::error!("Failed to set activation policy to Regular on macOS: {err}");
-            }
-            if let Err(err) = app_for_main.show() {
-                log::error!("Failed to show app on macOS: {err}");
-            }
-        }
-
-        if let Some(w) = app_for_main.get_webview_window("main") {
-            if let Err(err) = w.show() {
-                log::error!("Failed to show main window: {err}");
-            }
-            if let Err(err) = w.unminimize() {
-                log::error!("Failed to unminimize main window: {err}");
-            }
-            if let Err(err) = w.set_focus() {
-                log::error!("Failed to focus main window: {err}");
-            }
-        } else {
-            log::error!("Main window not found while restoring from tray");
-        }
-    }) {
-        log::error!("Failed to schedule restore_main_window on main thread: {err}");
-    }
-}
-
-fn request_quit(app: &tauri::AppHandle) {
-    let app_for_main = app.clone();
-    if let Err(err) = app.run_on_main_thread(move || {
-        quit_app(&app_for_main);
-    }) {
-        log::error!("Failed to schedule quit on main thread: {err}");
-        // Fallback: attempt quit anyway.
-        quit_app(app);
-    }
-}
-
-fn load_custom_tray_icon() -> Option<tauri::image::Image<'static>> {
-    let img = image::load_from_memory_with_format(CUSTOM_TRAY_ICON_BYTES, image::ImageFormat::Png)
-        .ok()?;
-    let rgba = img.to_rgba8();
-    let (width, height) = rgba.dimensions();
-    Some(tauri::image::Image::new_owned(
-        rgba.into_raw(),
-        width,
-        height,
-    ))
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum TrayPresetStatus {
-    Empty,
-    Inactive,
-    Partial,
-    Active,
-}
-
-#[derive(Debug, Clone)]
-struct TrayPresetEntry {
-    id: String,
-    name: String,
-    skill_count: usize,
-    synced_pairs: usize,
-    total_pairs: usize,
-}
-
-impl TrayPresetEntry {
-    fn status(&self) -> TrayPresetStatus {
-        if self.total_pairs == 0 {
-            TrayPresetStatus::Empty
-        } else if self.synced_pairs == 0 {
-            TrayPresetStatus::Inactive
-        } else if self.synced_pairs >= self.total_pairs {
-            TrayPresetStatus::Active
-        } else {
-            TrayPresetStatus::Partial
-        }
-    }
-}
-
-#[derive(Debug, Clone)]
-struct TrayMenuData {
-    total_skills: usize,
-    coding_agent_count: usize,
-    update_count: usize,
-    presets: Vec<TrayPresetEntry>,
-    check_updates_running: bool,
-}
-
-fn collect_tray_menu_data(store: &core::skill_store::SkillStore) -> TrayMenuData {
-    let all_skills = store.get_all_skills().unwrap_or_default();
-    let total_skills = all_skills.len();
-    let update_count = all_skills
-        .iter()
-        .filter(|s| s.update_status == "update_available")
-        .count();
-
-    let coding_keys: Vec<String> = core::tool_adapters::enabled_installed_adapters(store)
-        .into_iter()
-        .filter(|adapter| matches!(adapter.category, core::tool_adapters::ToolCategory::Coding))
-        .map(|adapter| adapter.key)
-        .collect();
-    let coding_agent_count = coding_keys.len();
-    let coding_set: HashSet<&str> = coding_keys.iter().map(String::as_str).collect();
-
-    let synced_pairs_set: HashSet<(String, String)> = store
-        .get_all_targets()
-        .unwrap_or_default()
-        .into_iter()
-        .filter(|target| coding_set.contains(target.tool.as_str()))
-        .map(|target| (target.skill_id, target.tool))
-        .collect();
-
-    let scenarios = store.get_all_scenarios().unwrap_or_default();
-    let mut presets = Vec::with_capacity(scenarios.len());
-    for scenario in scenarios {
-        let skill_ids = store
-            .get_skill_ids_for_scenario(&scenario.id)
-            .unwrap_or_default();
-        let skill_count = skill_ids.len();
-        let total_pairs = skill_count * coding_agent_count;
-        let mut synced_pairs = 0usize;
-        if total_pairs > 0 {
-            for sid in &skill_ids {
-                for tk in &coding_keys {
-                    if synced_pairs_set.contains(&(sid.clone(), tk.clone())) {
-                        synced_pairs += 1;
-                    }
-                }
-            }
-        }
-        presets.push(TrayPresetEntry {
-            id: scenario.id,
-            name: scenario.name,
-            skill_count,
-            synced_pairs,
-            total_pairs,
-        });
-    }
-
-    TrayMenuData {
-        total_skills,
-        coding_agent_count,
-        update_count,
-        presets,
-        check_updates_running: TRAY_CHECK_UPDATES_RUNNING.load(Ordering::SeqCst),
-    }
-}
-
-fn format_status_line(data: &TrayMenuData) -> String {
-    let skill_label = if data.total_skills == 1 { "skill" } else { "skills" };
-    let agent_label = if data.coding_agent_count == 1 { "agent" } else { "agents" };
-    format!(
-        "{} {} · {} {} connected",
-        data.total_skills, skill_label, data.coding_agent_count, agent_label
-    )
-}
-
-fn format_tooltip(data: &TrayMenuData) -> String {
-    if data.update_count > 0 {
-        format!(
-            "Skills Manager · {} skills · {} agents · {} updates",
-            data.total_skills, data.coding_agent_count, data.update_count
-        )
-    } else {
-        format!(
-            "Skills Manager · {} skills · {} agents",
-            data.total_skills, data.coding_agent_count
-        )
-    }
-}
-
-fn preset_menu_item_id(preset: &TrayPresetEntry) -> (String, &'static str) {
-    // E1 semantics: only a fully-active preset removes on click. Partial
-    // and inactive both fill missing pairs up to fully active.
-    match preset.status() {
-        TrayPresetStatus::Active => (
-            format!("{TRAY_PRESET_REMOVE_PREFIX}{}", preset.id),
-            "remove",
-        ),
-        _ => (format!("{TRAY_PRESET_ADD_PREFIX}{}", preset.id), "add"),
-    }
-}
-
-fn preset_menu_label(preset: &TrayPresetEntry) -> String {
-    let unit = if preset.skill_count == 1 { "skill" } else { "skills" };
-    match preset.status() {
-        TrayPresetStatus::Active => format!("✓ {} ({} {unit})", preset.name, preset.skill_count),
-        TrayPresetStatus::Partial => format!(
-            "{} ({}/{} synced)",
-            preset.name, preset.synced_pairs, preset.total_pairs
-        ),
-        _ => format!("{} ({} {unit})", preset.name, preset.skill_count),
-    }
-}
-
-fn preset_id_from_menu_id(menu_id: &str) -> Option<(&str, scenario_service_alias::BatchApplyMode)> {
-    if let Some(id) = menu_id.strip_prefix(TRAY_PRESET_ADD_PREFIX) {
-        return Some((id, scenario_service_alias::BatchApplyMode::Add));
-    }
-    if let Some(id) = menu_id.strip_prefix(TRAY_PRESET_REMOVE_PREFIX) {
-        return Some((id, scenario_service_alias::BatchApplyMode::Remove));
-    }
-    None
-}
-
-mod scenario_service_alias {
-    pub use crate::core::scenario_service::BatchApplyMode;
-}
-
-fn build_tray_menu<R: tauri::Runtime>(
-    app: &tauri::AppHandle<R>,
-    store: &Arc<core::skill_store::SkillStore>,
-) -> tauri::Result<(tauri::menu::Menu<R>, String)> {
-    let data = collect_tray_menu_data(store);
-    build_tray_menu_from_data(app, &data)
-}
-
-fn build_tray_menu_from_data<R: tauri::Runtime>(
-    app: &tauri::AppHandle<R>,
-    data: &TrayMenuData,
-) -> tauri::Result<(tauri::menu::Menu<R>, String)> {
-    use tauri::menu::{Menu, MenuItem, PredefinedMenuItem, Submenu};
-
-    let menu = Menu::new(app)?;
-
-    let app_name = MenuItem::with_id(app, "tray-app-name", "Skills Manager", false, None::<&str>)?;
-    menu.append(&app_name)?;
-
-    let status_line = MenuItem::with_id(
-        app,
-        "tray-status-line",
-        format_status_line(data),
-        false,
-        None::<&str>,
-    )?;
-    menu.append(&status_line)?;
-
-    if data.update_count > 0 {
-        let updates_label = if data.update_count == 1 {
-            "1 skill update available".to_string()
-        } else {
-            format!("{} skill updates available", data.update_count)
-        };
-        let updates_item =
-            MenuItem::with_id(app, TRAY_OPEN_UPDATES_ID, updates_label, true, None::<&str>)?;
-        menu.append(&updates_item)?;
-    }
-
-    menu.append(&PredefinedMenuItem::separator(app)?)?;
-
-    let presets_submenu = Submenu::new(app, "Presets", true)?;
-    if data.coding_agent_count == 0 {
-        let no_agents = MenuItem::with_id(
-            app,
-            "tray-presets-no-agents",
-            "No coding agents connected",
-            false,
-            None::<&str>,
-        )?;
-        presets_submenu.append(&no_agents)?;
-    } else {
-        let visible: Vec<_> = data
-            .presets
-            .iter()
-            .filter(|p| !matches!(p.status(), TrayPresetStatus::Empty))
-            .collect();
-        if visible.is_empty() {
-            let empty = MenuItem::with_id(
-                app,
-                "tray-presets-empty",
-                "No presets with skills",
-                false,
-                None::<&str>,
-            )?;
-            presets_submenu.append(&empty)?;
-        } else {
-            for preset in visible {
-                let (id, _action) = preset_menu_item_id(preset);
-                let label = preset_menu_label(preset);
-                let item = MenuItem::with_id(app, id, label, true, None::<&str>)?;
-                presets_submenu.append(&item)?;
-            }
-        }
-    }
-    menu.append(&presets_submenu)?;
-
-    menu.append(&PredefinedMenuItem::separator(app)?)?;
-
-    let show_item = MenuItem::with_id(app, "show", "Open Skills Manager", true, None::<&str>)?;
-    menu.append(&show_item)?;
-
-    let check_label = if data.check_updates_running {
-        "Checking for updates..."
-    } else {
-        "Check for skill updates"
-    };
-    let check_item = MenuItem::with_id(
-        app,
-        TRAY_CHECK_UPDATES_ID,
-        check_label,
-        !data.check_updates_running,
-        None::<&str>,
-    )?;
-    menu.append(&check_item)?;
-
-    let folder_item = MenuItem::with_id(
-        app,
-        TRAY_OPEN_FOLDER_ID,
-        "Open Skills Folder",
-        true,
-        None::<&str>,
-    )?;
-    menu.append(&folder_item)?;
-
-    menu.append(&PredefinedMenuItem::separator(app)?)?;
-
-    let quit_item = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
-    menu.append(&quit_item)?;
-
-    Ok((menu, format_tooltip(data)))
-}
-
-pub(crate) fn refresh_tray_menu<R: tauri::Runtime>(
-    app: &tauri::AppHandle<R>,
-) -> Result<(), String> {
-    if app.tray_by_id(MAIN_TRAY_ID).is_none() {
-        return Ok(());
-    }
-    let store = app
-        .state::<Arc<core::skill_store::SkillStore>>()
-        .inner()
-        .clone();
-    // Collect data off the main thread (DB reads are cheap, no FFI). The
-    // actual `Menu::new`, `set_menu`, `set_tooltip` calls hit native macOS
-    // (NSMenu / NSStatusItem) APIs and MUST run on the main thread — calling
-    // them from a worker thread is UB and crashed the app with a
-    // `slice::from_raw_parts` alignment panic during repeated tray actions.
-    let data = collect_tray_menu_data(&store);
-    let app_for_main = app.clone();
-    app.run_on_main_thread(move || {
-        let Some(tray) = app_for_main.tray_by_id(MAIN_TRAY_ID) else {
-            return;
-        };
-        match build_tray_menu_from_data(&app_for_main, &data) {
-            Ok((menu, tooltip)) => {
-                if let Err(err) = tray.set_menu(Some(menu)) {
-                    log::warn!("tray set_menu failed: {err}");
-                }
-                if let Err(err) = tray.set_tooltip(Some(&tooltip)) {
-                    log::warn!("tray set_tooltip failed: {err}");
-                }
-            }
-            Err(err) => log::warn!("build_tray_menu_from_data failed: {err}"),
-        }
-    })
-    .map_err(|e| e.to_string())
-}
-
-/// Coalesce bursts into at most one tray rebuild per 300 ms window. Avoids
-/// rebuilding the menu N times when `PresetBar` loops `skill × agent` calls
-/// through `sync_skill_to_tool`. The first request schedules the rebuild;
-/// any further requests during the wait window are absorbed.
-static TRAY_REFRESH_PENDING: AtomicBool = AtomicBool::new(false);
-const TRAY_REFRESH_DEBOUNCE: Duration = Duration::from_millis(300);
-
-pub(crate) fn schedule_tray_refresh(app: &tauri::AppHandle) {
-    if TRAY_REFRESH_PENDING.swap(true, Ordering::SeqCst) {
-        return;
-    }
-    let app = app.clone();
-    tauri::async_runtime::spawn(async move {
-        tokio::time::sleep(TRAY_REFRESH_DEBOUNCE).await;
-        TRAY_REFRESH_PENDING.store(false, Ordering::SeqCst);
-        if let Err(err) = refresh_tray_menu(&app) {
-            log::debug!("debounced tray refresh failed: {err}");
-        }
-    });
-}
-
-fn apply_preset_from_tray<R: tauri::Runtime>(
-    app: &tauri::AppHandle<R>,
-    preset_id: &str,
-    mode: core::scenario_service::BatchApplyMode,
-) {
-    let store = app
-        .state::<Arc<core::skill_store::SkillStore>>()
-        .inner()
-        .clone();
-    let app = app.clone();
-    let preset_id = preset_id.to_string();
-
-    tauri::async_runtime::spawn(async move {
-        let store_for_task = store.clone();
-        let preset_id_for_task = preset_id.clone();
-        // Result variants:
-        //   Ok(true)  — the batch actually ran (do success-side effects)
-        //   Ok(false) — skipped because another apply is in-flight or the
-        //               preset/agent set was empty (no real work happened, so
-        //               do NOT emit app-files-changed: that would lie to the
-        //               frontend about state changes that didn't occur)
-        //   Err(_)    — failure inside the batch
-        let result = tauri::async_runtime::spawn_blocking(move || -> Result<bool, String> {
-            let _guard = match TRAY_PRESET_APPLY_LOCK.try_lock() {
-                Ok(guard) => guard,
-                Err(_) => {
-                    log::debug!(
-                        "Another preset apply in flight, ignoring tray click for {preset_id_for_task}"
-                    );
-                    return Ok(false);
-                }
-            };
-            core::scenario_service::ensure_scenario_exists(&store_for_task, &preset_id_for_task)
-                .map_err(|e| e.to_string())?;
-            let skill_ids = store_for_task
-                .get_skill_ids_for_scenario(&preset_id_for_task)
-                .map_err(|e| e.to_string())?;
-            if skill_ids.is_empty() {
-                return Ok(false);
-            }
-            let tool_keys: Vec<String> =
-                core::tool_adapters::enabled_installed_adapters(&store_for_task)
-                    .into_iter()
-                    .filter(|adapter| {
-                        matches!(adapter.category, core::tool_adapters::ToolCategory::Coding)
-                    })
-                    .map(|adapter| adapter.key)
-                    .collect();
-            if tool_keys.is_empty() {
-                return Ok(false);
-            }
-            core::scenario_service::apply_skills_to_tools(
-                &store_for_task,
-                &skill_ids,
-                &tool_keys,
-                mode,
-            )
-            .map_err(|e| e.to_string())?;
-            Ok(true)
-        })
-        .await;
-
-        match result {
-            Ok(Ok(true)) => {
-                if let Err(err) = refresh_tray_menu(&app) {
-                    log::warn!("Failed to refresh tray menu after preset apply: {err}");
-                }
-                if let Err(err) = app.emit("app-files-changed", ()) {
-                    log::warn!("Failed to emit app-files-changed after tray preset apply: {err}");
-                }
-            }
-            Ok(Ok(false)) => {
-                // Refresh the menu so the user still sees fresh status (no
-                // app-files-changed because nothing actually changed on disk).
-                if let Err(err) = refresh_tray_menu(&app) {
-                    log::debug!("Failed to refresh tray menu after skipped preset apply: {err}");
-                }
-            }
-            Ok(Err(err)) => log::error!("Tray preset apply failed for {preset_id}: {err}"),
-            Err(err) => log::error!("Tray preset apply task panicked: {err}"),
-        }
-    });
-}
-
-fn check_updates_from_tray<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
-    if TRAY_CHECK_UPDATES_RUNNING
-        .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
-        .is_err()
-    {
-        log::debug!("Skill update check already running, ignoring tray trigger");
-        return;
-    }
-    if let Err(err) = refresh_tray_menu(app) {
-        log::warn!("Failed to refresh tray menu before update check: {err}");
-    }
-
-    let store = app
-        .state::<Arc<core::skill_store::SkillStore>>()
-        .inner()
-        .clone();
-    let app_handle = app.clone();
-
-    tauri::async_runtime::spawn(async move {
-        let store_for_task = store.clone();
-        // Note: this intentionally does NOT take TRAY_PRESET_APPLY_LOCK.
-        // Update checks only mutate `update_status` columns; preset apply
-        // mutates `skill_targets`. They're orthogonal, and sharing a lock
-        // would silently drop preset clicks made during a long-running check.
-        let result = tauri::async_runtime::spawn_blocking(move || {
-            let proxy_url = store_for_task.proxy_url();
-            let ids: Vec<String> = store_for_task
-                .get_all_skills()
-                .map_err(|e| e.to_string())?
-                .into_iter()
-                .map(|skill| skill.id)
-                .collect();
-            for skill_id in ids {
-                // Yield the lock between checks so a waiting user-initiated
-                // operation isn't starved by this loop re-acquiring it
-                // immediately (mirrors the auto-updater's FOREGROUND_YIELD).
-                std::thread::sleep(std::time::Duration::from_millis(200));
-                // Resolve off the lock, then take it only for the status
-                // write — the lock must never span a network round-trip (#315).
-                let prefetched = commands::skills::prefetch_skill_remote(
-                    &store_for_task,
-                    &skill_id,
-                    true,
-                    proxy_url.as_deref(),
-                );
-                let _repo_lock = match core::repo_lock::RepoLock::acquire("tray check skill update")
-                {
-                    Ok(lock) => lock,
-                    Err(err) => {
-                        log::warn!("Tray update check: failed to acquire repo lock for {skill_id}: {err}");
-                        continue;
-                    }
-                };
-                if let Err(err) = commands::skills::check_skill_update_internal_with_remote(
-                    &store_for_task,
-                    &skill_id,
-                    true,
-                    prefetched,
-                ) {
-                    log::warn!("Tray update check failed for {skill_id}: {err}");
-                }
-            }
-            Ok::<(), String>(())
-        })
-        .await;
-
-        TRAY_CHECK_UPDATES_RUNNING.store(false, Ordering::SeqCst);
-
-        match result {
-            Ok(Ok(())) => {
-                // Route through the shared completion helper so the manual
-                // tray check writes `auto_update_last_run_at`, emits the same
-                // `AutoUpdatePayload { ran_at }` the Settings listener
-                // expects, and prevents the background scheduler from firing
-                // a redundant round immediately after.
-                core::skill_auto_updater::record_round_completion(&app_handle, &store);
-            }
-            Ok(Err(err)) => {
-                log::error!("Tray update check failed: {err}");
-                if let Err(err) = refresh_tray_menu(&app_handle) {
-                    log::warn!("Failed to refresh tray menu after failed update check: {err}");
-                }
-            }
-            Err(err) => {
-                log::error!("Tray update check task panicked: {err}");
-                if let Err(err) = refresh_tray_menu(&app_handle) {
-                    log::warn!("Failed to refresh tray menu after update check panic: {err}");
-                }
-            }
-        }
-    });
-}
-
-fn open_skills_folder_from_tray<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
-    let app_handle = app.clone();
-    tauri::async_runtime::spawn_blocking(move || {
-        let repo_path = core::central_repo::base_dir();
-
-        match core::file_manager::open_dir(&repo_path) {
-            Ok(status) if core::file_manager::exit_is_failure(status.success()) => {
-                log::warn!("Tray open folder: file manager exited with status: {status}");
-            }
-            Ok(_) => {}
-            Err(err) => log::warn!("Tray open folder failed: {err}"),
-        }
-        let _ = app_handle;
-    });
-}
-
-fn open_updates_from_tray(app: &tauri::AppHandle) {
-    restore_main_window(app);
-    if let Err(err) = app.emit(TRAY_OPEN_UPDATES_EVENT, ()) {
-        log::warn!("Failed to emit {TRAY_OPEN_UPDATES_EVENT}: {err}");
-    }
-}
-
-fn ensure_tray_icon(app: &tauri::AppHandle) -> tauri::Result<()> {
-    if app.tray_by_id(MAIN_TRAY_ID).is_some() {
-        return Ok(());
-    }
-
-    use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
-
-    let store = app
-        .state::<Arc<core::skill_store::SkillStore>>()
-        .inner()
-        .clone();
-    let (menu, tooltip) = build_tray_menu(app, &store)?;
-
-    let mut builder = TrayIconBuilder::with_id(MAIN_TRAY_ID)
-        .tooltip(tooltip)
-        .menu(&menu)
-        .on_menu_event(|app, event| {
-            let id = event.id.as_ref();
-            match id {
-                "show" => {
-                    log::debug!("Tray menu clicked: show");
-                    restore_main_window(app)
-                }
-                "quit" => {
-                    log::debug!("Tray menu clicked: quit");
-                    request_quit(app)
-                }
-                TRAY_OPEN_UPDATES_ID => {
-                    log::debug!("Tray menu clicked: open updates");
-                    open_updates_from_tray(app);
-                }
-                TRAY_OPEN_FOLDER_ID => {
-                    log::debug!("Tray menu clicked: open skills folder");
-                    open_skills_folder_from_tray(app);
-                }
-                TRAY_CHECK_UPDATES_ID => {
-                    log::debug!("Tray menu clicked: check for updates");
-                    check_updates_from_tray(app);
-                }
-                other => {
-                    if let Some((preset_id, mode)) = preset_id_from_menu_id(other) {
-                        log::debug!("Tray menu clicked: preset {preset_id} mode {:?}", mode);
-                        apply_preset_from_tray(app, preset_id, mode);
-                    }
-                }
-            }
-        });
-
-    if let Some(icon) = load_custom_tray_icon().or_else(|| app.default_window_icon().cloned()) {
-        builder = builder.icon(icon);
-    }
-
-    #[cfg(target_os = "macos")]
-    {
-        // Render the original white PNG directly for maximum brightness.
-        builder = builder.icon_as_template(false);
-    }
-
-    // On macOS, left-click on tray icon opens the menu by default;
-    // on Windows/Linux, left-click restores the window directly.
-    if !cfg!(target_os = "macos") {
-        builder = builder
-            .show_menu_on_left_click(false)
-            .on_tray_icon_event(|tray, event| {
-                if let TrayIconEvent::Click {
-                    button: MouseButton::Left,
-                    button_state: MouseButtonState::Up,
-                    ..
-                } = event
-                {
-                    restore_main_window(tray.app_handle());
-                }
-            });
-    }
-
-    let _tray = builder.build(app)?;
-    log::debug!("Tray icon created");
-    Ok(())
-}
-
-pub fn set_tray_icon_enabled(app: &tauri::AppHandle, enabled: bool) -> Result<(), String> {
-    let app_for_main = app.clone();
-    let (tx, rx) = std::sync::mpsc::channel();
-    app.run_on_main_thread(move || {
-        let result = if enabled {
-            ensure_tray_icon(&app_for_main).map_err(|e| e.to_string())
-        } else {
-            let _ = app_for_main.remove_tray_by_id(MAIN_TRAY_ID);
-            log::debug!("Tray icon removed");
-            Ok(())
-        };
-        let _ = tx.send(result);
-    })
-    .map_err(|e| e.to_string())?;
-
-    rx.recv()
-        .map_err(|e| format!("Failed to receive tray update result: {e}"))?
-}
-
-/// Quit the application cleanly: destroy the main window, then exit.
-///
-/// Do NOT signal our process group here (e.g. `kill(-pgid, SIGTERM)`).
-/// On Linux the app inherits the launcher's pgid — that may be the user's
-/// desktop session (issue #47, tearing down GNOME) or the developer's shell
-/// (terminating the parent terminal and its sibling jobs). Either is
-/// catastrophic and not worth the convenience of auto-cleaning a stray
-/// `tauri dev` vite process.
-pub fn quit_app(app: &tauri::AppHandle) {
-    teardown_before_exit(app);
-    app.exit(0);
-}
-
-/// Restart the process, running the same teardown `quit_app` does.
-///
-/// Called after an in-app update has replaced the bundle on disk. Reuses
-/// `teardown_before_exit` rather than restarting outright: skipping it would
-/// drop the exit-time local backup commit, so a user who restarts instead of
-/// quitting would silently lose it.
-///
-/// `request_restart`, not `restart`: on the main thread the latter spawns the
-/// replacement process and exits without ever emitting `RunEvent::Exit`, and
-/// `tauri-plugin-single-instance` removes its socket only on that event. The
-/// old process usually exits before the new one gets far enough to connect —
-/// leaving a stale socket file the next launch cleans up on `ConnectionRefused`
-/// — but nothing enforces that ordering, and losing the race means the new
-/// instance sees a live singleton and exits immediately, taking the app down
-/// instead of restarting it. Going through the exit event closes the window.
-pub fn restart_app(app: &tauri::AppHandle) {
-    teardown_before_exit(app);
-    app.request_restart();
-}
-
-fn teardown_before_exit(app: &tauri::AppHandle) {
-    QUITTING.store(true, Ordering::SeqCst);
-    let _ = app.save_window_state(
-        StateFlags::SIZE
-            | StateFlags::POSITION
-            | StateFlags::MAXIMIZED
-            | StateFlags::FULLSCREEN,
-    );
-    if let Some(w) = app.get_webview_window("main") {
-        if let Err(err) = w.destroy() {
-            log::error!("Failed to destroy main window while quitting: {err}");
-        }
-    }
-    // 退出前 auto-backup (§3.4): local commit only, fail-fast on a busy lock,
-    // after the window is gone so quitting feels instant.
-    if let Some(store) = app.try_state::<Arc<core::skill_store::SkillStore>>() {
-        core::auto_backup::commit_on_exit(&store);
-    }
-}
-
-#[cfg_attr(mobile, tauri::mobile_entry_point)]
-pub fn run() {
-    let pre_builder_start = Instant::now();
-    let (store, startup_timings) =
-        core::app_state::initialize_store().expect("Failed to initialize app state");
-    let pre_builder_ms = pre_builder_start.elapsed().as_millis();
-    let store_for_setup = store.clone();
-
-    let cancel_registry = Arc::new(core::install_cancel::InstallCancelRegistry::new());
-
-    let builder_start = Instant::now();
-    tauri::Builder::default()
-        .manage(store)
-        .manage(cancel_registry)
-        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
-            restore_main_window(app);
-        }))
-        .plugin(tauri_plugin_dialog::init())
-        .plugin(tauri_plugin_shell::init())
-        .plugin(tauri_plugin_opener::init())
-        .plugin(tauri_plugin_clipboard_manager::init())
-        .plugin(tauri_plugin_updater::Builder::new().build())
-        .plugin(
-            tauri_plugin_window_state::Builder::default()
-                .with_state_flags(
-                    StateFlags::SIZE
-                        | StateFlags::POSITION
-                        | StateFlags::MAXIMIZED
-                        | StateFlags::FULLSCREEN,
-                )
-                .build(),
-        )
-        .setup(move |app| {
-            // Snapshot the builder->setup gap BEFORE doing any work in setup,
-            // so the label reflects only the time Tauri spent constructing
-            // the App between Builder::default() and invoking this callback.
-            let builder_to_setup_ms = builder_start.elapsed().as_millis();
-            let setup_start = Instant::now();
-            app.handle().plugin(
-                tauri_plugin_log::Builder::default()
-                    .level(log::LevelFilter::Info)
-                    .level_for("tao", log::LevelFilter::Warn)
-                    .level_for("wry", log::LevelFilter::Warn)
-                    .level_for("hyper", log::LevelFilter::Warn)
-                    .level_for("reqwest", log::LevelFilter::Warn)
-                    .level_for("rustls", log::LevelFilter::Warn)
-                    .max_file_size(5 * 1024 * 1024)
-                    .rotation_strategy(tauri_plugin_log::RotationStrategy::KeepSome(3))
-                    .timezone_strategy(tauri_plugin_log::TimezoneStrategy::UseLocal)
-                    .format(|out, message, record| {
-                        out.finish(format_args!(
-                            "{} {:5} [{}] {}",
-                            chrono::Local::now().format("%Y-%m-%dT%H:%M:%S%.3f%:z"),
-                            record.level(),
-                            record.target(),
-                            message
-                        ))
-                    })
-                    .build(),
-            )?;
-
-            core::panic_log::install_panic_hook(app.handle().clone());
-            log::info!(
-                "app start: version={} os={} arch={}",
-                app.config().version.clone().unwrap_or_default(),
-                std::env::consts::OS,
-                std::env::consts::ARCH
-            );
-            log::info!(
-                "startup: pre_builder {} ms, builder_to_setup {} ms",
-                pre_builder_ms,
-                builder_to_setup_ms
-            );
-            startup_timings.log();
-
-            // Flush any errors stashed while resolving the central repo — that
-            // ran before this logger existed, so its own log calls were no-ops
-            // (e.g. a central-library migration that fell back to the source).
-            for detail in core::central_repo::take_startup_errors() {
-                log::error!("{detail}");
-            }
-
-            // One-time repair for skills uploaded before sync targets were
-            // registered on import: they have a center record but no target,
-            // leaving them button-less in the workspace. This scans and hashes
-            // every agent's local skills, so it must NOT block the window
-            // (#248: it ran ~8s synchronously here on every launch). Run it in
-            // the background after the UI is up; the function itself skips the
-            // scan when the stranded set is unchanged from the last attempt.
-            let store_for_backfill = store_for_setup.clone();
-            tauri::async_runtime::spawn_blocking(move || {
-                let step = Instant::now();
-                let repaired =
-                    commands::agent_workspace::backfill_stranded_agent_targets(&store_for_backfill);
-                if repaired > 0 {
-                    log::info!(
-                        "startup: backfilled {} stranded agent skill target(s) in {} ms",
-                        repaired,
-                        step.elapsed().as_millis()
-                    );
-                }
-            });
-
-            // Publish the CLI that ships in this bundle to a fixed path so
-            // agents can drive Skills Manager without it being on PATH. A
-            // ~15 MB copy plus one `--version` run, so never on the UI thread.
-            // The crate version, not `tauri.conf.json`'s: it is what the CLI
-            // reports about itself, and the bridge verifies the copy by asking
-            // it. Reading the app config here would silently disable the
-            // bridge for everyone if the two ever drifted apart.
-            tauri::async_runtime::spawn_blocking(|| {
-                let step = Instant::now();
-                core::cli_bridge::ensure_bridge(env!("CARGO_PKG_VERSION"));
-                log::info!(
-                    "startup: cli bridge step done in {} ms",
-                    step.elapsed().as_millis()
-                );
-            });
-
-            let step = Instant::now();
-            if is_tray_icon_enabled(&store_for_setup) {
-                ensure_tray_icon(app.handle())?;
-                log::info!(
-                    "startup: ensure_tray_icon done in {} ms",
-                    step.elapsed().as_millis()
-                );
-            } else {
-                log::info!("startup: tray icon disabled");
-            }
-
-            let step = Instant::now();
-            core::file_watcher::start_file_watcher(app.handle().clone(), store_for_setup.clone());
-            log::info!(
-                "startup: start_file_watcher done in {} ms",
-                step.elapsed().as_millis()
-            );
-
-            let step = Instant::now();
-            core::skill_auto_updater::start(app.handle().clone(), store_for_setup.clone());
-            log::info!(
-                "startup: skill auto-updater spawned in {} ms",
-                step.elapsed().as_millis()
-            );
-
-            // Object-merge crash recovery (merge-engine design §5): finish or
-            // roll back an interrupted sync apply before any background work
-            // can touch the repo. Best-effort, never blocks startup.
-            let store_for_merge_recovery = store_for_setup.clone();
-            tauri::async_runtime::spawn_blocking(move || {
-                core::merge::recover_on_startup(
-                    &store_for_merge_recovery,
-                    &core::central_repo::skills_dir(),
-                );
-            });
-
-            // Automatic backup (§3.4): debounced commit+push after central-repo
-            // changes; the first round also uploads whatever the exit-time
-            // commit captured last session.
-            core::auto_backup::start(app.handle().clone(), store_for_setup.clone());
-
-            // One-time (idempotent) security migration: move credentials
-            // embedded in the backup remote URL into the OS keychain so no
-            // token stays in `.git/config`. Best-effort in the background —
-            // offline machines retry on the next launch.
-            let store_for_cred_migration = store_for_setup.clone();
-            tauri::async_runtime::spawn_blocking(move || {
-                match commands::git_backup::migrate_embedded_credentials(&store_for_cred_migration)
-                {
-                    Ok(Some(_)) => log::info!("startup: migrated backup token to OS keychain"),
-                    Ok(None) => {}
-                    Err(e) => log::warn!("startup: backup credential migration skipped: {e:#}"),
-                }
-            });
-
-            // Intercept window close — let frontend decide (close vs hide to tray)
-            // When QUITTING is set, allow the close to proceed so the process fully exits.
-            let step = Instant::now();
-            let win = app.get_webview_window("main").unwrap();
-            let win_for_event = win.clone();
-            win.on_window_event(move |event| {
-                if let tauri::WindowEvent::CloseRequested { api, .. } = event {
-                    if QUITTING.load(Ordering::SeqCst) {
-                        return; // allow close
-                    }
-                    win_for_event.emit("window-close-requested", ()).ok();
-                    api.prevent_close();
-                }
-            });
-            // A failed restore still shows the window at its default geometry.
-            if let Err(err) = win.restore_state(
-                StateFlags::SIZE
-                    | StateFlags::POSITION
-                    | StateFlags::MAXIMIZED
-                    | StateFlags::FULLSCREEN,
-            ) {
-                log::warn!("Failed to restore saved window state: {err}");
-            }
-            win.show()?;
-            log::info!(
-                "startup: window handle + close hook + state restore in {} ms",
-                step.elapsed().as_millis()
-            );
-
-            log::info!(
-                "startup: setup() body total {} ms",
-                setup_start.elapsed().as_millis()
-            );
-
-            Ok(())
-        })
-        .invoke_handler(tauri::generate_handler![
-            // Tools
-            commands::tools::get_tool_status,
-            commands::tools::set_tool_enabled,
-            commands::tools::set_all_tools_enabled,
-            commands::tools::get_tool_order_cmd,
-            commands::tools::set_tool_order_cmd,
-            commands::tools::set_custom_tool_path,
-            commands::tools::reset_custom_tool_path,
-            commands::tools::set_custom_tool_project_path,
-            commands::tools::reset_custom_tool_project_path,
-            commands::tools::add_custom_tool,
-            commands::tools::remove_custom_tool,
-            // Skills
-            commands::skills::get_managed_skills,
-            commands::skills::get_skills_for_preset,
-            commands::skills::get_skill_document,
-            commands::skills::get_source_skill_document,
-            commands::skills::get_skill_source_diff,
-            commands::skills::delete_managed_skill,
-            commands::skills::delete_managed_skills,
-            commands::skills::install_local,
-            commands::skills::install_git,
-            commands::skills::preview_git_install,
-            commands::skills::confirm_git_install,
-            commands::skills::cancel_git_preview,
-            commands::skills::install_from_skillssh,
-            commands::skills::check_skill_update,
-            commands::skills::check_all_skill_updates,
-            commands::skills::update_skill,
-            commands::skills::batch_update_skills,
-            commands::skills::reimport_local_skill,
-            commands::skills::relink_local_skill_source,
-            commands::skills::detach_local_skill_source,
-            commands::skills::get_all_tags,
-            commands::skills::set_skill_tags,
-            commands::skills::rename_tag,
-            commands::skills::delete_tag,
-            commands::skills::cancel_install,
-            commands::skills::batch_import_folder,
-            // Sync
-            commands::sync::sync_skill_to_tool,
-            commands::sync::unsync_skill_from_tool,
-            commands::sync::get_skill_tool_toggles,
-            commands::sync::set_skill_tool_toggle,
-            // Scan
-            commands::scan::scan_local_skills,
-            commands::scan::import_existing_skill,
-            commands::scan::import_all_discovered,
-            // Browse
-            commands::browse::fetch_leaderboard,
-            commands::browse::search_skillssh,
-            // Settings
-            commands::settings::get_settings,
-            commands::settings::set_settings,
-            commands::settings::get_central_repo_path,
-            commands::settings::get_central_repo_path_override,
-            commands::settings::get_central_repo_pending_path,
-            commands::settings::get_central_repo_warnings,
-            commands::settings::set_central_repo_path,
-            commands::settings::open_central_repo_folder,
-            commands::settings::check_app_update,
-            commands::settings::update_install_blocker,
-            commands::settings::get_diagnostic_info,
-            commands::settings::get_recent_log_excerpt,
-            commands::settings::export_logs_zip,
-            commands::settings::log_startup_event,
-            commands::settings::check_last_panic,
-            commands::settings::clear_last_panic,
-            commands::settings::app_exit,
-            commands::settings::restart_app,
-            commands::settings::hide_to_tray,
-            // Git Backup
-            commands::git_backup::git_backup_fetch,
-            commands::git_backup::git_backup_status,
-            commands::git_backup::git_backup_init,
-            commands::git_backup::git_backup_set_remote,
-            commands::git_backup::github_backup_connect,
-            commands::git_backup::github_device_flow_start,
-            commands::git_backup::github_device_flow_poll,
-            commands::git_backup::git_backup_sanitize_remote_url,
-            commands::git_backup::git_backup_migrate_credentials,
-            commands::git_backup::git_backup_size_report,
-            commands::git_backup::git_backup_remove_remote,
-            commands::git_backup::git_backup_commit,
-            commands::git_backup::git_backup_push,
-            commands::git_backup::git_backup_pull,
-            commands::git_backup::git_backup_clone,
-            commands::git_backup::git_backup_reclone,
-            commands::git_backup::git_backup_create_snapshot,
-            commands::git_backup::git_backup_list_versions,
-            commands::git_backup::git_backup_restore_version,
-            commands::git_backup::backup_device_name,
-            commands::git_backup::backup_set_device_name,
-            commands::git_backup::git_backup_pending_conflicts,
-            commands::git_backup::git_backup_resolve_conflict,
-            commands::git_backup::git_backup_sync,
-            // Projects
-            commands::projects::get_projects,
-            commands::projects::add_project,
-            commands::projects::add_linked_workspace,
-            commands::projects::remove_project,
-            commands::projects::reveal_project_folder,
-            commands::projects::scan_projects,
-            commands::projects::get_project_agent_targets,
-            commands::projects::get_project_skills,
-            commands::projects::get_project_skill_document,
-            commands::projects::import_project_skill_to_center,
-            commands::projects::export_skill_to_project,
-            commands::projects::update_project_skill_to_center,
-            commands::projects::update_project_skill_from_center,
-            commands::projects::toggle_project_skill,
-            commands::projects::delete_project_skill,
-            commands::projects::slugify_skill_names,
-            // Agent local workspace
-            commands::agent_workspace::get_global_local_skills,
-            commands::agent_workspace::get_global_local_skill_document,
-            commands::agent_workspace::import_global_local_skill_to_center,
-            commands::agent_workspace::update_global_local_skill_from_center,
-            commands::agent_workspace::delete_global_local_skill,
-            // Presets
-            commands::presets::get_presets,
-            commands::presets::get_active_preset,
-            commands::presets::create_preset,
-            commands::presets::update_preset,
-            commands::presets::delete_preset,
-            commands::presets::switch_preset,
-            commands::presets::apply_preset_to_default,
-            commands::presets::apply_preset_to_coding_agents,
-            commands::presets::add_skill_to_preset,
-            commands::presets::remove_skill_from_preset,
-            commands::presets::reorder_presets,
-            commands::projects::reorder_projects,
-            commands::presets::get_preset_skill_order,
-            commands::presets::reorder_preset_skills,
-        ])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
 }
 ````
 
@@ -67993,6 +70912,81 @@ npm run cli:build
 MIT
 ````
 
+## File: package.json
+````json
+{
+  "name": "skills-manager",
+  "private": true,
+  "version": "1.41.0",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "lint": "eslint .",
+    "preview": "vite preview",
+    "release:prepare": "node scripts/prepare-release.mjs",
+    "tauri": "tauri",
+    "tauri:dev": "tauri dev --config src-tauri/tauri.dev.conf.json",
+    "tauri:build": "tauri build",
+    "cli": "node scripts/run-rust-cli.mjs cli",
+    "cli:build": "node scripts/run-rust-cli.mjs build",
+    "cli:install": "node scripts/run-rust-cli.mjs install",
+    "test:company": "vitest run --config vitest.config.ts",
+    "mock:store": "node scripts/company-mock-store.mjs",
+    "company:demo": "node scripts/company-demo.mjs"
+  },
+  "dependencies": {
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/sortable": "^10.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
+    "@hello-pangea/dnd": "^18.0.1",
+    "@tauri-apps/api": "^2.10.1",
+    "@tauri-apps/cli": "^2.10.0",
+    "@tauri-apps/plugin-clipboard-manager": "^2.3.2",
+    "@tauri-apps/plugin-dialog": "^2.6.0",
+    "@tauri-apps/plugin-opener": "^2.5.3",
+    "@tauri-apps/plugin-shell": "^2.3.5",
+    "@tauri-apps/plugin-updater": "^2.10.0",
+    "clsx": "^2.1.1",
+    "i18next": "^25.8.13",
+    "lucide-react": "^0.575.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "react-i18next": "^16.5.4",
+    "react-markdown": "^10.1.0",
+    "react-router-dom": "^7.13.1",
+    "remark-gfm": "^4.0.1",
+    "sonner": "^2.0.7",
+    "tailwind-merge": "^3.5.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.1",
+    "@testing-library/dom": "^10.4.2",
+    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/react": "^16.3.3",
+    "@testing-library/user-event": "^14.6.7",
+    "@types/node": "^24.10.1",
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^5.1.1",
+    "autoprefixer": "^10.4.27",
+    "eslint": "^9.39.1",
+    "eslint-plugin-react-hooks": "^7.0.1",
+    "eslint-plugin-react-refresh": "^0.4.24",
+    "globals": "^16.5.0",
+    "jsdom": "^30.1.2",
+    "playwright-core": "^1.64.0",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^3.4.19",
+    "typescript": "~5.9.3",
+    "typescript-eslint": "^8.48.0",
+    "vite": "^7.3.1",
+    "vitest": "^5.0.4"
+  }
+}
+````
+
 ## File: README.md
 ````markdown
 <p align="center">
@@ -68281,81 +71275,6 @@ Anything else — [open an issue](https://github.com/xingkongliang/skills-manage
 ## License
 
 MIT
-````
-
-## File: package.json
-````json
-{
-  "name": "skills-manager",
-  "private": true,
-  "version": "1.41.0",
-  "license": "MIT",
-  "type": "module",
-  "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build",
-    "lint": "eslint .",
-    "preview": "vite preview",
-    "release:prepare": "node scripts/prepare-release.mjs",
-    "tauri": "tauri",
-    "tauri:dev": "tauri dev --config src-tauri/tauri.dev.conf.json",
-    "tauri:build": "tauri build",
-    "cli": "node scripts/run-rust-cli.mjs cli",
-    "cli:build": "node scripts/run-rust-cli.mjs build",
-    "cli:install": "node scripts/run-rust-cli.mjs install",
-    "test:company": "vitest run --config vitest.config.ts",
-    "mock:store": "node scripts/company-mock-store.mjs",
-    "company:demo": "node scripts/company-demo.mjs"
-  },
-  "dependencies": {
-    "@dnd-kit/core": "^6.3.1",
-    "@dnd-kit/sortable": "^10.0.0",
-    "@dnd-kit/utilities": "^3.2.2",
-    "@hello-pangea/dnd": "^18.0.1",
-    "@tauri-apps/api": "^2.10.1",
-    "@tauri-apps/cli": "^2.10.0",
-    "@tauri-apps/plugin-clipboard-manager": "^2.3.2",
-    "@tauri-apps/plugin-dialog": "^2.6.0",
-    "@tauri-apps/plugin-opener": "^2.5.3",
-    "@tauri-apps/plugin-shell": "^2.3.5",
-    "@tauri-apps/plugin-updater": "^2.10.0",
-    "clsx": "^2.1.1",
-    "i18next": "^25.8.13",
-    "lucide-react": "^0.575.0",
-    "react": "^19.2.0",
-    "react-dom": "^19.2.0",
-    "react-i18next": "^16.5.4",
-    "react-markdown": "^10.1.0",
-    "react-router-dom": "^7.13.1",
-    "remark-gfm": "^4.0.1",
-    "sonner": "^2.0.7",
-    "tailwind-merge": "^3.5.0"
-  },
-  "devDependencies": {
-    "@eslint/js": "^9.39.1",
-    "@testing-library/dom": "^10.4.2",
-    "@testing-library/jest-dom": "^7.0.1",
-    "@testing-library/react": "^16.3.3",
-    "@testing-library/user-event": "^14.6.7",
-    "@types/node": "^24.10.1",
-    "@types/react": "^19.2.7",
-    "@types/react-dom": "^19.2.3",
-    "@vitejs/plugin-react": "^5.1.1",
-    "autoprefixer": "^10.4.27",
-    "eslint": "^9.39.1",
-    "eslint-plugin-react-hooks": "^7.0.1",
-    "eslint-plugin-react-refresh": "^0.4.24",
-    "globals": "^16.5.0",
-    "jsdom": "^30.1.2",
-    "playwright-core": "^1.64.0",
-    "postcss": "^8.5.6",
-    "tailwindcss": "^3.4.19",
-    "typescript": "~5.9.3",
-    "typescript-eslint": "^8.48.0",
-    "vite": "^7.3.1",
-    "vitest": "^5.0.4"
-  }
-}
 ````
 
 ## File: src-tauri/Cargo.toml
