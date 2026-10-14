@@ -167,6 +167,9 @@ impl CompanyService {
         let mut results = Vec::new();
         for id in ids {
             let mut item = self.refresh_installation(id)?;
+            if item.state == InstallationState::Removed {
+                continue;
+            }
             item.checked_at = Some(chrono::Utc::now().to_rfc3339());
             match self.detail(&item.skill_id) {
                 Ok(skill) => {

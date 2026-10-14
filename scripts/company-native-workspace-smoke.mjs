@@ -17,7 +17,7 @@ const server = createMockStore(); await new Promise(done => server.listen(0, '12
 const portListener = createServer(); await new Promise(done => portListener.listen(0, '127.0.0.1', done));
 const port = portListener.address().port; await new Promise(done => portListener.close(done));
 const env = { ...process.env, COMPANY_STORE_MODE: 'mock', COMPANY_STORE_BASE_URL: `http://127.0.0.1:${server.address().port}`, COMPANY_PROFILE_ROOT: profile, COMPANY_DATA_ROOT: data, WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: `--remote-debugging-port=${port}` };
-let child; let browser; let page;
+let child; let browser; let page; let storeClosed = false;
 async function start() {
   child = spawn(resolve('src-tauri/target/debug/skills-manager.exe'), [], { env, windowsHide: true, stdio: 'ignore' });
   for (let i = 0; i < 100; i++) {
@@ -102,10 +102,43 @@ try {
   const screenshot = process.env.COMPANY_SMOKE_SCREENSHOT;
   if (screenshot) { await mkdir(dirname(resolve(screenshot)), { recursive: true }); await page.screenshot({ path: screenshot, fullPage: true }); }
   await page.getByRole('button', { name: 'Đăng xuất', exact: true }).click();
+  if (process.argv.includes('--lifecycle')) {
+    await new Promise(done => server.close(done)); storeClosed = true;
+    const aCard = () => page.locator('.installation-card').filter({ hasText: 'Dự án: Project A' });
+    await aCard().getByRole('button', { name: 'Bản lưu', exact: true }).click();
+    await page.getByRole('button', { name: 'Khôi phục bản lưu', exact: true }).click();
+    assert.match(await readFile(join(aTarget, 'SKILL.md'), 'utf8'), /Jira project summary v2/);
+    await page.getByRole('button', { name: 'Backup và khôi phục', exact: true }).click();
+    await page.getByText('Đã khôi phục nội dung và baseline của bản lưu.', { exact: true }).waitFor();
+    await page.getByRole('button', { name: 'Đóng', exact: true }).click();
+    assert.equal(await readFile(join(aTarget, 'SKILL.md'), 'utf8'), 'Native project customization');
+    const restored = await page.evaluate(async () => window.__TAURI_INTERNALS__.invoke('company_installations_list', {}));
+    assert.equal(restored.find(i => i.id === backup.installationId).packageHash, backup.installation.packageHash);
+    await aCard().getByRole('button', { name: 'Gỡ bản cài', exact: true }).click();
+    await page.getByRole('button', { name: 'Backup và gỡ', exact: true }).click();
+    await page.getByText('Đã gỡ bản cài; bản lưu vẫn có thể khôi phục.', { exact: true }).waitFor();
+    await page.getByRole('button', { name: 'Đóng', exact: true }).click();
+    await assert.rejects(readFile(join(aTarget, 'SKILL.md')));
+    assert.deepEqual(await readFile(join(globalTarget, 'SKILL.md')), originalGlobal);
+    assert.deepEqual(await readFile(join(bTarget, 'SKILL.md')), originalB);
+    await stop(); await start();
+    await page.getByRole('button', { name: 'Skill đã cài', exact: true }).click();
+    await aCard().getByText('Đã gỡ', { exact: true }).waitFor();
+    await aCard().getByRole('button', { name: 'Bản lưu', exact: true }).click();
+    const removedBackup = page.locator('.company-card article').filter({ hasText: 'Trước khi gỡ' });
+    await removedBackup.getByRole('button', { name: 'Khôi phục bản lưu', exact: true }).click();
+    await page.getByRole('button', { name: 'Backup và khôi phục', exact: true }).click();
+    await page.getByText('Đã khôi phục nội dung và baseline của bản lưu.', { exact: true }).waitFor();
+    await page.getByRole('button', { name: 'Đóng', exact: true }).click();
+    assert.equal(await readFile(join(aTarget, 'SKILL.md'), 'utf8'), 'Native project customization');
+    assert.equal(await readFile(mcp, 'utf8'), mcpBefore);
+    if (screenshot) await page.screenshot({ path: screenshot, fullPage: true });
+    console.log('PASS native L6: offline restore/baseline, backup/remove, restart/restore, independent targets and unchanged MCP');
+  }
   console.log('PASS native L4/L5: projects, independent copies, customization, update preview/backup/apply, restart and unchanged MCP');
 } finally {
   if (page) await page.evaluate(async () => { try { await window.__TAURI_INTERNALS__.invoke('company_logout', {}); } catch { /* owned mock credentials only */ } }).catch(() => {});
-  await stop(); await new Promise(done => server.close(done));
+  await stop(); if (!storeClosed) await new Promise(done => server.close(done));
   assert.equal(dirname(resolve(root)), resolve(tmpdir())); assert(basename(root).startsWith('company-native-l4-l5-'));
   await rm(root, { recursive: true, force: true });
 }

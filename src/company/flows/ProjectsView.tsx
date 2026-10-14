@@ -29,6 +29,6 @@ export function ProjectsView({ api, projects, installations, onChanged, onBrowse
     </section>
     {error && <div role="alert" className="error-banner">{error}</div>}
     {projects.length === 0 && <p>Chưa có dự án được đăng ký.</p>}
-    {projects.map(project => { const count = installations.filter(i => i.projectId === project.id).length; return <article className="company-card" key={project.id}><h2>{project.name}</h2><p className="target-path">{displayPath(project.path)}</p><p>{count} bản cài được quản lý</p><div className="row-actions"><button className="primary" onClick={() => onBrowse(project.id)}>Cài skill vào {project.name}</button><button className="secondary" disabled={busy || count > 0} title={count ? 'Dự án còn bản cài được quản lý' : undefined} onClick={() => remove(project.id)}>Bỏ khỏi danh sách</button></div></article>; })}
+    {projects.map(project => { const count = installations.filter(i => i.projectId === project.id && i.state !== 'removed').length; return <article className="company-card" key={project.id}><h2>{project.name}</h2><p className="target-path">{displayPath(project.path)}</p><p>{count} bản cài được quản lý</p><div className="row-actions"><button className="primary" onClick={() => onBrowse(project.id)}>Cài skill vào {project.name}</button><button className="secondary" disabled={busy || count > 0} title={count ? 'Dự án còn bản cài được quản lý' : undefined} onClick={() => remove(project.id)}>Bỏ khỏi danh sách</button></div></article>; })}
   </>;
 }

@@ -63,6 +63,7 @@ fn pending_fixture(
         kind: OperationKind::Install, preview_ready: false, customized: false, changes: Vec::new(),
     };
     let installation = Installation {
+        state: Default::default(),
         id,
         skill_id: "skl_001".into(),
         slug: "jira-project-summary".into(),

@@ -4,7 +4,12 @@ use std::path::PathBuf;
 
 impl CompanyService {
     pub fn projects(&self) -> CompanyResult<Vec<Project>> {
-        self.repository.projects()
+        Ok(self
+            .repository
+            .projects()?
+            .into_iter()
+            .filter(|p| !p.archived)
+            .collect())
     }
 
     pub fn add_project(&self, path: &Path) -> CompanyResult<Project> {
@@ -29,11 +34,16 @@ impl CompanyService {
                 "Dự án không được nằm trong bản cài hoặc vùng dữ liệu ứng dụng.",
             ));
         }
-        if let Some(existing) = self
+        if let Some(mut existing) = self
+            .repository
             .projects()?
             .into_iter()
             .find(|p| path_key(Path::new(&p.path)) == path_key(&path))
         {
+            if existing.archived {
+                existing.archived = false;
+                self.repository.restore_project(&existing)?;
+            }
             return Ok(existing);
         }
         let project = Project {
@@ -44,18 +54,16 @@ impl CompanyService {
                 .to_string_lossy()
                 .to_string(),
             path: path.display().to_string(),
+            archived: false,
         };
         self.repository.save_project(&project)?;
         Ok(project)
     }
     pub fn remove_project(&self, id: &str) -> CompanyResult<()> {
         let _worker = self.worker.lock().map_err(|_| write_error())?;
-        if self
-            .repository
-            .installations()?
-            .iter()
-            .any(|item| item.project_id.as_deref() == Some(id))
-        {
+        if self.repository.installations()?.iter().any(|item| {
+            item.project_id.as_deref() == Some(id) && item.state == InstallationState::Active
+        }) {
             return Err(CompanyError::new(
                 "PROJECT_IN_USE",
                 "Dự án còn bản cài được quản lý; không bỏ dự án khỏi danh sách.",
@@ -101,7 +109,8 @@ impl CompanyService {
         match project_id {
             None => Ok(self.config.profile_root.clone()),
             Some(id) => Ok(PathBuf::from(
-                self.projects()?
+                self.repository
+                    .projects()?
                     .into_iter()
                     .find(|p| p.id == id)
                     .ok_or_else(|| CompanyError::new("PROJECT_NOT_FOUND", "Không tìm thấy dự án."))?
@@ -139,6 +148,10 @@ impl CompanyService {
         Ok(item)
     }
     pub(super) fn refreshed(&self, mut item: Installation) -> Installation {
+        if item.state == InstallationState::Removed {
+            item.content_state = ContentState::Missing;
+            return item;
+        }
         item.content_state = if self.guarded_installation(&item.id).is_err() {
             ContentState::Unknown
         } else {
@@ -160,6 +173,12 @@ impl CompanyService {
     }
     pub fn installation_open_path(&self, id: &str, kind: &str) -> CompanyResult<PathBuf> {
         let item = self.guarded_installation(id)?;
+        if item.state == InstallationState::Removed {
+            return Err(CompanyError::new(
+                "CONTENT_MISSING",
+                "Bản cài đã gỡ; chọn bản lưu để khôi phục.",
+            ));
+        }
         let target = PathBuf::from(item.target);
         let path = match kind {
             "skill_file" => target.join("SKILL.md"),

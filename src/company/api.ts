@@ -25,6 +25,9 @@ export interface CompanyApi {
   prepareUpdate(id: string): Promise<OperationView>;
   applyUpdate(id: string, replaceCustomized: boolean): Promise<OperationView>;
   backupsList(id: string): Promise<Backup[]>;
+  prepareRestore(backupId: string): Promise<OperationView>;
+  prepareRemove(id: string): Promise<OperationView>;
+  applyLifecycle(id: string): Promise<OperationView>;
   openPreview(id: string, side: 'current' | 'incoming', path: string): Promise<null>;
 }
 
@@ -51,5 +54,8 @@ export const nativeApi: CompanyApi = {
   prepareUpdate: id => invoke('company_update_prepare', { id }),
   applyUpdate: (id, replaceCustomized) => invoke('company_update_apply', { id, replaceCustomized }),
   backupsList: id => invoke('company_backups_list', { id }),
+  prepareRestore: backupId => invoke('company_restore_prepare', { backupId }),
+  prepareRemove: id => invoke('company_remove_prepare', { id }),
+  applyLifecycle: id => invoke('company_lifecycle_apply', { id }),
   openPreview: (id, side, path) => invoke('company_operation_open_preview', { id, side, path }),
 };

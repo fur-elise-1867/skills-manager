@@ -31,6 +31,8 @@ struct Operation {
     preview: Option<package_store::VerifiedPackage>,
     bypass: bool,
 }
+#[path = "lifecycle_service.rs"]
+mod lifecycle;
 #[path = "project_service.rs"]
 mod projects;
 #[path = "replacement_service.rs"]
@@ -44,6 +46,7 @@ pub struct CompanyService {
     repository: CompanyRepository,
     operations: Mutex<HashMap<String, Operation>>,
     worker: Mutex<()>,
+    lifecycle_jobs: Mutex<HashMap<String, LifecycleJournal>>,
 }
 fn operation_error() -> CompanyError {
     CompanyError::new(
@@ -71,9 +74,11 @@ impl CompanyService {
             repository,
             operations: Mutex::new(HashMap::new()),
             worker: Mutex::new(()),
+            lifecycle_jobs: Mutex::new(HashMap::new()),
         };
         app.recover()?;
         app.recover_replacements()?;
+        app.recover_lifecycle()?;
         Ok(app)
     }
     pub fn current_session(&self) -> SessionView {
@@ -149,7 +154,10 @@ impl CompanyService {
     fn cancel_pending(&self) {
         if let Ok(operations) = self.operations.lock() {
             for operation in operations.values() {
-                if !matches!(
+                if matches!(
+                    operation.view.kind,
+                    OperationKind::Install | OperationKind::Update
+                ) && !matches!(
                     operation.view.state,
                     OperationState::Committing | OperationState::Succeeded
                 ) {
@@ -199,7 +207,12 @@ impl CompanyService {
         {
             return Err(CompanyError::new("RECOVERY_REQUIRED", "Đích này có thao tác chưa phục hồi xong. Kiểm tra dữ liệu đã giữ trước khi cài lại."));
         }
-        let existing = self.repository.installations()?;
+        let existing: Vec<_> = self
+            .repository
+            .installations()?
+            .into_iter()
+            .filter(|i| i.state == InstallationState::Active)
+            .collect();
         let reinstall = existing
             .iter()
             .find(|item| {
@@ -460,6 +473,7 @@ impl CompanyService {
             store_state: StoreState::Current,
             checked_at: Some(chrono::Utc::now().to_rfc3339()),
             store_error: None,
+            state: InstallationState::Active,
         };
         let mut journal = InstallJournal {
             view,

@@ -22,7 +22,12 @@ fn matches(path: &Path, hash: &str) -> bool {
 }
 
 impl CompanyService {
-    fn snapshot_backup(&self, old: &Installation, expected: &str) -> CompanyResult<Backup> {
+    pub(super) fn snapshot_backup(
+        &self,
+        old: &Installation,
+        expected: &str,
+        reason: &str,
+    ) -> CompanyResult<Backup> {
         let root = self.config.data_root.join("backups").join(&old.id);
         uuid::Uuid::parse_str(&old.id).map_err(|_| operation_error())?;
         validate_ancestors(&root)?;
@@ -45,7 +50,7 @@ impl CompanyService {
             id,
             installation_id: old.id.clone(),
             created_at: chrono::Utc::now().to_rfc3339(),
-            reason: "update".into(),
+            reason: reason.into(),
             path: destination.join("content").display().to_string(),
             full_hash: expected.into(),
             installation: old.clone(),
@@ -120,7 +125,7 @@ impl CompanyService {
                 "Gói gốc đã đổi sau preview. Không cập nhật.",
             ));
         }
-        let backup = self.snapshot_backup(old, old_hash)?;
+        let backup = self.snapshot_backup(old, old_hash, "update")?;
         let mut new = old.clone();
         new.package_hash = package.archive_hash.clone();
         new.content_hash = package.content_hash.clone();

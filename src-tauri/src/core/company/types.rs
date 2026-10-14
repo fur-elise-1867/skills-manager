@@ -160,6 +160,8 @@ pub enum OperationKind {
     #[default]
     Install,
     Update,
+    Restore,
+    Remove,
 }
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -214,6 +216,15 @@ pub struct Installation {
     pub checked_at: Option<String>,
     #[serde(default)]
     pub store_error: Option<String>,
+    #[serde(default)]
+    pub state: InstallationState,
+}
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum InstallationState {
+    #[default]
+    Active,
+    Removed,
 }
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 #[serde(rename_all = "snake_case")]
@@ -239,6 +250,8 @@ pub struct Project {
     pub id: String,
     pub name: String,
     pub path: String,
+    #[serde(default)]
+    pub archived: bool,
 }
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -277,5 +290,19 @@ pub struct InstallJournal {
     pub installation: Installation,
     pub full_hash: String,
     #[serde(default)]
+    pub stage_owned: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LifecycleJournal {
+    pub view: OperationView,
+    pub old: Installation,
+    pub new: Installation,
+    pub old_full_hash: Option<String>,
+    pub new_full_hash: Option<String>,
+    pub current_backup: Option<Backup>,
+    pub source_backup: Option<Backup>,
+    pub phase: ReplacePhase,
     pub stage_owned: bool,
 }

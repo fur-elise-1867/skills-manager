@@ -3,6 +3,27 @@ use std::sync::Arc;
 use tauri::State;
 
 type AppState<'a> = State<'a, Arc<CompanyService>>;
+#[tauri::command]
+pub async fn company_restore_prepare(
+    state: AppState<'_>,
+    backup_id: String,
+) -> CompanyResult<OperationView> {
+    blocking(state, move |app| app.prepare_restore(&backup_id)).await
+}
+#[tauri::command]
+pub async fn company_remove_prepare(
+    state: AppState<'_>,
+    id: String,
+) -> CompanyResult<OperationView> {
+    blocking(state, move |app| app.prepare_remove(&id)).await
+}
+#[tauri::command]
+pub async fn company_lifecycle_apply(
+    state: AppState<'_>,
+    id: String,
+) -> CompanyResult<OperationView> {
+    blocking(state, move |app| app.apply_lifecycle(&id)).await
+}
 async fn blocking<T: Send + 'static>(
     state: AppState<'_>,
     action: impl FnOnce(Arc<CompanyService>) -> CompanyResult<T> + Send + 'static,

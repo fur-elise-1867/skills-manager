@@ -47,6 +47,9 @@ pub fn run() {
             company_update_prepare,
             company_update_apply,
             company_backups_list,
+            company_restore_prepare,
+            company_remove_prepare,
+            company_lifecycle_apply,
             company_operation_open_preview
         ])
         .run(tauri::generate_context!())

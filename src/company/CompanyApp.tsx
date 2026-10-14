@@ -29,7 +29,7 @@ export function CompanyApp({ api = nativeApi }: { api?: CompanyApi }) {
   const [resumeSkillId, setResumeSkillId] = useState<string>();
   const expired = useCallback((message: string, skillId?: string) => { setResumeSkillId(skillId); setSession(emptySession); setError(message); }, []);
   const resumed = useCallback(() => setResumeSkillId(undefined), []);
-  const refreshInstallations = useCallback(() => { api.installationsList().then(setInstallations).catch(e => setError(errorMessage(e))); }, [api]);
+  const refreshInstallations = useCallback(() => { Promise.all([api.installationsList(), api.projectsList()]).then(([items, knownProjects]) => { setInstallations(items); setProjects(knownProjects); }).catch(e => setError(errorMessage(e))); }, [api]);
 
   useEffect(() => {
     let active = true;

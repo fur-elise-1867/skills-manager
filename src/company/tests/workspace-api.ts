@@ -9,5 +9,6 @@ export function workspaceApi() {
     refreshInstallation: vi.fn(), openInstallation: vi.fn(),
     checkUpdates: vi.fn(), prepareUpdate: vi.fn(), applyUpdate: vi.fn(),
     backupsList: vi.fn().mockResolvedValue([]), openPreview: vi.fn(),
+    prepareRestore: vi.fn(), prepareRemove: vi.fn(), applyLifecycle: vi.fn(),
   };
 }

@@ -17,7 +17,7 @@ impl CompanyRepository {
         let version: i64 = connection
             .pragma_query_value(None, "user_version", |row| row.get(0))
             .map_err(|_| db_error())?;
-        if version > 4 {
+        if version > 5 {
             return Err(CompanyError::new(
                 "DATABASE_VERSION_UNSUPPORTED",
                 "Dữ liệu thuộc phiên bản app mới hơn. Không thay đổi dữ liệu này.",
@@ -33,7 +33,8 @@ impl CompanyRepository {
             CREATE TABLE IF NOT EXISTS company_catalog_cache (store_key TEXT NOT NULL, user_id TEXT NOT NULL, query TEXT NOT NULL, page INTEGER NOT NULL, fetched_at TEXT NOT NULL, payload TEXT NOT NULL, PRIMARY KEY(store_key,user_id,query,page));
             CREATE TABLE IF NOT EXISTS company_projects (id TEXT PRIMARY KEY, path_key TEXT NOT NULL UNIQUE, payload TEXT NOT NULL);
             CREATE TABLE IF NOT EXISTS company_backups (id TEXT PRIMARY KEY, installation_id TEXT NOT NULL, payload TEXT NOT NULL);
-            CREATE TABLE IF NOT EXISTS company_replacements (id TEXT PRIMARY KEY, state TEXT NOT NULL, payload TEXT NOT NULL);").map_err(|_| db_error())?;
+            CREATE TABLE IF NOT EXISTS company_replacements (id TEXT PRIMARY KEY, state TEXT NOT NULL, payload TEXT NOT NULL);
+            CREATE TABLE IF NOT EXISTS company_lifecycle (id TEXT PRIMARY KEY, state TEXT NOT NULL, payload TEXT NOT NULL);").map_err(|_| db_error())?;
         let transaction = connection.transaction().map_err(|_| db_error())?;
         let legacy = {
             let mut query = transaction
@@ -53,13 +54,13 @@ impl CompanyRepository {
         };
         for (id, old_key, payload) in legacy {
             let item: Installation = serde_json::from_str(&payload).map_err(|_| db_error())?;
-            let key = super::aipro_paths::path_key(Path::new(&item.target));
+            let key = target_key(&item);
             if key != old_key {
                 transaction.execute("UPDATE company_installations SET target_key=?2 WHERE id=?1", params![id,key]).map_err(|_| CompanyError::new("DATABASE_MIGRATION_FAILED", "Ownership cũ chồng lấn khi chuẩn hóa đường dẫn. Dữ liệu được giữ để kiểm tra."))?;
             }
         }
         transaction
-            .pragma_update(None, "user_version", 4)
+            .pragma_update(None, "user_version", 5)
             .map_err(|_| db_error())?;
         transaction.commit().map_err(|_| db_error())?;
         Ok(Self {
@@ -104,10 +105,33 @@ impl CompanyRepository {
         Ok(())
     }
     pub fn remove_project(&self, id: &str) -> CompanyResult<()> {
+        let mut project = self
+            .projects()?
+            .into_iter()
+            .find(|p| p.id == id)
+            .ok_or_else(db_error)?;
+        project.archived = true;
         self.connection
             .lock()
             .map_err(|_| db_error())?
-            .execute("DELETE FROM company_projects WHERE id=?1", [id])
+            .execute(
+                "UPDATE company_projects SET payload=?2 WHERE id=?1",
+                params![id, serde_json::to_string(&project).map_err(|_| db_error())?],
+            )
+            .map_err(|_| db_error())?;
+        Ok(())
+    }
+    pub fn restore_project(&self, project: &Project) -> CompanyResult<()> {
+        self.connection
+            .lock()
+            .map_err(|_| db_error())?
+            .execute(
+                "UPDATE company_projects SET payload=?2 WHERE id=?1",
+                params![
+                    project.id,
+                    serde_json::to_string(project).map_err(|_| db_error())?
+                ],
+            )
             .map_err(|_| db_error())?;
         Ok(())
     }
@@ -204,6 +228,96 @@ impl CompanyRepository {
     pub fn pending_replacements(&self) -> CompanyResult<Vec<ReplaceJournal>> {
         let connection = self.connection.lock().map_err(|_| db_error())?;
         let mut query = connection.prepare("SELECT payload FROM company_replacements WHERE state <> 'completed' ORDER BY rowid").map_err(|_| db_error())?;
+        let rows = query
+            .query_map([], |row| row.get::<_, String>(0))
+            .map_err(|_| db_error())?;
+        rows.map(|row| serde_json::from_str(&row.map_err(|_| db_error())?).map_err(|_| db_error()))
+            .collect()
+    }
+    pub fn all_backups(&self) -> CompanyResult<Vec<Backup>> {
+        let connection = self.connection.lock().map_err(|_| db_error())?;
+        let mut query = connection
+            .prepare("SELECT payload FROM company_backups ORDER BY rowid DESC")
+            .map_err(|_| db_error())?;
+        let rows = query
+            .query_map([], |row| row.get::<_, String>(0))
+            .map_err(|_| db_error())?;
+        rows.map(|row| serde_json::from_str(&row.map_err(|_| db_error())?).map_err(|_| db_error()))
+            .collect()
+    }
+    pub fn record_lifecycle(&self, journal: &LifecycleJournal) -> CompanyResult<()> {
+        let phase = serde_json::to_value(&journal.phase).map_err(|_| db_error())?;
+        self.connection.lock().map_err(|_| db_error())?.execute(
+            "INSERT INTO company_lifecycle(id,state,payload) VALUES(?1,?2,?3) ON CONFLICT(id) DO UPDATE SET state=excluded.state,payload=excluded.payload",
+            params![journal.view.id,phase.as_str().ok_or_else(db_error)?,serde_json::to_string(journal).map_err(|_| db_error())?]).map_err(|_| db_error())?;
+        Ok(())
+    }
+    pub fn commit_lifecycle(&self, journal: &LifecycleJournal) -> CompanyResult<()> {
+        let mut connection = self.connection.lock().map_err(|_| db_error())?;
+        let tx = connection.transaction().map_err(|_| db_error())?;
+        let changed = tx
+            .execute(
+                "UPDATE company_installations SET target_key=?2,payload=?3 WHERE id=?1",
+                params![
+                    journal.new.id,
+                    target_key(&journal.new),
+                    serde_json::to_string(&journal.new).map_err(|_| db_error())?
+                ],
+            )
+            .map_err(|_| db_error())?;
+        if changed != 1 {
+            return Err(db_error());
+        }
+        if journal.new.state == InstallationState::Active {
+            if let Some(project_id) = &journal.new.project_id {
+                let payload: String = tx
+                    .query_row(
+                        "SELECT payload FROM company_projects WHERE id=?1",
+                        [project_id],
+                        |row| row.get(0),
+                    )
+                    .map_err(|_| db_error())?;
+                let mut project: Project =
+                    serde_json::from_str(&payload).map_err(|_| db_error())?;
+                project.archived = false;
+                tx.execute(
+                    "UPDATE company_projects SET payload=?2 WHERE id=?1",
+                    params![
+                        project_id,
+                        serde_json::to_string(&project).map_err(|_| db_error())?
+                    ],
+                )
+                .map_err(|_| db_error())?;
+            }
+        }
+        tx.execute(
+            "UPDATE company_lifecycle SET state='committed',payload=?2 WHERE id=?1",
+            params![
+                journal.view.id,
+                serde_json::to_string(journal).map_err(|_| db_error())?
+            ],
+        )
+        .map_err(|_| db_error())?;
+        tx.commit().map_err(|_| db_error())
+    }
+    pub fn finish_lifecycle(&self, id: &str) -> CompanyResult<()> {
+        self.connection
+            .lock()
+            .map_err(|_| db_error())?
+            .execute(
+                "UPDATE company_lifecycle SET state='completed' WHERE id=?1",
+                [id],
+            )
+            .map_err(|_| db_error())?;
+        Ok(())
+    }
+    pub fn pending_lifecycle(&self) -> CompanyResult<Vec<LifecycleJournal>> {
+        let connection = self.connection.lock().map_err(|_| db_error())?;
+        let mut query = connection
+            .prepare(
+                "SELECT payload FROM company_lifecycle WHERE state <> 'completed' ORDER BY rowid",
+            )
+            .map_err(|_| db_error())?;
         let rows = query
             .query_map([], |row| row.get::<_, String>(0))
             .map_err(|_| db_error())?;
@@ -327,5 +441,12 @@ impl CompanyRepository {
             .map_err(|_| db_error())?;
         rows.map(|row| serde_json::from_str(&row.map_err(|_| db_error())?).map_err(|_| db_error()))
             .collect()
+    }
+}
+fn target_key(item: &Installation) -> String {
+    if item.state == InstallationState::Removed {
+        format!("removed:{}", item.id)
+    } else {
+        super::aipro_paths::path_key(Path::new(&item.target))
     }
 }
