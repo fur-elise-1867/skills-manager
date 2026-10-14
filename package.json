@@ -20,7 +20,7 @@
     "mock:store": "node scripts/company-mock-store.mjs",
     "company:demo": "node scripts/company-demo.mjs",
     "check:company-release": "node scripts/check-company-release.mjs",
-    "test:company-contract": "node --test scripts/company-mock-store.test.mjs scripts/check-company-release.test.mjs",
+    "test:company-contract": "node --test scripts/company-mock-store.test.mjs scripts/check-company-release.test.mjs scripts/company-acceptance-launcher.test.mjs",
     "company:package-acceptance": "node scripts/package-company-acceptance.mjs"
   },
   "dependencies": {

@@ -1,5 +1,5 @@
 import { createMockStore } from './company-mock-store.mjs';
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -18,6 +18,16 @@ for (let i = 0; i < args.length; i++) {
   else throw new Error(`Tham số không hợp lệ: ${args[i]}`);
 }
 if (!Number.isInteger(port) || port < 0 || port > 65535) throw new Error('Port không hợp lệ.');
+function checkExistingInstance() {
+  // Same session-scoped mutex as tauri-plugin-single-instance on Windows.
+  // Do not launch a second instance: it would focus the first app and ignore this demo's roots.
+  const probe = spawnSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command',
+    "try { $mutex = [System.Threading.Mutex]::OpenExisting('com.companyskills.manager-sim'); $mutex.Dispose(); exit 10 } catch [System.Threading.WaitHandleCannotBeOpenedException] { exit 0 } catch { exit 11 }"],
+  { windowsHide: true, encoding: 'utf8', timeout: 10000 });
+  if (probe.status === 10) throw new Error('Hãy đóng mọi cửa sổ Skill Manager đang chạy rồi chạy lại demo. Demo chưa được khởi động ở lần này.');
+  if (probe.error || probe.status !== 0) throw new Error('Không kiểm tra được phiên Skill Manager đang chạy. Hãy đóng các phiên hiện có và chạy lại demo trên Windows có PowerShell.');
+}
+if (!serverOnly && !publishUpdate) checkExistingInstance();
 const profile = join(root, 'profile');
 const revisionFile = join(root, 'store-revision.txt');
 await mkdir(root, { recursive: true });
@@ -61,15 +71,27 @@ if (publishUpdate) {
   if (!serverOnly) {
     function startApp() {
       if (stopping || (child && child.exitCode === null)) return;
+      try { checkExistingInstance(); }
+      catch (error) { console.error(error.message); process.exitCode = 1; stop(); return; }
+      let running = false;
       child = spawn(join(pack, 'app', 'skills-manager.exe'), [], {
         cwd: join(pack, 'app'), windowsHide: true, stdio: 'inherit',
         env: { ...process.env, COMPANY_STORE_MODE: 'mock', COMPANY_STORE_BASE_URL: url,
           COMPANY_PROFILE_ROOT: profile, COMPANY_DATA_ROOT: join(root, 'data') },
       });
-      child.once('spawn', () => console.log(`APP_STARTED ${child.pid}`));
-      child.once('error', error => { console.error(`Không mở được app: ${error.message}`); process.exitCode = 1; stop(); });
+      const startup = setTimeout(() => {
+        running = true;
+        console.log(`APP_PROCESS_RUNNING ${child.pid} — tiến trình còn chạy; kiểm tra màn hình DỮ LIỆU GIẢ LẬP trong app.`);
+      }, 2000);
+      child.once('error', error => { clearTimeout(startup); console.error(`Không mở được app: ${error.message}`); process.exitCode = 1; stop(); });
       child.once('exit', code => {
-        if (!stopping) console.log(`App đã đóng (mã ${code}). Nhấn Enter để mở lại; Ctrl+C để dừng toàn bộ demo.`);
+        clearTimeout(startup);
+        if (stopping) return;
+        if (!running) {
+          console.error(`App thoát trước khi khởi động (mã ${code}). Hãy đóng mọi cửa sổ Skill Manager đang chạy rồi chạy lại demo; không dùng cửa sổ cũ để nghiệm thu.`);
+          process.exitCode = 1; stop(); return;
+        }
+        console.log(`App đã đóng (mã ${code}). Nhấn Enter để mở lại; Ctrl+C để dừng toàn bộ demo.`);
       });
     }
     input = createInterface({ input: process.stdin, output: process.stdout });
@@ -78,4 +100,3 @@ if (publishUpdate) {
     startApp();
   }
 }
-
