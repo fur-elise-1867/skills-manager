@@ -1,5 +1,5 @@
 use super::*;
-use crate::core::company::aipro_paths::{overlaps, path_key, validate_ancestors};
+use crate::core::company::aipro_paths::{overlaps, validate_ancestors};
 use std::path::PathBuf;
 
 #[derive(Clone)]
@@ -53,7 +53,7 @@ impl CompanyService {
             .values()
             .any(|op| {
                 op.view.state == OperationState::RecoveryRequired
-                    && path_key(Path::new(&op.view.target)) == path_key(&target)
+                    && overlaps(Path::new(&op.view.target), &target)
             })
         {
             return Err(CompanyError::new(

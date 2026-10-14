@@ -17,7 +17,14 @@ pub fn run() {
             }
         }))
         .setup(|app| {
-            let config = CompanyConfig::from_environment()?;
+            let resource = app
+                .path()
+                .resolve(
+                    "resources/company-store.json",
+                    tauri::path::BaseDirectory::Resource,
+                )
+                .ok();
+            let config = CompanyConfig::from_environment_with_resource(resource.as_deref())?;
             let credentials = Arc::new(WindowsCredentials::new(&config));
             app.manage(Arc::new(CompanyService::new(config, credentials)?));
             if let Some(window) = app.get_webview_window("main") {

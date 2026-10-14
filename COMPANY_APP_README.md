@@ -36,10 +36,10 @@ Gói Excel là 7z thật, decoder được đóng cùng app; người dùng app 
 Bản app bình thường đọc `%LOCALAPPDATA%\CompanySkillsManager\store.json`:
 
 ```json
-{ "baseUrl": "https://your-internal-store-host" }
+{ "baseUrl": "https://your-internal-store-host", "allowedHosts": ["your-internal-store-host"] }
 ```
 
-Thay hostname minh họa bằng dịch vụ nội bộ thật cung cấp năm endpoint của API draft v0.1 dưới `/api/v1`. Rust thực hiện HTTP, token không đưa ra frontend. HTTPS được xác minh bằng hệ thống chứng chỉ Windows; redirect bị từ chối. Bản release không nhận override debug/mock.
+Thay hostname minh họa bằng dịch vụ nội bộ thật cung cấp năm endpoint dưới `/api/v1`; tài liệu bàn giao hiện ở `docs/api/skills-store-l1-l5/README.md`. Host phải thuộc allowlist cụ thể, không wildcard. Template bundled `resources/company-store.json` có Store trống để dùng tính năng local; cấu hình per-user trên có ưu tiên cao hơn. Rust thực hiện HTTP, token không đưa ra frontend. HTTPS được xác minh bằng hệ thống chứng chỉ Windows; redirect bị từ chối. Bản release không nhận override debug/mock.
 
 Các gói/description dùng hash và strong ETag theo contract. Nếu gói hoặc description thay khi đang tải, thao tác lỗi 412; chọn **Xem thông tin mới** để đọc lại detail rồi quyết định MCP cho lần cài mới. Không tái dùng quyền bỏ qua cũ. App chỉ xét tên MCP trong mcp.json, không kiểm tra kết nối/token/runtime và không sửa file này.
 
@@ -47,13 +47,14 @@ Các gói/description dùng hash và strong ETag theo contract. Nếu gói hoặ
 
 ```powershell
 npm run test:company
-node --test scripts/company-mock-store.test.mjs
+npm run test:company-contract
+npm run check:company-release
 cargo test --manifest-path src-tauri/Cargo.toml --test company_flows
 npm run lint
 npm run build
 npm run tauri:build -- --debug
 node scripts/company-native-smoke.mjs
-node scripts/company-native-workspace-smoke.mjs
+node scripts/company-native-workspace-smoke.mjs --lifecycle --local
 ```
 
 API giả lập hỗ trợ `--scenario normal`, `session-expired`, `unavailable`, `package-changed`, `corrupt-download`, `forbidden-download`. Gói hỏng/unsafe, hash/size sai, conflict đích, file khóa hoặc journal không xác định không được báo cài thành công.
@@ -62,4 +63,6 @@ Native smoke mở app Windows đã build, dùng WebView2/IPC thật và profile 
 
 Smoke L4–L5 kiểm chứng tạo dự án, ba bản cài độc lập, tùy chỉnh, preview/backup/update một đích và restart qua WebView2/IPC thật. Schema 4 giữ dữ liệu Global schema 2, chuẩn hóa ownership paths và thêm projects/backups/replacement journals. App không mở database của phiên bản mới hơn để ghi đè.
 
-L6–L7 sẽ bổ sung UI khôi phục/gỡ và quản lý dung lượng. API thật, cách AIPRO nạp/ưu tiên skill, ký/phân phối installer do IT là phần nghiệm thu môi trường L8. Mốc L1–L5 xác nhận đặt file và quản lý bản cài, không chứng minh MCP hoặc AIPRO đã nạp/chạy skill.
+L6 đã có khôi phục snapshot offline, backup trước thay/gỡ, Removed history và project archive/reactivation. Schema 5 giữ dữ liệu L1–L5 và chỉ giữ một Active owner tại mỗi đích. L7 nhập ZIP/7z local Global/Project, nguồn Local/Store ID null, MCP unknown với stop/bypass; không kiểm tra cập nhật Store cho gói local. Cài đặt > Dung lượng cho phép chọn xóa backup và gói không còn reference; không tự dọn, không xóa metadata trước khi dọn file thành công.
+
+L8 hiện hoàn thiện app mock và bộ nghiệm thu theo yêu cầu ngày 2026-10-14. Workflow release chỉ build Windows khi chạy thủ công và lưu artifact cho IT; không tự publish GitHub release hoặc public updater. Installer dùng WebView2 đã cài hoặc được IT cài offline trước, không tự tải bootstrapper. API thật, AIPRO nạp/ưu tiên skill, ký/phân phối installer và upgrade tại khách hàng được ghi riêng trong checklist, chưa xác nhận trên môi trường thật.

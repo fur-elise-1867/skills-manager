@@ -14,6 +14,10 @@ on:
       - 'vitest.config.ts'
       - 'fixtures/company-store/**'
       - 'scripts/company-*.mjs'
+      - 'scripts/check-company-release*'
+      - 'src-tauri/tauri.conf.json'
+      - 'src-tauri/resources/company-store.json'
+      - '.github/workflows/release.yml'
       - 'tsconfig*.json'
       - 'eslint.config.js'
       - 'tailwind.config.js'
@@ -29,6 +33,10 @@ on:
       - 'vitest.config.ts'
       - 'fixtures/company-store/**'
       - 'scripts/company-*.mjs'
+      - 'scripts/check-company-release*'
+      - 'src-tauri/tauri.conf.json'
+      - 'src-tauri/resources/company-store.json'
+      - '.github/workflows/release.yml'
       - 'tsconfig*.json'
       - 'eslint.config.js'
       - 'tailwind.config.js'
@@ -62,7 +70,8 @@ jobs:
       - name: Company flow UI and Store contract tests
         run: |
           npm run test:company
-          node --test scripts/company-mock-store.test.mjs
+          npm run test:company-contract
+          npm run check:company-release
 
       # `tsc -b` is the real type check: the root tsconfig only holds project
       # references, so a bare `tsc --noEmit` checks no source file.

@@ -20,6 +20,8 @@ mod lifecycle_recovery;
 mod local_import;
 #[path = "company/storage.rs"]
 mod storage;
+#[path = "company/release.rs"]
+mod release;
 #[path = "company/support.rs"]
 mod support;
 use app_lib::core::company::installation_service::CompanyService;

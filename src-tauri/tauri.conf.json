@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "Company Skills Manager",
-  "version": "1.41.0",
+  "version": "1.42.0",
   "identifier": "com.companyskills.manager",
   "build": {
     "frontendDist": "../dist",
@@ -47,7 +47,13 @@
       "minimumSystemVersion": "10.15"
     },
     "resources": [
-      "../licenses/**/*"
-    ]
+      "../licenses/**/*",
+      "resources/company-store.json"
+    ],
+    "windows": {
+      "webviewInstallMode": {
+        "type": "skip"
+      }
+    }
   }
 }

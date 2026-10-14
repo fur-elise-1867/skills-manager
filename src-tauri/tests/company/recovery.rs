@@ -60,7 +60,10 @@ fn pending_fixture(
         progress_bytes: meta.size_bytes,
         total_bytes: meta.size_bytes,
         error: None,
-        kind: OperationKind::Install, preview_ready: false, customized: false, changes: Vec::new(),
+        kind: OperationKind::Install,
+        preview_ready: false,
+        customized: false,
+        changes: Vec::new(),
     };
     let installation = Installation {
         state: Default::default(),
@@ -77,7 +80,9 @@ fn pending_fixture(
         mcp_bypassed: false,
         project_id: None,
         content_state: ContentState::Original,
-        store_state: StoreState::Unknown, checked_at: None, store_error: None,
+        store_state: StoreState::Unknown,
+        checked_at: None,
+        store_error: None,
     };
     let journal = InstallJournal {
         view,
@@ -105,6 +110,50 @@ fn company_flow03c_recovery_commits_complete_owned_target_after_rename() {
     assert_eq!(app.installations().unwrap().len(), 1);
     assert!(app.recovery_warnings().is_empty());
     assert!(target.join("SKILL.md").is_file());
+}
+
+#[cfg(windows)]
+#[test]
+fn company_flow07_import_recovery_preserves_a_stage_with_a_retained_writer() {
+    use std::os::windows::fs::OpenOptionsExt;
+    let (_root, config, mut journal, _target, stage, original) = pending_fixture(true);
+    journal.view.kind = OperationKind::LocalImport;
+    journal.installation.origin = Origin::Local;
+    journal.installation.skill_id = None;
+    CompanyRepository::open(&config.data_root.join("manager.db"))
+        .unwrap()
+        .stage_created(&journal)
+        .unwrap();
+    copy_tree(&original, &stage).unwrap();
+    let writer = fs::OpenOptions::new()
+        .write(true)
+        .share_mode(7)
+        .open(stage.join("SKILL.md"))
+        .unwrap();
+    let app = CompanyService::new(config, Arc::new(MemoryCredentials::default())).unwrap();
+    assert!(stage.join("SKILL.md").exists());
+    assert!(!app.recovery_warnings().is_empty());
+    drop(writer);
+}
+
+#[test]
+fn company_flow07_import_blocks_targets_inside_an_uncertain_recovery_tree() {
+    let (_root, config, _journal, target, _stage, original) = pending_fixture(false);
+    copy_tree(&original, &target).unwrap();
+    let app = CompanyService::new(config, Arc::new(MemoryCredentials::default())).unwrap();
+    assert!(!app.recovery_warnings().is_empty());
+    let project = app.add_project(&target).unwrap();
+    let archive = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .unwrap()
+        .join("fixtures/company-store/packages/writing-review.zip");
+    assert_eq!(
+        app.prepare_local_import(&archive, "local-writing", Some(&project.id))
+            .unwrap_err()
+            .code,
+        "RECOVERY_REQUIRED"
+    );
+    assert!(!target.join(".aipro/skills/local-writing").exists());
 }
 
 #[test]

@@ -4,7 +4,11 @@ import type { StorageSummary } from '../types';
 import { displayPath, errorMessage } from '../types';
 
 type DeleteChoice = { kind: 'backup'; id: string } | { kind: 'packages'; hashes: string[] };
-function size(bytes: number) { return `${(bytes / 1048576).toLocaleString('vi-VN', { maximumFractionDigits: 2 })} MiB`; }
+function size(bytes: number) {
+  if (bytes < 1024) return `${bytes} B`;
+  const unit = bytes < 1048576 ? 'KiB' : 'MiB';
+  return `${(bytes / (unit === 'KiB' ? 1024 : 1048576)).toLocaleString('vi-VN', { maximumFractionDigits: 2 })} ${unit}`;
+}
 export function StorageView({ api }: { api: CompanyApi }) {
   const [summary, setSummary] = useState<StorageSummary>(); const [selected, setSelected] = useState<string[]>([]);
   const [choice, setChoice] = useState<DeleteChoice>(); const [busy, setBusy] = useState(false); const [error, setError] = useState('');

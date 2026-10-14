@@ -31,18 +31,18 @@ struct Operation {
     preview: Option<package_store::VerifiedPackage>,
     bypass: bool,
 }
+#[path = "verified_cleanup.rs"]
+mod cleanup;
 #[path = "lifecycle_service.rs"]
 mod lifecycle;
 #[path = "local_import_service.rs"]
 mod local_import;
-#[path = "verified_cleanup.rs"]
-mod cleanup;
-#[path = "storage_service.rs"]
-mod storage;
 #[path = "project_service.rs"]
 mod projects;
 #[path = "replacement_service.rs"]
 mod replacements;
+#[path = "storage_service.rs"]
+mod storage;
 #[path = "update_service.rs"]
 mod updates;
 pub struct CompanyService {
@@ -553,10 +553,14 @@ impl CompanyService {
             fs::rename(&stage, &target).map_err(|_| write_error())
         })();
         if let Err(error) = before_rename {
-            if owned_stage && stage.exists() && package_store::reject_links(&stage).is_ok() {
-                let _ = fs::remove_dir_all(&stage);
+            if owned_stage
+                && stage.exists()
+                && cleanup::remove_verified_tree(&stage, &package.full_hash).is_err()
+            {
+                self.repository.finish(id, "recovery_required")?;
+                return Err(CompanyError::new("RECOVERY_REQUIRED", "Đã giữ staging chưa xác minh được. Mở lại app để kiểm tra phục hồi; không ghi đè đích này."));
             }
-            let _ = self.repository.finish(id, "cancelled");
+            self.repository.finish(id, "cancelled")?;
             return Err(error);
         }
         self.repository.commit(&journal).map_err(|_| {
@@ -636,8 +640,7 @@ impl CompanyService {
                         == Some(journal.full_hash.as_str())))
         {
             if stage.exists() {
-                package_store::reject_links(&stage)?;
-                fs::remove_dir_all(&stage).map_err(|_| write_error())?;
+                cleanup::remove_verified_tree(&stage, &journal.full_hash)?;
             }
             self.repository.finish(&journal.view.id, "cancelled")?;
             return Ok(true);
