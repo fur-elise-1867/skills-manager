@@ -7,13 +7,14 @@ export interface Skill { id: string; slug: string; name: string; descriptionExce
 export interface SkillPage { items: Skill[]; pagination: { page: number; pageSize: number; total: number; totalPages: number }; cache?: { fetchedAt: string; stale: boolean } }
 export interface Project { id: string; name: string; path: string }
 export type ContentState = 'original' | 'customized' | 'unknown' | 'missing';
-export type StoreState = 'current' | 'new_package' | 'unknown' | 'unavailable';
-export interface Installation { id: string; skillId: string; name: string; target: string; packageHash: string; installedAt: string; mcpBypassed: boolean; projectId?: string | null; contentState?: ContentState; storeState?: StoreState; checkedAt?: string | null; storeError?: string | null; state?: 'active' | 'removed' }
+export type StoreState = 'current' | 'new_package' | 'unknown' | 'unavailable' | 'not_applicable';
+export interface Installation { id: string; skillId?: string | null; name: string; target: string; packageHash: string; installedAt: string; mcpBypassed: boolean; projectId?: string | null; contentState?: ContentState; storeState?: StoreState; checkedAt?: string | null; storeError?: string | null; state?: 'active' | 'removed'; origin?: 'store' | 'local' }
 export interface FilePreview { kind: 'text' | 'binary' | 'directory'; sizeBytes: number }
 export interface FileChange { path: string; kind: 'added' | 'modified' | 'deleted'; current?: FilePreview | null; incoming?: FilePreview | null }
 export interface Backup { id: string; installationId: string; createdAt: string; reason: string; path: string; fullHash: string; installation: Installation }
+export interface StorageSummary { packageBytes: number; backupBytes: number; unreferencedPackageBytes: number; packages: { hash: string; bytes: number; referenced: boolean }[]; backups: { backup: Backup; bytes: number; inUse: boolean }[] }
 export interface McpReport { state: 'not_required' | 'undeclared' | 'present' | 'missing' | 'unknown'; required: string[]; present: string[]; missing: string[]; reason: string | null; checkedAt: string }
-export interface OperationView { id: string; state: 'awaiting_decision' | 'downloading' | 'validating' | 'staging' | 'committing' | 'succeeded' | 'cancelled' | 'failed' | 'recovery_required'; target: string; mcp: McpReport; mcpPath?: string; skill?: Skill; progressBytes: number; totalBytes: number; error: CompanyError | null; kind?: 'install' | 'update' | 'restore' | 'remove'; previewReady?: boolean; customized?: boolean; changes?: FileChange[] }
+export interface OperationView { id: string; state: 'awaiting_decision' | 'downloading' | 'validating' | 'staging' | 'committing' | 'succeeded' | 'cancelled' | 'failed' | 'recovery_required'; target: string; mcp: McpReport; mcpPath?: string; skill?: Skill; progressBytes: number; totalBytes: number; error: CompanyError | null; kind?: 'install' | 'update' | 'restore' | 'remove' | 'local_import'; previewReady?: boolean; customized?: boolean; changes?: FileChange[] }
 
 export function errorMessage(error: unknown): string {
   if (typeof error === 'object' && error !== null && 'message' in error && typeof error.message === 'string') return error.message;

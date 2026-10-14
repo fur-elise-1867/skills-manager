@@ -83,6 +83,77 @@ fn company_flow06_recovery_never_deletes_a_new_owner_even_with_identical_snapsho
 }
 
 // Seed actual file/SQLite states at each interrupted operation boundary. Observe
+#[cfg(windows)]
+#[test]
+fn company_flow06_recovery_retains_rollback_when_a_writer_can_still_edit_after_verification() {
+    use std::os::windows::fs::OpenOptionsExt;
+    let root = tempfile::tempdir().unwrap();
+    let server = MockServer::start("normal");
+    let config = CompanyConfig::for_test(
+        &server.url,
+        root.path().join("profile"),
+        root.path().join("data"),
+    )
+    .unwrap();
+    let credentials = Arc::new(MemoryCredentials::default());
+    let app = Arc::new(CompanyService::new(config.clone(), credentials.clone()).unwrap());
+    app.login("employee01", "demo-password").unwrap();
+    let install = app.prepare_install("skl_003").unwrap();
+    app.confirm(&install.id, false).unwrap();
+    assert_eq!(
+        wait_operation(&app, &install.id).state,
+        OperationState::Succeeded
+    );
+    let old = app.installations().unwrap().remove(0);
+    let remove = app.prepare_remove(&old.id).unwrap();
+    app.apply_lifecycle(&remove.id).unwrap();
+    assert_eq!(
+        wait_operation(&app, &remove.id).state,
+        OperationState::Succeeded
+    );
+    let backup = app.backups(&old.id).unwrap().remove(0);
+    let repo = CompanyRepository::open(&config.data_root.join("manager.db")).unwrap();
+    let new = repo.installations().unwrap().remove(0);
+    let rollback = Path::new(&old.target)
+        .parent()
+        .unwrap()
+        .join(format!(".company-rollback-{}", remove.id));
+    copy_tree(Path::new(&backup.path), &rollback).unwrap();
+    let journal = LifecycleJournal {
+        view: remove,
+        old: backup.installation.clone(),
+        new,
+        old_full_hash: Some(backup.full_hash.clone()),
+        new_full_hash: None,
+        current_backup: Some(backup),
+        source_backup: None,
+        phase: ReplacePhase::Committed,
+        stage_owned: false,
+    };
+    repo.record_lifecycle(&journal).unwrap();
+    drop(repo);
+    drop(app);
+    // Read/write/delete sharing lets the old implementation hash and unlink
+    // this file even though the writer can still change its bytes at any time.
+    let writer = fs::OpenOptions::new()
+        .write(true)
+        .share_mode(7)
+        .open(rollback.join("SKILL.md"))
+        .unwrap();
+    let restarted = CompanyService::new(config, credentials).unwrap();
+    assert!(rollback.join("SKILL.md").exists());
+    assert!(!restarted.recovery_warnings().is_empty());
+    assert_eq!(
+        restarted
+            .delete_backup(&journal.current_backup.as_ref().unwrap().id)
+            .unwrap_err()
+            .code,
+        "BACKUP_IN_USE"
+    );
+    drop(writer);
+}
+
+// Seed actual file/SQLite states at each interrupted operation boundary. Observe
 // recovery only through the public service after restart.
 #[test]
 fn company_flow06_recovery_restores_or_keeps_committed_state_at_all_rename_boundaries() {

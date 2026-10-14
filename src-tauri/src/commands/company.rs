@@ -4,6 +4,33 @@ use tauri::State;
 
 type AppState<'a> = State<'a, Arc<CompanyService>>;
 #[tauri::command]
+pub async fn company_storage_status(state: AppState<'_>) -> CompanyResult<StorageSummary> {
+    blocking(state, |app| app.storage_status()).await
+}
+#[tauri::command]
+pub async fn company_backup_delete(state: AppState<'_>, id: String) -> CompanyResult<()> {
+    blocking(state, move |app| app.delete_backup(&id)).await
+}
+#[tauri::command]
+pub async fn company_package_cleanup(
+    state: AppState<'_>,
+    hashes: Vec<String>,
+) -> CompanyResult<Vec<String>> {
+    blocking(state, move |app| app.cleanup_packages(&hashes)).await
+}
+#[tauri::command]
+pub async fn company_local_import_prepare(
+    state: AppState<'_>,
+    path: String,
+    slug: String,
+    project_id: Option<String>,
+) -> CompanyResult<OperationView> {
+    blocking(state, move |app| {
+        app.prepare_local_import(std::path::Path::new(&path), &slug, project_id.as_deref())
+    })
+    .await
+}
+#[tauri::command]
 pub async fn company_restore_prepare(
     state: AppState<'_>,
     backup_id: String,

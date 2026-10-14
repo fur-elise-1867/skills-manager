@@ -15,6 +15,35 @@ fn completed(app: &Arc<CompanyService>, id: &str) {
 }
 
 #[test]
+fn company_flow06_remove_and_update_cannot_hold_conflicting_decisions_for_one_target() {
+    let root = tempfile::tempdir().unwrap();
+    let revision = root.path().join("revision");
+    fs::write(&revision, "1").unwrap();
+    let server = MockServer::start_with_revision("normal", Some(&revision));
+    let config = CompanyConfig::for_test(
+        &server.url,
+        root.path().join("profile"),
+        root.path().join("data"),
+    )
+    .unwrap();
+    let app =
+        Arc::new(CompanyService::new(config, Arc::new(MemoryCredentials::default())).unwrap());
+    app.login("employee01", "demo-password").unwrap();
+    let op = app.prepare_install("skl_001").unwrap();
+    app.confirm(&op.id, true).unwrap();
+    completed(&app, &op.id);
+    let item = app.installations().unwrap().remove(0);
+    let remove = app.prepare_remove(&item.id).unwrap();
+    fs::write(&revision, "2").unwrap();
+    assert_eq!(
+        app.prepare_update(&item.id).unwrap_err().code,
+        "TARGET_BUSY"
+    );
+    app.cancel(&remove.id).unwrap();
+    assert!(app.prepare_update(&item.id).is_ok());
+}
+
+#[test]
 fn company_flow06_restore_reactivates_the_archived_project_without_recreating_its_root() {
     let root = tempfile::tempdir().unwrap();
     let server = MockServer::start("normal");

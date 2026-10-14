@@ -1,5 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
-import type { Backup, Environment, Installation, OperationView, Project, SessionView, Skill, SkillPage } from './types';
+import type { Backup, Environment, Installation, OperationView, Project, SessionView, Skill, SkillPage, StorageSummary } from './types';
 import { open } from '@tauri-apps/plugin-dialog';
 
 export interface CompanyApi {
@@ -28,6 +28,11 @@ export interface CompanyApi {
   prepareRestore(backupId: string): Promise<OperationView>;
   prepareRemove(id: string): Promise<OperationView>;
   applyLifecycle(id: string): Promise<OperationView>;
+  chooseArchive(): Promise<string | null>;
+  prepareLocalImport(path: string, slug: string, projectId: string | null): Promise<OperationView>;
+  storageStatus(): Promise<StorageSummary>;
+  deleteBackup(id: string): Promise<null>;
+  cleanupPackages(hashes: string[]): Promise<string[]>;
   openPreview(id: string, side: 'current' | 'incoming', path: string): Promise<null>;
 }
 
@@ -57,5 +62,10 @@ export const nativeApi: CompanyApi = {
   prepareRestore: backupId => invoke('company_restore_prepare', { backupId }),
   prepareRemove: id => invoke('company_remove_prepare', { id }),
   applyLifecycle: id => invoke('company_lifecycle_apply', { id }),
+  chooseArchive: async () => { const path = await open({ multiple: false, filters: [{ name: 'Skill ZIP/7z', extensions: ['zip', '7z'] }] }); return typeof path === 'string' ? path : null; },
+  prepareLocalImport: (path, slug, projectId) => invoke('company_local_import_prepare', { path, slug, projectId }),
+  storageStatus: () => invoke('company_storage_status'),
+  deleteBackup: id => invoke('company_backup_delete', { id }),
+  cleanupPackages: hashes => invoke('company_package_cleanup', { hashes }),
   openPreview: (id, side, path) => invoke('company_operation_open_preview', { id, side, path }),
 };

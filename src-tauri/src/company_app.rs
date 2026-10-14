@@ -48,6 +48,10 @@ pub fn run() {
             company_update_apply,
             company_backups_list,
             company_restore_prepare,
+            company_local_import_prepare,
+            company_storage_status,
+            company_backup_delete,
+            company_package_cleanup,
             company_remove_prepare,
             company_lifecycle_apply,
             company_operation_open_preview

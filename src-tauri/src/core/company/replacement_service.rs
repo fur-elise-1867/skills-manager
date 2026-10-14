@@ -116,7 +116,12 @@ impl CompanyService {
             ));
         }
         let current = self.guarded_installation(&old.id)?;
-        if current.package_hash != old.package_hash || !matches(Path::new(&old.target), old_hash) {
+        if current.state != InstallationState::Active
+            || current.origin != old.origin
+            || current.skill_id != old.skill_id
+            || current.package_hash != old.package_hash
+            || !matches(Path::new(&old.target), old_hash)
+        {
             return Err(changed());
         }
         if !matches(&package.original_root, &package.full_hash) {
@@ -192,7 +197,8 @@ impl CompanyService {
                     return Err(needs_recovery());
                 }
                 fs::rename(&rollback, &target).map_err(|_| needs_recovery())?;
-                fs::remove_dir_all(&stage).map_err(|_| needs_recovery())?;
+                cleanup::remove_verified_tree(&stage, &journal.new_full_hash)
+                    .map_err(|_| needs_recovery())?;
                 self.repository.finish_replacement(id)?;
                 edited_old_returned = true;
                 return Err(changed());
@@ -235,6 +241,13 @@ impl CompanyService {
     }
     pub(super) fn recover_replacement(&self, journal: &ReplaceJournal) -> CompanyResult<bool> {
         let (target, stage, rollback) = self.replacement_paths(journal)?;
+        if self.repository.installations()?.iter().any(|item| {
+            item.id != journal.old.id
+                && item.state == InstallationState::Active
+                && crate::core::company::aipro_paths::overlaps(Path::new(&item.target), &target)
+        }) {
+            return Ok(false);
+        }
         let backup = self
             .repository
             .backups(&journal.old.id)?
@@ -265,16 +278,17 @@ impl CompanyService {
         }
         if journal.phase == ReplacePhase::Committed {
             let current = self.guarded_installation(&journal.new.id)?;
-            if current.package_hash != journal.new.package_hash
+            if current.state != InstallationState::Active
+                || current.package_hash != journal.new.package_hash
                 || current.content_hash != journal.new.content_hash
             {
                 return Ok(false);
             }
             if stage_exists {
-                fs::remove_dir_all(&stage).map_err(|_| write_error())?;
+                cleanup::remove_verified_tree(&stage, &journal.new_full_hash)?;
             }
             if rollback_exists {
-                fs::remove_dir_all(&rollback).map_err(|_| write_error())?;
+                cleanup::remove_verified_tree(&rollback, &journal.old_full_hash)?;
             }
             self.repository.finish_replacement(&journal.view.id)?;
             return Ok(true);
@@ -292,7 +306,7 @@ impl CompanyService {
             return Ok(false);
         }
         if stage.exists() && journal.stage_owned && matches(&stage, &journal.new_full_hash) {
-            fs::remove_dir_all(&stage).map_err(|_| write_error())?;
+            cleanup::remove_verified_tree(&stage, &journal.new_full_hash)?;
         }
         self.repository.finish_replacement(&journal.view.id)?;
         Ok(true)
@@ -312,7 +326,7 @@ impl CompanyService {
                 ),
             ));
             let skill = view.skill.clone().unwrap_or(Skill {
-                id: journal.new.skill_id.clone(),
+                id: journal.new.skill_id.clone().unwrap_or_default(),
                 slug: journal.new.slug.clone(),
                 name: journal.new.name.clone(),
                 description_excerpt: None,

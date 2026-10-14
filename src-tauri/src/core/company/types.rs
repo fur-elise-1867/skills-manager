@@ -162,6 +162,7 @@ pub enum OperationKind {
     Update,
     Restore,
     Remove,
+    LocalImport,
 }
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -197,7 +198,7 @@ pub enum PreviewKind {
 #[serde(rename_all = "camelCase")]
 pub struct Installation {
     pub id: String,
-    pub skill_id: String,
+    pub skill_id: Option<String>,
     pub slug: String,
     pub name: String,
     pub target: String,
@@ -218,6 +219,15 @@ pub struct Installation {
     pub store_error: Option<String>,
     #[serde(default)]
     pub state: InstallationState,
+    #[serde(default)]
+    pub origin: Origin,
+}
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum Origin {
+    #[default]
+    Store,
+    Local,
 }
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 #[serde(rename_all = "snake_case")]
@@ -234,6 +244,7 @@ pub enum StoreState {
     #[default]
     Unknown,
     Unavailable,
+    NotApplicable,
 }
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 #[serde(rename_all = "snake_case")]
@@ -305,4 +316,28 @@ pub struct LifecycleJournal {
     pub source_backup: Option<Backup>,
     pub phase: ReplacePhase,
     pub stage_owned: bool,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct StorageSummary {
+    pub package_bytes: u64,
+    pub backup_bytes: u64,
+    pub unreferenced_package_bytes: u64,
+    pub packages: Vec<StoragePackage>,
+    pub backups: Vec<StorageBackup>,
+}
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct StoragePackage {
+    pub hash: String,
+    pub bytes: u64,
+    pub referenced: bool,
+}
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct StorageBackup {
+    pub backup: Backup,
+    pub bytes: u64,
+    pub in_use: bool,
 }

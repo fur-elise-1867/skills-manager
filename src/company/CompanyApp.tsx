@@ -7,6 +7,7 @@ import './company.css';
 import { StoreView } from './flows/StoreView';
 import { ProjectsView } from './flows/ProjectsView';
 import { InstalledView } from './flows/InstalledView';
+import { StorageView } from './flows/StorageView';
 
 const emptySession: SessionView = { user: null, expiresAt: null, persistent: false };
 const tabs = ['Store', 'Skill đã cài', 'Dự án', 'Cài đặt'] as const;
@@ -76,9 +77,10 @@ export function CompanyApp({ api = nativeApi }: { api?: CompanyApi }) {
       <div className="page-heading"><h1>{tab === 'Store' ? 'Skill Store' : tab}</h1><p>{tab === 'Store' ? 'Tìm skill phù hợp và đưa vào AIPRO của bạn.' : 'Các bản cài và dữ liệu trên máy Windows hiện tại.'}</p></div>
       {booting && <p role="status">Đang mở môi trường AIPRO…</p>}
       {tab === 'Store' && !booting && (!session.user ? signIn : <StoreView key={session.user.id} api={api} projects={projects} projectId={projectId} onProjectChange={setProjectId} onExpired={expired} onInstalled={refreshInstallations} resumeSkillId={resumeSkillId} onResumed={resumed} />)}
-      {tab === 'Skill đã cài' && <InstalledView api={api} installations={installations} projects={projects} onChanged={refreshInstallations} signedIn={!!session.user} onExpired={expired} selectedIds={selectedIds} onSelectionChange={setSelectedIds} onReinstall={item => { setProjectId(item.projectId ?? ''); setResumeSkillId(item.skillId); setTab('Store'); }} />}
+      {tab === 'Skill đã cài' && <InstalledView api={api} installations={installations} projects={projects} onChanged={refreshInstallations} signedIn={!!session.user} onExpired={expired} selectedIds={selectedIds} onSelectionChange={setSelectedIds} onReinstall={item => { if (!item.skillId || item.origin === 'local') return; setProjectId(item.projectId ?? ''); setResumeSkillId(item.skillId); setTab('Store'); }} />}
       {tab === 'Dự án' && <ProjectsView api={api} projects={projects} installations={installations} onChanged={refreshProjects} onBrowse={id => { setProjectId(id); setTab('Store'); }} />}
       {tab === 'Cài đặt' && <><section className="company-card"><h2>Môi trường AIPRO</h2><dl><dt>Thư mục Global</dt><dd>{environment?.profileRoot}\.aipro\skills</dd><dt>Cấu hình MCP</dt><dd>{environment?.profileRoot}\.aipro\mcp.json</dd><dt>Dữ liệu ứng dụng</dt><dd>{environment?.dataRoot}</dd><dt>Skill Store</dt><dd>{environment?.storeUrl || 'Chưa cấu hình'}</dd></dl></section>{!session.user ? signIn : <section className="company-card"><h2>Phiên đăng nhập</h2><p>{session.persistent ? 'Phiên được giữ trong Windows Credential Manager.' : 'Phiên chỉ được giữ trong lần mở app này.'}</p><p>Hết hạn: {session.expiresAt ? new Date(session.expiresAt).toLocaleString('vi-VN') : '—'}</p></section>}</>}
+      {tab === 'Cài đặt' && <StorageView api={api} />}
     </main>
   </div>;
 }

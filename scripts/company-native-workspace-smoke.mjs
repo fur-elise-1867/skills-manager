@@ -135,6 +135,46 @@ try {
     if (screenshot) await page.screenshot({ path: screenshot, fullPage: true });
     console.log('PASS native L6: offline restore/baseline, backup/remove, restart/restore, independent targets and unchanged MCP');
   }
+  if (process.argv.includes('--local')) {
+    assert(storeClosed, '--local runs after --lifecycle with the Store offline');
+    for (const [file, slug] of [['writing-review.zip', 'local-writing'], ['excel-insights.7z', 'excel-insights']]) {
+      await page.getByRole('button', { name: 'Nhập ZIP/7z', exact: true }).click();
+      await page.getByLabel('File ZIP/7z', { exact: true }).fill(resolve('fixtures/company-store/packages', file));
+      await page.getByLabel('Tên thư mục skill', { exact: true }).fill(slug);
+      await page.getByRole('button', { name: 'Kiểm tra gói local', exact: true }).click();
+      await page.getByText('Gói local chưa có dữ liệu yêu cầu MCP từ Skill Store. Không suy ra yêu cầu từ SKILL.md.', { exact: true }).waitFor();
+      await page.getByRole('button', { name: 'Bỏ qua và cài tiếp', exact: true }).click();
+      await page.getByText('Cài xong; đã bỏ qua cảnh báo MCP của lần này.', { exact: true }).waitFor();
+      await page.getByRole('button', { name: 'Hoàn tất', exact: true }).click();
+      const local = await page.evaluate(async slug => (await window.__TAURI_INTERNALS__.invoke('company_installations_list', {})).find(i => i.slug === slug), slug);
+      assert.equal(local.origin, 'local'); assert.equal(local.skillId, null); assert.equal(local.storeState, 'not_applicable');
+      assert(await readFile(join(local.target, 'SKILL.md'), 'utf8'));
+    }
+    const localCard = page.locator('.installation-card').filter({ has: page.getByRole('heading', { name: 'local-writing', exact: true }) });
+    await localCard.getByRole('button', { name: 'Gỡ bản cài', exact: true }).click();
+    await page.getByRole('button', { name: 'Backup và gỡ', exact: true }).click();
+    await page.getByText('Đã gỡ bản cài; bản lưu vẫn có thể khôi phục.', { exact: true }).waitFor();
+    await page.getByRole('button', { name: 'Đóng', exact: true }).click();
+    await page.getByRole('button', { name: 'Cài đặt', exact: true }).click();
+    const storage = await page.evaluate(async () => window.__TAURI_INTERNALS__.invoke('company_storage_status', {}));
+    const localBackup = storage.backups.find(b => b.backup.installation.slug === 'local-writing'); assert(localBackup);
+    const storageBackupCard = page.locator('.company-card article').filter({ hasText: 'local-writing' });
+    await storageBackupCard.getByRole('button', { name: 'Xóa bản lưu', exact: true }).click();
+    await page.getByRole('button', { name: 'Hủy', exact: true }).click();
+    assert(await readFile(join(localBackup.backup.path, 'SKILL.md'), 'utf8'));
+    await storageBackupCard.getByRole('button', { name: 'Xóa bản lưu', exact: true }).click();
+    await page.getByRole('button', { name: 'Xác nhận xóa', exact: true }).click();
+    await page.getByLabel(`Chọn gói ${localBackup.backup.installation.packageHash}`, { exact: true }).waitFor();
+    const unused = page.getByLabel(`Chọn gói ${localBackup.backup.installation.packageHash}`, { exact: true });
+    await unused.check();
+    await page.getByRole('button', { name: 'Dọn các gói đã chọn (1)', exact: true }).click();
+    await page.getByRole('button', { name: 'Xác nhận xóa', exact: true }).click();
+    await unused.waitFor({ state: 'detached' });
+    await assert.rejects(readFile(join(localBackup.backup.path, 'SKILL.md')));
+    assert.equal(await readFile(mcp, 'utf8'), mcpBefore);
+    if (screenshot) await page.screenshot({ path: screenshot, fullPage: true });
+    console.log('PASS native L7: offline local ZIP/7z, local origin/no Store id, retained backup, cancel/delete/unused-package cleanup');
+  }
   console.log('PASS native L4/L5: projects, independent copies, customization, update preview/backup/apply, restart and unchanged MCP');
 } finally {
   if (page) await page.evaluate(async () => { try { await window.__TAURI_INTERNALS__.invoke('company_logout', {}); } catch { /* owned mock credentials only */ } }).catch(() => {});

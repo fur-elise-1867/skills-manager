@@ -170,8 +170,16 @@ impl CompanyService {
             if item.state == InstallationState::Removed {
                 continue;
             }
+            if item.origin == Origin::Local {
+                item.store_state = StoreState::NotApplicable;
+                item.checked_at = None;
+                item.store_error = None;
+                self.repository.save_installation(&item)?;
+                results.push(item);
+                continue;
+            }
             item.checked_at = Some(chrono::Utc::now().to_rfc3339());
-            match self.detail(&item.skill_id) {
+            match self.detail(item.skill_id.as_deref().ok_or_else(operation_error)?) {
                 Ok(skill) => {
                     item.store_state = if skill.package.sha256 == item.package_hash {
                         StoreState::Current
@@ -198,6 +206,12 @@ impl CompanyService {
         Ok(results)
     }
     pub fn prepare_update(&self, id: &str) -> CompanyResult<OperationView> {
+        if self.guarded_installation(id)?.origin == Origin::Local {
+            return Err(CompanyError::new(
+                "LOCAL_SOURCE",
+                "Skill nhập local không có nguồn cập nhật Store.",
+            ));
+        }
         let owner = self.owner()?;
         let item = self.refresh_installation(id)?;
         if !matches!(
@@ -216,6 +230,26 @@ impl CompanyService {
             .map_err(|_| operation_error())?
             .values()
             .any(|op| {
+                !matches!(
+                    op.view.state,
+                    OperationState::Succeeded
+                        | OperationState::Failed
+                        | OperationState::Cancelled
+                        | OperationState::RecoveryRequired
+                ) && overlaps(Path::new(&op.view.target), target)
+            })
+        {
+            return Err(CompanyError::new(
+                "TARGET_BUSY",
+                "Đích có thao tác chưa hoàn tất. Hủy hoặc hoàn tất thao tác đó trước.",
+            ));
+        }
+        if self
+            .operations
+            .lock()
+            .map_err(|_| operation_error())?
+            .values()
+            .any(|op| {
                 op.view.state == OperationState::RecoveryRequired
                     && overlaps(Path::new(&op.view.target), target)
             })
@@ -226,7 +260,7 @@ impl CompanyService {
             ));
         }
         let old_full_hash = content_hash(target, false)?;
-        let skill = self.detail(&item.skill_id)?;
+        let skill = self.detail(item.skill_id.as_deref().ok_or_else(operation_error)?)?;
         if skill.slug != item.slug {
             return Err(CompanyError::new(
                 "TARGET_CONFLICT",

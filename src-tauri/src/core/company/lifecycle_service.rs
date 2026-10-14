@@ -30,7 +30,7 @@ fn matches(path: &Path, hash: &str) -> bool {
 }
 fn snapshot_skill(item: &Installation) -> Skill {
     Skill {
-        id: item.skill_id.clone(),
+        id: item.skill_id.clone().unwrap_or_default(),
         slug: item.slug.clone(),
         name: item.name.clone(),
         description_excerpt: None,
@@ -97,7 +97,11 @@ impl CompanyService {
         }
         let mut new = backup.installation.clone();
         new.state = InstallationState::Active;
-        new.store_state = StoreState::Unknown;
+        new.store_state = if new.origin == Origin::Local {
+            StoreState::NotApplicable
+        } else {
+            StoreState::Unknown
+        };
         new.checked_at = None;
         new.store_error = None;
         self.prepare_lifecycle(old, new, Some(backup), OperationKind::Restore)
@@ -375,7 +379,11 @@ impl CompanyService {
                     {
                         return Err(recovery_error());
                     }
-                    fs::remove_dir_all(&stage).map_err(|_| recovery_error())?;
+                    cleanup::remove_verified_tree(
+                        &stage,
+                        j.new_full_hash.as_deref().ok_or_else(recovery_error)?,
+                    )
+                    .map_err(|_| recovery_error())?;
                 }
                 self.repository.finish_lifecycle(&j.view.id)?;
                 return Err(error);
@@ -433,10 +441,16 @@ impl CompanyService {
                 return Ok(false);
             }
             if !absent(&stage) {
-                fs::remove_dir_all(&stage).map_err(|_| write_error())?;
+                cleanup::remove_verified_tree(
+                    &stage,
+                    j.new_full_hash.as_deref().ok_or_else(recovery_error)?,
+                )?;
             }
             if !absent(&rollback) {
-                fs::remove_dir_all(&rollback).map_err(|_| write_error())?;
+                cleanup::remove_verified_tree(
+                    &rollback,
+                    j.old_full_hash.as_deref().ok_or_else(recovery_error)?,
+                )?;
             }
         } else {
             if serde_json::to_value(&current).ok() != serde_json::to_value(&j.old).ok() {
@@ -466,7 +480,10 @@ impl CompanyService {
                 return Ok(false);
             }
             if !absent(&stage) {
-                fs::remove_dir_all(&stage).map_err(|_| write_error())?;
+                cleanup::remove_verified_tree(
+                    &stage,
+                    j.new_full_hash.as_deref().ok_or_else(recovery_error)?,
+                )?;
             }
         }
         self.repository.finish_lifecycle(&j.view.id)?;

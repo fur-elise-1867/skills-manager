@@ -64,8 +64,9 @@ fn pending_fixture(
     };
     let installation = Installation {
         state: Default::default(),
+        origin: Default::default(),
         id,
-        skill_id: "skl_001".into(),
+        skill_id: Some("skl_001".into()),
         slug: "jira-project-summary".into(),
         name: "Jira".into(),
         target: target.display().to_string(),

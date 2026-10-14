@@ -33,6 +33,12 @@ struct Operation {
 }
 #[path = "lifecycle_service.rs"]
 mod lifecycle;
+#[path = "local_import_service.rs"]
+mod local_import;
+#[path = "verified_cleanup.rs"]
+mod cleanup;
+#[path = "storage_service.rs"]
+mod storage;
 #[path = "project_service.rs"]
 mod projects;
 #[path = "replacement_service.rs"]
@@ -47,6 +53,7 @@ pub struct CompanyService {
     operations: Mutex<HashMap<String, Operation>>,
     worker: Mutex<()>,
     lifecycle_jobs: Mutex<HashMap<String, LifecycleJournal>>,
+    local_sources: Mutex<HashMap<String, local_import::LocalSource>>,
 }
 fn operation_error() -> CompanyError {
     CompanyError::new(
@@ -75,6 +82,7 @@ impl CompanyService {
             operations: Mutex::new(HashMap::new()),
             worker: Mutex::new(()),
             lifecycle_jobs: Mutex::new(HashMap::new()),
+            local_sources: Mutex::new(HashMap::new()),
         };
         app.recover()?;
         app.recover_replacements()?;
@@ -218,7 +226,7 @@ impl CompanyService {
             .find(|item| {
                 super::aipro_paths::path_key(Path::new(&item.target))
                     == super::aipro_paths::path_key(&target)
-                    && item.skill_id == skill.id
+                    && item.skill_id.as_deref() == Some(skill.id.as_str())
                     && item.project_id.as_deref() == project_id
             })
             .cloned();
@@ -309,7 +317,18 @@ impl CompanyService {
         if self.status(id)?.kind == OperationKind::Update {
             return self.confirm_preview(id, bypass_mcp);
         }
-        let owner = self.owner()?;
+        let kind = self.status(id)?.kind;
+        if matches!(kind, OperationKind::Restore | OperationKind::Remove) {
+            return Err(CompanyError::new(
+                "INVALID_REQUEST",
+                "Dùng xác nhận khôi phục/gỡ cho thao tác này.",
+            ));
+        }
+        let owner = if kind == OperationKind::LocalImport {
+            String::new()
+        } else {
+            self.owner()?
+        };
         let (skill, cancelled, view, project_id, installation_id) = {
             let mut operations = self.operations.lock().map_err(|_| operation_error())?;
             let operation = operations.get_mut(id).ok_or_else(operation_error)?;
@@ -423,7 +442,8 @@ impl CompanyService {
     ) -> CompanyResult<()> {
         let _worker = self.worker.lock().map_err(|_| write_error())?;
         Self::check_cancel(cancelled)?;
-        if self.owner()? != owner {
+        let local = self.status(id)?.kind == OperationKind::LocalImport;
+        if !local && self.owner()? != owner {
             return Err(CompanyError::new(
                 "SESSION_EXPIRED",
                 "Cần đăng nhập và chuẩn bị cài lại.",
@@ -434,7 +454,11 @@ impl CompanyService {
         package_store::reject_links(&operations_root)?;
         let temporary = tempfile::tempdir_in(&operations_root).map_err(|_| write_error())?;
         let archive = temporary.path().join("download");
-        self.download(id, skill, &archive, cancelled)?;
+        if local {
+            self.copy_local_archive(id, &archive, cancelled)?;
+        } else {
+            self.download(id, skill, &archive, cancelled)?;
+        }
         Self::check_cancel(cancelled)?;
         self.update(id, OperationState::Validating, None, None);
         let package = package_store::prepare_archive(
@@ -459,7 +483,7 @@ impl CompanyService {
         let view = self.status(id)?;
         let installation = Installation {
             id: installation_id.unwrap_or(id).into(),
-            skill_id: skill.id.clone(),
+            skill_id: if local { None } else { Some(skill.id.clone()) },
             slug: skill.slug.clone(),
             name: skill.name.clone(),
             target: target.display().to_string(),
@@ -470,10 +494,19 @@ impl CompanyService {
             mcp_bypassed: bypass,
             project_id: project_id.map(str::to_string),
             content_state: ContentState::Original,
-            store_state: StoreState::Current,
-            checked_at: Some(chrono::Utc::now().to_rfc3339()),
+            store_state: if local {
+                StoreState::NotApplicable
+            } else {
+                StoreState::Current
+            },
+            checked_at: if local {
+                None
+            } else {
+                Some(chrono::Utc::now().to_rfc3339())
+            },
             store_error: None,
             state: InstallationState::Active,
+            origin: if local { Origin::Local } else { Origin::Store },
         };
         let mut journal = InstallJournal {
             view,
@@ -503,7 +536,7 @@ impl CompanyService {
                 ));
             }
             Self::check_cancel(cancelled)?;
-            if self.owner()? != owner {
+            if !local && self.owner()? != owner {
                 return Err(CompanyError::new(
                     "SESSION_EXPIRED",
                     "Phiên đã thay đổi; chuẩn bị cài lại.",
@@ -627,7 +660,7 @@ impl CompanyService {
                     ),
                 ));
                 let skill = Skill {
-                    id: journal.installation.skill_id,
+                    id: journal.installation.skill_id.unwrap_or_default(),
                     slug: journal.installation.slug,
                     name: journal.installation.name,
                     description_excerpt: None,

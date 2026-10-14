@@ -193,10 +193,11 @@ impl CompanyRepository {
         let transaction = connection.transaction().map_err(|_| db_error())?;
         let changed = transaction
             .execute(
-                "UPDATE company_installations SET payload=?2 WHERE id=?1",
+                "UPDATE company_installations SET payload=?2 WHERE id=?1 AND target_key=?3",
                 params![
                     journal.new.id,
-                    serde_json::to_string(&journal.new).map_err(|_| db_error())?
+                    serde_json::to_string(&journal.new).map_err(|_| db_error())?,
+                    target_key(&journal.new)
                 ],
             )
             .map_err(|_| db_error())?;
@@ -244,6 +245,32 @@ impl CompanyRepository {
             .map_err(|_| db_error())?;
         rows.map(|row| serde_json::from_str(&row.map_err(|_| db_error())?).map_err(|_| db_error()))
             .collect()
+    }
+    pub fn package_hashes(&self) -> CompanyResult<Vec<String>> {
+        let connection = self.connection.lock().map_err(|_| db_error())?;
+        let mut query = connection
+            .prepare("SELECT hash FROM company_packages ORDER BY hash")
+            .map_err(|_| db_error())?;
+        let rows = query
+            .query_map([], |row| row.get::<_, String>(0))
+            .map_err(|_| db_error())?;
+        rows.collect::<Result<Vec<_>, _>>().map_err(|_| db_error())
+    }
+    pub fn delete_backup(&self, id: &str) -> CompanyResult<()> {
+        self.connection
+            .lock()
+            .map_err(|_| db_error())?
+            .execute("DELETE FROM company_backups WHERE id=?1", [id])
+            .map_err(|_| db_error())?;
+        Ok(())
+    }
+    pub fn delete_package(&self, hash: &str) -> CompanyResult<()> {
+        self.connection
+            .lock()
+            .map_err(|_| db_error())?
+            .execute("DELETE FROM company_packages WHERE hash=?1", [hash])
+            .map_err(|_| db_error())?;
+        Ok(())
     }
     pub fn record_lifecycle(&self, journal: &LifecycleJournal) -> CompanyResult<()> {
         let phase = serde_json::to_value(&journal.phase).map_err(|_| db_error())?;
