@@ -7,6 +7,7 @@ use tauri_plugin_window_state::{AppHandleExt, StateFlags, WindowExt};
 
 pub mod commands;
 pub mod core;
+pub mod sds;
 
 /// Shared flag: when true, CloseRequested should NOT be prevented.
 pub static QUITTING: AtomicBool = AtomicBool::new(false);
@@ -791,6 +792,15 @@ fn teardown_before_exit(app: &tauri::AppHandle) {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    let context = tauri::generate_context!();
+    if !sds::profile::matches_identifier(cfg!(feature = "sds"), &context.config().identifier) {
+        sds::runtime::run_mismatch(context);
+        return;
+    }
+    sds::profile::dispatch_runtime(cfg!(feature = "sds"), sds::runtime::run, run_upstream);
+}
+
+fn run_upstream() {
     let pre_builder_start = Instant::now();
     let (store, startup_timings) =
         core::app_state::initialize_store().expect("Failed to initialize app state");
@@ -1000,6 +1010,7 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            sds::runtime_profile,
             // Tools
             commands::tools::get_tool_status,
             commands::tools::set_tool_enabled,

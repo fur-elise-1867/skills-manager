@@ -1,4 +1,6 @@
 fn main() {
+    println!("cargo:rerun-if-env-changed=SDS_ENVIRONMENT");
+    println!("cargo:rerun-if-env-changed=SDS_FIXTURES");
     // Use a custom Windows application manifest that opts the process into long
     // path support (#298/#299). app_manifest() replaces Tauri's default, so the
     // manifest file re-declares the Common-Controls v6 dependency Tauri ships.
