@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>W10 Offline Library</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif],
+            mono: ['JetBrains Mono', monospace]
+          },
+          colors: {
+            brand: {
+              DEFAULT: '#1657b8',
+              hover: '#13479b',
+              light: '#eef4fc'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: #fafafa;
+      color: #1f2937;
+      margin: 0;
+      padding: 0;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+      font-size: 18px;
+      line-height: 1;
+      display: inline-block;
+      vertical-align: middle;
+    }
+    .material-symbols-outlined.fill {
+      font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+    }
+  </style>
+</head>
+<body class="w-[1440px] h-[900px] min-h-[900px] flex flex-col bg-[#fafafa] select-none text-[13px]">
+
+  <!-- Top Titlebar (Samsung SDS OS Desktop Shell) -->
+  <header class="h-8 bg-[#f4f4f5] border-b border-[#e1e3e7] flex items-center justify-between px-3 text-[11px] text-[#4b5563] z-20 shrink-0">
+    <div class="flex items-center gap-2">
+      <div class="w-4 h-4 bg-[#1657b8] rounded flex items-center justify-center text-white font-bold text-[9px]">S</div>
+      <span class="font-medium text-[#111827]">Skills Manager — Samsung SDS</span>
+      <span class="text-[#9ca3af]">/</span>
+      <span class="font-mono text-[#6b7280]">v2.4.1-offline</span>
+    </div>
+
+    <!-- Center status pill for offline state -->
+    <div class="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#fef3c7] border border-[#fde68a] text-[#b45309] font-medium text-[11px]">
+      <span class="w-2 h-2 rounded-full bg-[#f59e0b] animate-pulse"></span>
+      <span>Offline mode · Store unreachable</span>
+    </div>
+
+    <!-- Window control buttons -->
+    <div class="flex items-center space-x-3 text-[#6b7280]">
+      <button class="hover:text-black transition-colors" title="Minimize">
+        <svg class="w-3.5 h-3.5" viewBox="0 0 16 16" fill="currentColor"><path d="M2 8a.75.75 0 0 1 .75-.75h10.5a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 8Z"/></svg>
+      </button>
+      <button class="hover:text-black transition-colors" title="Maximize">
+        <svg class="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="10" height="10" rx="1.5"/></svg>
+      </button>
+      <button class="hover:text-red-600 transition-colors" title="Close">
+        <svg class="w-3.5 h-3.5" viewBox="0 0 16 16" fill="currentColor"><path d="M3.72 3.72a.75.75 0 0 1 1.06 0L8 6.94l3.22-3.22a.75.75 0 1 1 1.06 1.06L9.06 8l3.22 3.22a.75.75 0 1 1-1.06 1.06L8 9.06l-3.22 3.22a.75.75 0 0 1-1.06-1.06L6.94 8 3.72 4.78a.75.75 0 0 1 0-1.06Z"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <div class="flex-1 flex overflow-hidden">
+
+    <!-- 225px Shared Sidebar Navigation -->
+    <aside class="w-[225px] bg-[#f4f4f5] border-r border-[#e1e3e7] flex flex-col justify-between p-3 shrink-0 select-none text-[13px]" aria-label="App navigation">
+      <div class="flex flex-col space-y-4">
+        
+        <!-- Brand / Identity -->
+        <div class="flex items-center space-x-2.5 px-2 py-1.5">
+          <div class="w-8 h-8 rounded-lg bg-[#1657b8] text-white flex items-center justify-center font-bold text-[15px] shadow-sm">S</div>
+          <div class="leading-tight">
+            <div class="font-semibold text-[#111827] text-[13px]">Skills Manager</div>
+            <div class="text-[10px] text-[#6b7280] tracking-wider uppercase font-semibold">SAMSUNG SDS</div>
+          </div>
+        </div>
+
+        <!-- New preset button -->
+        <button class="w-full flex items-center justify-center gap-1.5 py-1.5 px-3 bg-white border border-[#e1e3e7] rounded-lg text-[12px] font-medium text-[#374151] hover:bg-[#fafafa] hover:border-[#cbd5e1] transition-all shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
+          <span class="text-[14px] leading-none font-bold text-[#6b7280]">＋</span>
+          <span>New preset</span>
+        </button>
+
+        <!-- Primary Navigation -->
+        <nav class="space-y-0.5 text-[12.5px]">
+          <a class="flex items-center justify-between px-2.5 py-1.5 rounded-md text-[#4b5563] hover:bg-[#eaecee] transition-colors" href="#dashboard">
+            <span class="flex items-center gap-2.5">
+              <span class="material-symbols-outlined text-[17px] text-[#6b7280]">dashboard</span>
+              <span>Dashboard</span>
+            </span>
+          </a>
+
+          <!-- Active tab: Library -->
+          <a class="flex items-center justify-between px-2.5 py-1.5 rounded-md bg-[#eef4fc] text-[#1657b8] font-semibold border-l-2 border-[#1657b8] transition-colors" href="#library">
+            <span class="flex items-center gap-2.5">
+              <span class="material-symbols-outlined text-[17px] text-[#1657b8]">folder</span>
+              <span>Library</span>
+            </span>
+            <span class="px-1.5 py-0.2 rounded-full bg-[#1657b8]/10 text-[#1657b8] text-[11px] font-semibold">12</span>
+          </a>
+
+          <a class="flex items-center justify-between px-2.5 py-1.5 rounded-md text-[#4b5563] hover:bg-[#eaecee] transition-colors" href="#store">
+            <span class="flex items-center gap-2.5">
+              <span class="material-symbols-outlined text-[17px] text-[#6b7280]">storefront</span>
+              <span>Skills Store</span>
+            </span>
+            <span class="w-1.5 h-1.5 rounded-full bg-[#f59e0b]" title="Store unreachable"></span>
+          </a>
+
+          <a class="flex items-center justify-between px-2.5 py-1.5 rounded-md text-[#4b5563] hover:bg-[#eaecee] transition-colors" href="#backup">
+            <span class="flex items-center gap-2.5">
+              <span class="material-symbols-outlined text-[17px] text-[#6b7280]">history</span>
+              <span>Backup</span>
+            </span>
+          </a>
+        </nav>
+
+        <!-- Group: Presets -->
+        <div>
+          <div class="px-2.5 mb-1 text-[10px] font-semibold tracking-wider text-[#9ca3af] uppercase">Presets</div>
+          <div class="space-y-0.5 text-[12.5px]">
+            <a class="flex items-center justify-between px-2.5 py-1.5 rounded-md text-[#4b5563] hover:bg-[#eaecee] transition-colors" href="#workspace">
+              <span class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-[16px] text-[#6b7280]">tune</span>
+                <span>PM Essentials</span>
+              </span>
+              <span class="text-[11px] text-[#9ca3af] font-medium">3</span>
+            </a>
+            <a class="flex items-center gap-2 px-2.5 py-1.5 rounded-md text-[#6b7280] hover:bg-[#eaecee] transition-colors text-[12px]" href="#workspace">
+              <span class="text-[14px] leading-none font-medium">＋</span>
+              <span>New preset</span>
+            </a>
+          </div>
+        </div>
+
+        <!-- Group: Global Workspace -->
+        <div>
+          <div class="px-2.5 mb-1 text-[10px] font-semibold tracking-wider text-[#9ca3af] uppercase">Global Workspace</div>
+          <div class="space-y-0.5 text-[12.5px]">
+            <a class="flex items-center justify-between px-2.5 py-1.5 rounded-md text-[#4b5563] hover:bg-[#eaecee] transition-colors" href="#workspace">
+              <span class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-[16px] text-[#6b7280]">hub</span>
+                <span>All Agents</span>
+              </span>
+            </a>
+            <a class="flex items-center justify-between px-2.5 py-1.5 rounded-md text-[#4b5563] hover:bg-[#eaecee] transition-colors" href="#workspace">
+              <span class="flex items-center gap-2">
+                <span class="w-4 h-4 rounded bg-[#1657b8] text-white flex items-center justify-center text-[10px] font-bold">A</span>
+                <span>AIPro</span>
+              </span>
+              <span class="text-[11px] text-[#9ca3af] font-medium">8</span>
+            </a>
+            <a class="flex items-center justify-between px-2.5 py-1.5 rounded-md text-[#4b5563] hover:bg-[#eaecee] transition-colors" href="#workspace">
+              <span class="flex items-center gap-2">
+                <span class="w-4 h-4 rounded bg-[#d97706] text-white flex items-center justify-center text-[9px] font-bold">Cl</span>
+                <span>Claude</span>
+              </span>
+              <span class="text-[11px] text-[#9ca3af] font-medium">4</span>
+            </a>
+            <a class="flex items-center justify-between px-2.5 py-1.5 rounded-md text-[#4b5563] hover:bg-[#eaecee] transition-colors" href="#workspace">
+              <span class="flex items-center gap-2">
+                <span class="w-4 h-4 rounded bg-[#7c3aed] text-white flex items-center justify-center text-[10px] font-bold">G</span>
+                <span>Gemini</span>
+              </span>
+              <span class="text-[11px] text-[#9ca3af] font-medium">3</span>
+            </a>
+            <a class="flex items-center justify-between px-2.5 py-1.5 rounded-md text-[#4b5563] hover:bg-[#eaecee] transition-colors" href="#workspace">
+              <span class="flex items-center gap-2">
+                <span class="w-4 h-4 rounded bg-[#1f2937] text-white flex items-center justify-center text-[9px] font-bold">Cx</span>
+                <span>Codex</span>
+              </span>
+              <span class="text-[11px] text-[#9ca3af] font-medium">5</span>
+            </a>
+          </div>
+        </div>
+
+        <!-- Group: Project Workspaces -->
+        <div>
+          <div class="px-2.5 mb-1 text-[10px] font-semibold tracking-wider text-[#9ca3af] uppercase">Project Workspaces</div>
+          <div class="space-y-0.5 text-[12.5px]">
+            <a class="flex items-center justify-between px-2.5 py-1.5 rounded-md text-[#4b5563] hover:bg-[#eaecee] transition-colors" href="#workspace">
+              <span class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-[16px] text-[#6b7280]">workspaces</span>
+                <span>Project Atlas</span>
+              </span>
+              <span class="text-[11px] text-[#9ca3af] font-medium">3</span>
+            </a>
+            <a class="flex items-center gap-2 px-2.5 py-1.5 rounded-md text-[#6b7280] hover:bg-[#eaecee] transition-colors text-[12px]" href="#install">
+              <span class="text-[14px] leading-none font-medium">＋</span>
+              <span>Add project</span>
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sidebar Footer -->
+      <div class="pt-3 border-t border-[#e1e3e7] space-y-2">
+        <a class="flex items-center gap-2 px-2.5 py-1.5 rounded-md text-[#4b5563] hover:bg-[#eaecee] transition-colors text-[12.5px]" href="#settings">
+          <span class="material-symbols-outlined text-[16px] text-[#6b7280]">settings</span>
+          <span>Settings</span>
+        </a>
+        <div class="flex items-center gap-2.5 px-2 py-1.5 bg-[#eaecee]/50 rounded-lg border border-[#e1e3e7]/60">
+          <div class="w-7 h-7 rounded-full bg-[#1657b8] text-white flex items-center justify-center font-semibold text-[11px] shrink-0">E</div>
+          <div class="min-w-0 flex-1 leading-tight">
+            <div class="text-[12px] font-medium text-[#111827] truncate">Example Employee</div>
+            <div class="text-[10px] text-[#6b7280] truncate">Skills Store account</div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Workspace Content Area -->
+    <main class="flex-1 flex flex-col overflow-y-auto bg-[#fafafa]">
+      
+      <!-- Screen Header with Title and Connection Action -->
+      <div class="px-8 pt-7 pb-5 flex items-center justify-between border-b border-[#e1e3e7]/70 bg-white">
+        <div class="flex items-center gap-3">
+          <h1 id="offline-title" class="text-[22px] font-bold text-[#111827] tracking-tight">Library</h1>
+          <span class="px-2.5 py-0.5 rounded-full bg-[#f3f4f6] text-[#4b5563] font-semibold text-[12px] border border-[#e5e7eb]">12</span>
+          <span class="px-2 py-0.5 text-[11px] font-medium bg-[#fef3c7] text-[#92400e] rounded border border-[#fde68a]">Offline Cache</span>
+        </div>
+
+        <div class="flex items-center gap-3">
+          <span class="text-[11px] text-[#6b7280] flex items-center gap-1.5">
+            <span class="w-1.5 h-1.5 rounded-full bg-[#d1d5db]"></span>
+            Attempting background sync in 48s
+          </span>
+          <a class="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-[#1657b8] hover:bg-[#13479b] text-white font-medium text-[12.5px] rounded-lg transition-colors shadow-sm" href="#library">
+            <span class="material-symbols-outlined text-[16px]">sync</span>
+            <span>Retry connection</span>
+          </a>
+        </div>
+      </div>
+
+      <!-- Main Body Container -->
+      <div class="p-8 space-y-6 max-w-[1150px]">
+        
+        <!-- Warning Notice: Store Unavailable -->
+        <div class="rounded-xl border border-[#fed7aa] bg-[#fffbeb] p-4 text-[#9a3412] flex items-start gap-3.5 shadow-sm">
+          <div class="w-8 h-8 rounded-lg bg-[#ffedd5] flex items-center justify-center shrink-0 text-[#c2410c] mt-0.5">
+            <span class="material-symbols-outlined text-[20px]">cloud_off</span>
+          </div>
+          <div class="flex-1 space-y-1">
+            <div class="flex items-center justify-between">
+              <strong class="text-[14px] font-semibold text-[#9a3412]">Skills Store is unavailable.</strong>
+              <span class="text-[11px] font-medium px-2 py-0.5 bg-[#fef3c7] rounded border border-[#fed7aa] text-[#b45309]">Network / Registry Unreachable</span>
+            </div>
+            <p class="text-[13px] text-[#7c2d12] leading-relaxed">
+              You can manage skills already downloaded to this computer. New downloads and update checks need a Store connection.
+            </p>
+            <div class="pt-1 flex items-center gap-2 text-[11.5px] text-[#9a3412]/80">
+              <span class="material-symbols-outlined text-[14px]">schedule</span>
+              <span>Last connected: 15 Oct 2026, 09:20 · Example timestamp</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section: Cached Local Items -->
+        <section aria-labelledby="cached-heading">
+          <div class="flex items-center justify-between mb-3.5">
+            <div class="flex items-center gap-2">
+              <h2 id="cached-heading" class="text-[14px] font-semibold text-[#111827]">Cached Local Items</h2>
+              <span class="text-[11.5px] text-[#6b7280] font-medium bg-[#f3f4f6] px-2 py-0.5 rounded-full border border-[#e5e7eb]">2 ready</span>
+            </div>
+            <span class="text-[11.5px] text-[#6b7280] flex items-center gap-1">
+              <span class="material-symbols-outlined text-[15px]">database</span>
+              Registry snapshot preserved in local SQLite storage
+            </span>
+          </div>
+
+          <!-- Cards Grid -->
+          <div class="grid grid-cols-2 gap-4">
+
+            <!-- Card 1: Jira Weekly Report -->
+            <article class="bg-white border border-[#e1e3e7] rounded-xl p-4 flex flex-col justify-between hover:border-[#cbd5e1] transition-all shadow-[0_1px_3px_rgba(0,0,0,0.03)]">
+              <div>
+                <div class="flex items-start justify-between gap-3 mb-2">
+                  <div class="flex items-center gap-2.5">
+                    <div class="w-8 h-8 rounded-lg bg-[#eef4fc] border border-[#d9e6f9] flex items-center justify-center text-[#1657b8] shrink-0">
+                      <span class="material-symbols-outlined text-[18px]">assignment</span>
+                    </div>
+                    <div>
+                      <h3 class="text-[14px] font-semibold text-[#111827] leading-tight">Jira Weekly Report</h3>
+                      <div class="text-[11px] text-[#6b7280] font-mono">com.sds.jira.weekly</div>
+                    </div>
+                  </div>
+                  <span class="px-2 py-0.5 rounded bg-[#f3f4f6] text-[#4b5563] text-[11px] font-medium border border-[#e5e7eb] shrink-0">
+                    Cached release
+                  </span>
+                </div>
+
+                <div class="my-3 p-3 bg-[#f9fafb] rounded-lg border border-[#f3f4f6] text-[12.5px] space-y-1">
+                  <div class="text-[#374151] font-medium">Version 1.1.0 is available locally.</div>
+                  <div class="text-[#b45309] text-[11.5px] flex items-center gap-1 font-medium">
+                    <span class="material-symbols-outlined text-[14px]">sync_problem</span>
+                    Latest Store version cannot be checked.
+                  </div>
+                </div>
+
+                <div class="flex items-center gap-3 text-[11.5px] text-[#6b7280]">
+                  <span class="flex items-center gap-1">
+                    <span class="material-symbols-outlined text-[14px]">archive</span>
+                    Package: 4.2 MB
+                  </span>
+                  <span>•</span>
+                  <span>Target: Claude Desktop, AIPro</span>
+                </div>
+              </div>
+
+              <div class="mt-4 pt-3.5 border-t border-[#f3f4f6] flex items-center justify-between">
+                <a class="inline-flex items-center gap-1.5 text-[12.5px] font-medium text-[#1657b8] hover:text-[#13479b] transition-colors" href="#install">
+                  <span class="material-symbols-outlined text-[15px]">download</span>
+                  <span>Install from Library</span>
+                </a>
+                <a class="inline-flex items-center gap-1.5 text-[12.5px] font-medium text-[#dc2626] hover:text-[#b91c1c] transition-colors" href="#remove">
+                  <span class="material-symbols-outlined text-[15px]">delete_outline</span>
+                  <span>Remove from target</span>
+                </a>
+              </div>
+            </article>
+
+            <!-- Card 2: Meeting Notes -->
+            <article class="bg-white border border-[#e1e3e7] rounded-xl p-4 flex flex-col justify-between hover:border-[#cbd5e1] transition-all shadow-[0_1px_3px_rgba(0,0,0,0.03)]">
+              <div>
+                <div class="flex items-start justify-between gap-3 mb-2">
+                  <div class="flex items-center gap-2.5">
+                    <div class="w-8 h-8 rounded-lg bg-[#f0fdf4] border border-[#dcfce7] flex items-center justify-center text-[#16a34a] shrink-0">
+                      <span class="material-symbols-outlined text-[18px]">article</span>
+                    </div>
+                    <div>
+                      <h3 class="text-[14px] font-semibold text-[#111827] leading-tight">Meeting Notes</h3>
+                      <div class="text-[11px] text-[#6b7280] font-mono">com.sds.mcp.notes</div>
+                    </div>
+                  </div>
+                  <span class="px-2 py-0.5 rounded bg-[#f3f4f6] text-[#4b5563] text-[11px] font-medium border border-[#e5e7eb] shrink-0">
+                    Cached release
+                  </span>
+                </div>
+
+                <div class="my-3 p-3 bg-[#f9fafb] rounded-lg border border-[#f3f4f6] text-[12.5px] space-y-1">
+                  <div class="text-[#374151] font-medium">Version 1.0.0 is available locally.</div>
+                  <div class="text-[#16a34a] text-[11.5px] flex items-center gap-1 font-medium">
+                    <span class="material-symbols-outlined text-[14px]">check_circle</span>
+                    Manage existing installations.
+                  </div>
+                </div>
+
+                <div class="flex items-center gap-3 text-[11.5px] text-[#6b7280]">
+                  <span class="flex items-center gap-1">
+                    <span class="material-symbols-outlined text-[14px]">archive</span>
+                    Package: 1.8 MB
+                  </span>
+                  <span>•</span>
+                  <span>Target: Gemini, PM Essentials</span>
+                </div>
+              </div>
+
+              <div class="mt-4 pt-3.5 border-t border-[#f3f4f6] flex items-center justify-between">
+                <a class="inline-flex items-center gap-1.5 text-[12.5px] font-medium text-[#1657b8] hover:text-[#13479b] transition-colors" href="#workspace">
+                  <span class="material-symbols-outlined text-[15px]">open_in_new</span>
+                  <span>Open workspace</span>
+                </a>
+                <span class="text-[11.5px] text-[#6b7280] font-medium bg-[#f3f4f6] px-2 py-0.5 rounded">
+                  Active locally
+                </span>
+              </div>
+            </article>
+
+          </div>
+        </section>
+
+        <!-- Informational Panel: Available While Offline -->
+        <div class="bg-white border border-[#e1e3e7] rounded-xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.03)]">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="material-symbols-outlined text-[#1657b8] text-[19px]">verified_user</span>
+            <h3 class="text-[14px] font-semibold text-[#111827]">Available while offline</h3>
+          </div>
+
+          <ul class="space-y-2 text-[13px] text-[#374151] ml-1">
+            <li class="flex items-start gap-2.5">
+              <span class="w-1.5 h-1.5 rounded-full bg-[#1657b8] mt-2 shrink-0"></span>
+              <span>View Library and installed locations across configured agent roots.</span>
+            </li>
+            <li class="flex items-start gap-2.5">
+              <span class="w-1.5 h-1.5 rounded-full bg-[#1657b8] mt-2 shrink-0"></span>
+              <span>Install already downloaded releases; manage presets and local destinations without registry contact.</span>
+            </li>
+            <li class="flex items-start gap-2.5">
+              <span class="w-1.5 h-1.5 rounded-full bg-[#1657b8] mt-2 shrink-0"></span>
+              <span>Remove skills or restore local snapshots created during prior manual updates.</span>
+            </li>
+          </ul>
+
+          <div class="mt-4 pt-3.5 border-t border-[#f3f4f6] flex items-center gap-2 text-[12px] text-[#b45309]">
+            <span class="material-symbols-outlined text-[16px] shrink-0">warning</span>
+            <span>This does not guarantee the agent or MCP service can run offline. Runtime host connectivity depends on your specific orchestrator profile.</span>
+          </div>
+        </div>
+
+        <!-- Collapsible Details: Session-expired Variant -->
+        <details class="group bg-white border border-[#e1e3e7] rounded-xl overflow-hidden transition-all shadow-[0_1px_3px_rgba(0,0,0,0.03)]" open>
+          <summary class="flex items-center justify-between px-5 py-3.5 bg-[#fcfcfd] cursor-pointer hover:bg-[#f9fafb] text-[13px] font-semibold text-[#374151] border-b border-[#e1e3e7]">
+            <span class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-[17px] text-[#6b7280]">info</span>
+              <span>Session-expired variant & Offline Authentication Policies</span>
+            </span>
+            <span class="material-symbols-outlined text-[18px] text-[#9ca3af] group-open:rotate-180 transition-transform">expand_more</span>
+          </summary>
+          <div class="p-5 text-[13px] text-[#4b5563] space-y-2.5 bg-white">
+            <div class="p-3.5 bg-[#f8fafc] border border-[#e2e8f0] rounded-lg">
+              <div class="font-medium text-[#1e293b] mb-1">Notice state if auth token has lapsed:</div>
+              <p class="text-[12.5px] text-[#475569] leading-relaxed">
+                “Your session has expired. Sign in again to access Skills Store.” 
+                <a class="text-[#1657b8] font-semibold underline hover:text-[#13479b] ml-1" href="#login">Sign in</a>.
+              </p>
+            </div>
+            <p class="text-[12px] text-[#6b7280] leading-relaxed">
+              This is different from a network outage; local access follows the agreed offline policy where existing files in your target project folders remain untouched and functional.
+            </p>
+          </div>
+        </details>
+
+      </div>
+    </main>
+
+  </div>
+
+</body>
+</html>

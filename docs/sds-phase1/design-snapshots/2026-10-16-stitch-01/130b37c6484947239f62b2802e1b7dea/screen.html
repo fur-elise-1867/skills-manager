@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=1440, initial-scale=1.0">
+  <title>W12 Settings</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+            mono: ['JetBrains Mono', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace']
+          },
+          colors: {
+            brand: {
+              primary: '#1657b8',
+              hover: '#124694',
+              subtle: '#eaf1fb'
+            },
+            app: {
+              bg: '#fafafa',
+              sidebar: '#f4f4f5',
+              border: '#e1e3e7',
+              panel: '#ffffff',
+              subtleText: '#71717a',
+              headingText: '#18181b',
+              badgeBg: '#e4e4e7'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #fafafa;
+      font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      color: #18181b;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+    /* Custom scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #fafafa;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #d4d4d8;
+      border-radius: 3px;
+    }
+  </style>
+</head>
+<body class="w-[1440px] min-h-screen bg-[#fafafa] flex flex-col text-[#18181b] select-none">
+
+  <!-- Desktop App Window Bar -->
+  <header class="h-8 bg-[#f4f4f5] border-b border-[#e1e3e7] px-3 flex items-center justify-between text-xs text-[#52525b] select-none z-30 flex-shrink-0">
+    <div class="flex items-center space-x-2">
+      <div class="flex items-center space-x-1.5 mr-2">
+        <span class="w-3 h-3 rounded-full bg-[#e4e4e7] border border-[#d4d4d8] inline-block"></span>
+        <span class="w-3 h-3 rounded-full bg-[#e4e4e7] border border-[#d4d4d8] inline-block"></span>
+        <span class="w-3 h-3 rounded-full bg-[#e4e4e7] border border-[#d4d4d8] inline-block"></span>
+      </div>
+      <span class="font-medium text-[#18181b] flex items-center gap-1.5">
+        <svg class="w-3.5 h-3.5 text-[#1657b8]" viewBox="0 0 24 24" fill="currentColor">
+          <rect x="2" y="2" width="20" height="20" rx="4"></rect>
+          <path d="M7 8h10M7 12h10M7 16h6" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        Skills Manager — Samsung SDS
+      </span>
+      <span class="text-[#a1a1aa] text-[11px] font-mono">/ v2.4.1-enterprise</span>
+    </div>
+    <div class="flex items-center space-x-4 text-[11px]">
+      <span class="flex items-center text-[#71717a]">
+        <span class="w-1.5 h-1.5 rounded-full bg-[#10b981] mr-1.5"></span>
+        Workstation Node · Seoul IDC #4
+      </span>
+      <div class="flex items-center space-x-2.5 text-[#71717a] border-l border-[#e1e3e7] pl-3">
+        <button class="hover:text-[#18181b] transition-colors" title="Minimize">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 12h14"></path></svg>
+        </button>
+        <button class="hover:text-[#18181b] transition-colors" title="Maximize">
+          <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="1"></rect></svg>
+        </button>
+        <button class="hover:text-[#dc2626] transition-colors" title="Close">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"></path></svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Body Layout: Fixed 225px Sidebar + Scrollable Content Area -->
+  <div class="flex flex-1 min-h-[calc(100vh-32px)]">
+
+    <!-- SHARED SIDEBAR (225px exactly as specified) -->
+    <aside class="sidebar w-[225px] bg-[#f4f4f5] border-r border-[#e1e3e7] flex flex-col justify-between flex-shrink-0 min-h-full" aria-label="App navigation">
+      <div class="flex flex-col">
+        <!-- Brand Header -->
+        <div class="brand p-3 flex items-center space-x-2.5 border-b border-[#e1e3e7]">
+          <span class="brandmark w-7 h-7 rounded bg-[#1657b8] text-white flex items-center justify-center font-bold text-sm tracking-tight shadow-sm flex-shrink-0">
+            S
+          </span>
+          <div class="min-w-0">
+            <strong class="block text-xs font-semibold text-[#18181b] leading-tight truncate">Skills Manager</strong>
+            <small class="block text-[10px] text-[#71717a] font-medium tracking-wide">SAMSUNG SDS</small>
+          </div>
+        </div>
+
+        <!-- Navigation Links -->
+        <nav class="p-2 space-y-0.5">
+          <a class="navitem nav-dashboard flex items-center justify-between px-2.5 py-1.5 rounded-md text-xs text-[#52525b] hover:bg-[#e4e4e7]/70 hover:text-[#18181b] transition-colors group" href="#dashboard">
+            <span class="flex items-center gap-2">
+              <span class="icon text-sm text-[#71717a] group-hover:text-[#18181b]">▦</span>
+              <span>Dashboard</span>
+            </span>
+          </a>
+
+          <a class="navitem nav-library flex items-center justify-between px-2.5 py-1.5 rounded-md text-xs text-[#52525b] hover:bg-[#e4e4e7]/70 hover:text-[#18181b] transition-colors group" href="#library">
+            <span class="flex items-center gap-2">
+              <span class="icon text-sm text-[#71717a] group-hover:text-[#18181b]">▤</span>
+              <span>Library</span>
+            </span>
+            <span class="navcount text-[11px] px-1.5 py-0.2 rounded-full bg-[#e4e4e7] text-[#52525b] font-medium">12</span>
+          </a>
+
+          <a class="navitem nav-store flex items-center justify-between px-2.5 py-1.5 rounded-md text-xs text-[#52525b] hover:bg-[#e4e4e7]/70 hover:text-[#18181b] transition-colors group" href="#store">
+            <span class="flex items-center gap-2">
+              <span class="icon text-sm text-[#71717a] group-hover:text-[#18181b]">↓</span>
+              <span>Skills Store</span>
+            </span>
+          </a>
+
+          <a class="navitem nav-backup flex items-center justify-between px-2.5 py-1.5 rounded-md text-xs text-[#52525b] hover:bg-[#e4e4e7]/70 hover:text-[#18181b] transition-colors group" href="#backup">
+            <span class="flex items-center gap-2">
+              <span class="icon text-sm text-[#71717a] group-hover:text-[#18181b]">◷</span>
+              <span>Backup</span>
+            </span>
+          </a>
+
+          <!-- Section: Presets -->
+          <div class="navlabel pt-3 pb-1 px-2.5 text-[10px] font-semibold tracking-wider text-[#a1a1aa] uppercase">
+            Presets
+          </div>
+
+          <a class="navitem flex items-center justify-between px-2.5 py-1.5 rounded-md text-xs text-[#52525b] hover:bg-[#e4e4e7]/70 hover:text-[#18181b] transition-colors group" href="#workspace">
+            <span class="flex items-center gap-2">
+              <span class="icon text-xs text-[#71717a] group-hover:text-[#18181b]">◇</span>
+              <span>PM Essentials</span>
+            </span>
+            <span class="navcount text-[11px] px-1.5 py-0.2 rounded-full bg-[#e4e4e7] text-[#52525b] font-medium">3</span>
+          </a>
+
+          <a class="navitem flex items-center gap-2 px-2.5 py-1.5 rounded-md text-xs text-[#71717a] hover:bg-[#e4e4e7]/70 hover:text-[#18181b] transition-colors" href="#workspace">
+            <span class="icon text-xs font-semibold">＋</span>
+            <span>New preset</span>
+          </a>
+
+          <!-- Section: Global Workspace -->
+          <div class="navlabel pt-3 pb-1 px-2.5 text-[10px] font-semibold tracking-wider text-[#a1a1aa] uppercase">
+            Global Workspace
+          </div>
+
+          <a class="navitem flex items-center gap-2 px-2.5 py-1.5 rounded-md text-xs text-[#52525b] hover:bg-[#e4e4e7]/70 hover:text-[#18181b] transition-colors" href="#workspace">
+            <span class="icon text-xs text-[#71717a]">◎</span>
+            <span>All Agents</span>
+          </a>
+
+          <a class="navitem flex items-center justify-between px-2.5 py-1.5 rounded-md text-xs text-[#52525b] hover:bg-[#e4e4e7]/70 hover:text-[#18181b] transition-colors" href="#workspace">
+            <span class="flex items-center gap-2">
+              <span class="agentdot aipro w-4 h-4 rounded bg-[#1657b8] text-white text-[9px] font-bold flex items-center justify-center">A</span>
+              <span>AIPro</span>
+            </span>
+            <span class="navcount text-[11px] px-1.5 py-0.2 rounded-full bg-[#e4e4e7] text-[#52525b] font-medium">8</span>
+          </a>
+
+          <a class="navitem flex items-center justify-between px-2.5 py-1.5 rounded-md text-xs text-[#52525b] hover:bg-[#e4e4e7]/70 hover:text-[#18181b] transition-colors" href="#workspace">
+            <span class="flex items-center gap-2">
+              <span class="agentdot claude w-4 h-4 rounded bg-[#d97706] text-white text-[9px] font-bold flex items-center justify-center">Cl</span>
+              <span>Claude</span>
+            </span>
+            <span class="navcount text-[11px] px-1.5 py-0.2 rounded-full bg-[#e4e4e7] text-[#52525b] font-medium">4</span>
+          </a>
+
+          <a class="navitem flex items-center justify-between px-2.5 py-1.5 rounded-md text-xs text-[#52525b] hover:bg-[#e4e4e7]/70 hover:text-[#18181b] transition-colors" href="#workspace">
+            <span class="flex items-center gap-2">
+              <span class="agentdot gemini w-4 h-4 rounded bg-[#7c3aed] text-white text-[9px] font-bold flex items-center justify-center">G</span>
+              <span>Gemini</span>
+            </span>
+            <span class="navcount text-[11px] px-1.5 py-0.2 rounded-full bg-[#e4e4e7] text-[#52525b] font-medium">3</span>
+          </a>
+
+          <a class="navitem flex items-center justify-between px-2.5 py-1.5 rounded-md text-xs text-[#52525b] hover:bg-[#e4e4e7]/70 hover:text-[#18181b] transition-colors" href="#workspace">
+            <span class="flex items-center gap-2">
+              <span class="agentdot codex w-4 h-4 rounded bg-[#0f172a] text-white text-[9px] font-bold flex items-center justify-center">Cx</span>
+              <span>Codex</span>
+            </span>
+            <span class="navcount text-[11px] px-1.5 py-0.2 rounded-full bg-[#e4e4e7] text-[#52525b] font-medium">5</span>
+          </a>
+
+          <!-- Section: Project Workspaces -->
+          <div class="navlabel pt-3 pb-1 px-2.5 text-[10px] font-semibold tracking-wider text-[#a1a1aa] uppercase">
+            Project Workspaces
+          </div>
+
+          <a class="navitem nav-workspace flex items-center justify-between px-2.5 py-1.5 rounded-md text-xs text-[#52525b] hover:bg-[#e4e4e7]/70 hover:text-[#18181b] transition-colors" href="#workspace">
+            <span class="flex items-center gap-2">
+              <span class="icon text-xs text-[#71717a]">▱</span>
+              <span>Project Atlas</span>
+            </span>
+            <span class="navcount text-[11px] px-1.5 py-0.2 rounded-full bg-[#e4e4e7] text-[#52525b] font-medium">3</span>
+          </a>
+
+          <a class="navitem flex items-center gap-2 px-2.5 py-1.5 rounded-md text-xs text-[#71717a] hover:bg-[#e4e4e7]/70 hover:text-[#18181b] transition-colors" href="#install">
+            <span class="icon text-xs font-semibold">＋</span>
+            <span>Add project</span>
+          </a>
+        </nav>
+      </div>
+
+      <!-- Sidebar Footer (Settings Active + Profile) -->
+      <div class="sidebarfoot p-2 border-t border-[#e1e3e7] space-y-1.5 bg-[#f4f4f5]">
+        <!-- Active Settings Navigation State -->
+        <a class="navitem nav-settings flex items-center gap-2 px-2.5 py-1.5 rounded-md text-xs font-medium bg-[#eaf1fb] text-[#1657b8] border-l-2 border-[#1657b8] transition-colors" href="#settings">
+          <span class="icon text-sm">⚙</span>
+          <span>Settings</span>
+        </a>
+
+        <!-- Account Badge -->
+        <div class="account p-2 rounded-md bg-[#ffffff] border border-[#e1e3e7] flex items-center space-x-2">
+          <span class="avatar w-6 h-6 rounded bg-[#1657b8] text-white flex items-center justify-center text-xs font-semibold flex-shrink-0">
+            E
+          </span>
+          <div class="min-w-0 flex-1 leading-tight">
+            <div class="text-[11px] font-medium text-[#18181b] truncate">Example Employee</div>
+            <span class="muted text-[10px] text-[#71717a] block truncate">Skills Store account</span>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- MAIN CONTENT VIEWPORT (Settings Screen) -->
+    <main class="flex-1 overflow-y-auto px-8 py-6 bg-[#fafafa]">
+      <section class="screen max-w-[1140px] mx-auto space-y-6" id="settings" aria-labelledby="settings-title">
+
+        <!-- Screen Header -->
+        <div class="screenhead flex items-center justify-between pb-2 border-b border-[#e1e3e7]">
+          <div>
+            <h1 id="settings-title" class="text-2xl font-bold tracking-tight text-[#18181b]">Settings</h1>
+          </div>
+          <div class="flex items-center space-x-2">
+            <span class="tag inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-[#eaf1fb] text-[#1657b8] border border-[#bfdbfe]">
+              <span class="w-1.5 h-1.5 rounded-full bg-[#1657b8]"></span>
+              SDS profile
+            </span>
+            <span class="text-xs text-[#71717a] border border-[#e1e3e7] bg-[#ffffff] px-2.5 py-1 rounded-md font-mono">
+              Tenant ID: KR-7702-ENT
+            </span>
+          </div>
+        </div>
+
+        <!-- Two Column Balanced Grid -->
+        <div class="twocol grid grid-cols-12 gap-6 items-start">
+
+          <!-- Left Column (General, Skills Store Connection, Application Updates) -->
+          <div class="col-span-7 space-y-6">
+
+            <!-- Panel 1: General Preferences -->
+            <div class="panel bg-[#ffffff] rounded-[10px] border border-[#e1e3e7] p-5 shadow-[0_1px_2px_rgba(0,0,0,0.02)] space-y-4">
+              <div class="flex items-center justify-between pb-3 border-b border-[#f4f4f5]">
+                <h3 class="text-sm font-semibold text-[#18181b] flex items-center gap-2">
+                  <svg class="w-4 h-4 text-[#71717a]" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path>
+                  </svg>
+                  General
+                </h3>
+                <span class="text-[11px] text-[#71717a] font-normal">Client configuration</span>
+              </div>
+
+              <div class="space-y-3.5">
+                <!-- Language Field -->
+                <div class="field space-y-1">
+                  <label for="language" class="block text-xs font-medium text-[#3f3f46]">Language</label>
+                  <div class="relative">
+                    <select id="language" class="w-full bg-[#ffffff] border border-[#e1e3e7] rounded-md px-3 py-2 text-xs text-[#18181b] focus:outline-none focus:ring-1 focus:ring-[#1657b8] focus:border-[#1657b8] transition-colors appearance-none cursor-pointer pr-8">
+                      <option selected>English — default</option>
+                    </select>
+                    <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-[#71717a]">
+                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Theme Field -->
+                <div class="field space-y-1">
+                  <label for="theme" class="block text-xs font-medium text-[#3f3f46]">Theme</label>
+                  <div class="relative">
+                    <select id="theme" class="w-full bg-[#ffffff] border border-[#e1e3e7] rounded-md px-3 py-2 text-xs text-[#18181b] focus:outline-none focus:ring-1 focus:ring-[#1657b8] focus:border-[#1657b8] transition-colors appearance-none cursor-pointer pr-8">
+                      <option selected>System</option>
+                      <option>Light</option>
+                      <option>Dark</option>
+                    </select>
+                    <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-[#71717a]">
+                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                    </div>
+                  </div>
+                </div>
+
+                <p class="small muted text-[11px] text-[#71717a] pt-1">
+                  Additional translation scope will be agreed separately.
+                </p>
+              </div>
+            </div>
+
+            <!-- Panel 2: Skills Store Connection -->
+            <div class="panel bg-[#ffffff] rounded-[10px] border border-[#e1e3e7] p-5 shadow-[0_1px_2px_rgba(0,0,0,0.02)] space-y-4">
+              <div class="flex items-center justify-between pb-3 border-b border-[#f4f4f5]">
+                <h3 class="text-sm font-semibold text-[#18181b] flex items-center gap-2">
+                  <svg class="w-4 h-4 text-[#71717a]" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
+                  </svg>
+                  Skills Store connection
+                </h3>
+                <span class="text-[11px] font-medium text-[#059669] bg-[#ecfdf5] border border-[#a7f3d0] px-2 py-0.5 rounded">
+                  Enterprise SSO
+                </span>
+              </div>
+
+              <div class="space-y-3">
+                <div class="field space-y-1">
+                  <label for="store-url" class="block text-xs font-medium text-[#3f3f46]">Store address</label>
+                  <div class="relative">
+                    <input id="store-url" value="https://<internal-store-host>" readonly class="w-full bg-[#f4f4f5] border border-[#e1e3e7] rounded-md px-3 py-2 text-xs font-mono text-[#52525b] focus:outline-none cursor-default pr-9">
+                    <div class="absolute inset-y-0 right-0 flex items-center px-2.5 text-[#a1a1aa]">
+                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                    </div>
+                  </div>
+                </div>
+
+                <p class="small muted text-[11px] text-[#71717a] leading-relaxed">
+                  Configured by your company. Proxy and certificate settings follow the IT deployment profile.
+                </p>
+
+                <!-- Notice Status Box -->
+                <div class="notice ok flex items-center justify-between p-3 rounded-md bg-[#f0fdf4] border border-[#bbf7d0] text-xs text-[#166534]">
+                  <div class="flex items-center space-x-2">
+                    <svg class="w-4 h-4 text-[#16a34a] flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <span class="font-medium">Connected · Signed in as Example Employee</span>
+                  </div>
+                  <span class="text-[10px] text-[#15803d] font-mono">TLS 1.3 / mTLS OK</span>
+                </div>
+
+                <div class="pt-1 flex items-center justify-between">
+                  <span class="text-[11px] text-[#71717a]">Session expires in 14 days</span>
+                  <a class="btn inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium border border-[#e1e3e7] text-[#3f3f46] hover:bg-[#f4f4f5] hover:text-[#18181b] transition-colors" href="#login">
+                    <svg class="w-3.5 h-3.5 text-[#71717a]" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+                    </svg>
+                    Sign out
+                  </a>
+                </div>
+              </div>
+            </div>
+
+            <!-- Panel 3: Application Updates -->
+            <div class="panel bg-[#ffffff] rounded-[10px] border border-[#e1e3e7] p-5 shadow-[0_1px_2px_rgba(0,0,0,0.02)] space-y-4">
+              <div class="flex items-center justify-between pb-3 border-b border-[#f4f4f5]">
+                <h3 class="text-sm font-semibold text-[#18181b] flex items-center gap-2">
+                  <svg class="w-4 h-4 text-[#71717a]" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+                  </svg>
+                  Application updates
+                </h3>
+                <span class="text-[11px] text-[#71717a] font-normal">Channel: Production/Ring-0</span>
+              </div>
+
+              <div class="space-y-3">
+                <p class="small muted text-[11px] text-[#71717a]">
+                  Updates are distributed through the company network.
+                </p>
+
+                <!-- Update Available Notice -->
+                <div class="notice flex items-start space-x-2.5 p-3 rounded-md bg-[#eff6ff] border border-[#bfdbfe] text-xs text-[#1e40af]">
+                  <svg class="w-4 h-4 text-[#2563eb] mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                  </svg>
+                  <div class="leading-relaxed">
+                    <span class="font-medium text-[#1e3a8a] block">A new app version is available. Download the internal installer when you are ready.</span>
+                    <span class="text-[11px] text-[#3b82f6] mt-0.5 block">Release v2.5.0-rc2 includes critical telemetry patches and Samsung SDS MCP connector updates.</span>
+                  </div>
+                </div>
+
+                <div class="pt-1 flex items-center gap-3">
+                  <a class="btn inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium border border-[#e1e3e7] text-[#3f3f46] hover:bg-[#f4f4f5] hover:text-[#18181b] transition-colors" href="#app-update-info">
+                    <svg class="w-3.5 h-3.5 text-[#71717a]" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                    View update details
+                  </a>
+                </div>
+
+                <!-- Accordion details -->
+                <details id="app-update-info" class="pt-2 border-t border-[#f4f4f5] text-xs group">
+                  <summary class="font-medium text-[#52525b] hover:text-[#18181b] cursor-pointer flex items-center gap-1.5 py-1">
+                    <svg class="w-3.5 h-3.5 text-[#71717a] transition-transform group-open:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                    Internal installer destination
+                  </summary>
+                  <div class="pl-5 pt-1.5 text-[11px] text-[#71717a] leading-relaxed">
+                    The implemented app opens the internal release page supplied by IT/Store. It does not use the upstream public updater or restart automatically.
+                  </div>
+                </details>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Right Column (Agent Paths, AIPro MCP, Activity) -->
+          <div class="col-span-5 space-y-6">
+
+            <!-- Panel 4: Agent Paths -->
+            <div class="panel bg-[#ffffff] rounded-[10px] border border-[#e1e3e7] p-5 shadow-[0_1px_2px_rgba(0,0,0,0.02)] space-y-4">
+              <div class="flex items-center justify-between pb-3 border-b border-[#f4f4f5]">
+                <h3 class="text-sm font-semibold text-[#18181b] flex items-center gap-2">
+                  <svg class="w-4 h-4 text-[#71717a]" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path>
+                  </svg>
+                  Agent paths
+                </h3>
+                <span class="text-[11px] text-[#71717a]">4 mounted</span>
+              </div>
+
+              <div class="space-y-3">
+                <p class="small muted text-[11px] text-[#71717a]">
+                  Global skills locations. Project paths are relative to the selected project.
+                </p>
+
+                <!-- Key-Value Table for Agent Paths -->
+                <div class="border border-[#e1e3e7] rounded-md overflow-hidden bg-[#fafafa]">
+                  <table class="w-full text-left text-xs">
+                    <thead>
+                      <tr class="bg-[#f4f4f5] border-b border-[#e1e3e7] text-[10px] font-semibold text-[#71717a] uppercase tracking-wider">
+                        <th class="py-1.5 px-3">Agent Target</th>
+                        <th class="py-1.5 px-3">Local Filesystem Root</th>
+                      </tr>
+                    </thead>
+                    <tbody class="divide-y divide-[#e1e3e7] bg-[#ffffff]">
+                      <tr class="hover:bg-[#fafafa] transition-colors">
+                        <td class="py-2 px-3 font-medium text-[#18181b] flex items-center gap-2">
+                          <span class="w-2 h-2 rounded-full bg-[#1657b8]"></span>
+                          AIPro
+                        </td>
+                        <td class="py-2 px-3 font-mono text-[11px] text-[#52525b]"><code class="bg-[#f4f4f5] px-1.5 py-0.5 rounded border border-[#e4e4e7]">~\.aipro\skills</code></td>
+                      </tr>
+                      <tr class="hover:bg-[#fafafa] transition-colors">
+                        <td class="py-2 px-3 font-medium text-[#18181b] flex items-center gap-2">
+                          <span class="w-2 h-2 rounded-full bg-[#d97706]"></span>
+                          Claude
+                        </td>
+                        <td class="py-2 px-3 font-mono text-[11px] text-[#52525b]"><code class="bg-[#f4f4f5] px-1.5 py-0.5 rounded border border-[#e4e4e7]">~\.claude\skills</code></td>
+                      </tr>
+                      <tr class="hover:bg-[#fafafa] transition-colors">
+                        <td class="py-2 px-3 font-medium text-[#18181b] flex items-center gap-2">
+                          <span class="w-2 h-2 rounded-full bg-[#7c3aed]"></span>
+                          Gemini
+                        </td>
+                        <td class="py-2 px-3 font-mono text-[11px] text-[#52525b]"><code class="bg-[#f4f4f5] px-1.5 py-0.5 rounded border border-[#e4e4e7]">~\.gemini\skills</code></td>
+                      </tr>
+                      <tr class="hover:bg-[#fafafa] transition-colors">
+                        <td class="py-2 px-3 font-medium text-[#18181b] flex items-center gap-2">
+                          <span class="w-2 h-2 rounded-full bg-[#0f172a]"></span>
+                          Codex
+                        </td>
+                        <td class="py-2 px-3 font-mono text-[11px] text-[#52525b]"><code class="bg-[#f4f4f5] px-1.5 py-0.5 rounded border border-[#e4e4e7]">~\.codex\skills</code></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                <div class="pt-1">
+                  <a class="btn inline-flex items-center justify-center w-full px-3 py-2 rounded-md text-xs font-medium border border-[#e1e3e7] text-[#3f3f46] hover:bg-[#f4f4f5] hover:text-[#18181b] transition-colors gap-1.5" href="#agent-path-info">
+                    <svg class="w-3.5 h-3.5 text-[#71717a]" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg>
+                    Configure paths…
+                  </a>
+                </div>
+
+                <!-- Accordion details -->
+                <details id="agent-path-info" class="pt-2 border-t border-[#f4f4f5] text-xs group">
+                  <summary class="font-medium text-[#52525b] hover:text-[#18181b] cursor-pointer flex items-center gap-1.5 py-1">
+                    <svg class="w-3.5 h-3.5 text-[#71717a] transition-transform group-open:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                    Path configuration notes
+                  </summary>
+                  <div class="pl-5 pt-1.5 text-[11px] text-[#71717a] leading-relaxed">
+                    Keep path overrides from the existing app. Claude/Gemini/Codex defaults shown here come from the current repository and require confirmation against company-deployed agent versions.
+                  </div>
+                </details>
+              </div>
+            </div>
+
+            <!-- Panel 5: AIPro MCP -->
+            <div class="panel bg-[#ffffff] rounded-[10px] border border-[#e1e3e7] p-5 shadow-[0_1px_2px_rgba(0,0,0,0.02)] space-y-4">
+              <div class="flex items-center justify-between pb-3 border-b border-[#f4f4f5]">
+                <h3 class="text-sm font-semibold text-[#18181b] flex items-center gap-2">
+                  <svg class="w-4 h-4 text-[#71717a]" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"></path>
+                  </svg>
+                  AIPro MCP
+                </h3>
+                <span class="text-[10px] font-mono text-[#1657b8] bg-[#eff6ff] px-2 py-0.5 rounded border border-[#bfdbfe]">
+                  Standard Schema v1.1
+                </span>
+              </div>
+
+              <div class="space-y-3">
+                <span class="block text-[11px] text-[#71717a]">Active Configuration Descriptor</span>
+                <div class="path font-mono text-xs bg-[#f4f4f5] border border-[#e1e3e7] p-2.5 rounded-md text-[#3f3f46] flex items-center justify-between select-all">
+                  <span>%USERPROFILE%\.aipro\mcp.json</span>
+                  <button class="text-[#71717a] hover:text-[#18181b] ml-2" title="Copy path">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                  </button>
+                </div>
+                <p class="annotation text-[11px] text-[#71717a] leading-relaxed">
+                  Configuration is read locally. Tokens and file contents are not uploaded.
+                </p>
+              </div>
+            </div>
+
+            <!-- Panel 6: Activity -->
+            <div class="panel bg-[#ffffff] rounded-[10px] border border-[#e1e3e7] p-5 shadow-[0_1px_2px_rgba(0,0,0,0.02)] space-y-4">
+              <div class="flex items-center justify-between pb-3 border-b border-[#f4f4f5]">
+                <h3 class="text-sm font-semibold text-[#18181b] flex items-center gap-2">
+                  <svg class="w-4 h-4 text-[#71717a]" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                  </svg>
+                  Activity
+                </h3>
+                <span class="text-[10px] text-[#71717a] font-mono">Realtime sync</span>
+              </div>
+
+              <div class="space-y-3">
+                <div class="p-3 bg-[#fafafa] border border-[#e1e3e7] rounded-md space-y-1">
+                  <div class="flex items-center gap-2 text-xs font-medium text-[#18181b]">
+                    <span class="w-1.5 h-1.5 rounded-full bg-[#10b981]"></span>
+                    09:42 · Updated Jira Weekly Report
+                  </div>
+                  <div class="text-[11px] text-[#71717a] pl-3.5">
+                    AIPro · Project Atlas · Snapshot saved
+                  </div>
+                </div>
+
+                <details class="text-xs group pt-1">
+                  <summary class="font-medium text-[#52525b] hover:text-[#18181b] cursor-pointer flex items-center justify-between py-1.5 px-2 rounded hover:bg-[#f4f4f5] transition-colors">
+                    <span class="flex items-center gap-1.5">
+                      <svg class="w-3.5 h-3.5 text-[#71717a]" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                      View activity / Export logs
+                    </span>
+                    <svg class="w-3.5 h-3.5 text-[#71717a] transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                  </summary>
+                  <div class="p-2.5 mt-1 bg-[#f4f4f5] border border-[#e1e3e7] rounded-md text-[11px] text-[#71717a] leading-relaxed space-y-1.5">
+                    <p>Operations include skill, release, destination, result and time.</p>
+                    <p>Export excludes passwords, tokens and MCP configuration contents. Export control will use the existing app's log bundle flow.</p>
+                  </div>
+                </details>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+
+        <!-- In-app Internal Status Footer (No review-only developer annotations outside app) -->
+        <div class="pt-6 border-t border-[#e1e3e7] flex items-center justify-between text-[11px] text-[#a1a1aa]">
+          <div>
+            Client ID: SDS-DESKTOP-9081 &nbsp;•&nbsp; Policy: Global Enterprise Admin &nbsp;•&nbsp; Last Sync: Today 09:42:18
+          </div>
+          <div>
+            Samsung SDS Co., Ltd. All rights reserved.
+          </div>
+        </div>
+
+      </section>
+    </main>
+
+  </div>
+
+</body>
+</html>

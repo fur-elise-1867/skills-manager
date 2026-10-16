@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>W03 Skill detail</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            brand: {
+              DEFAULT: '#1657b8',
+              hover: '#124696',
+              light: '#eef4ff',
+            },
+            surface: {
+              canvas: '#fafafa',
+              panel: '#ffffff',
+              sidebar: '#f8f9fa',
+              subtle: '#f1f3f5',
+            },
+            line: {
+              DEFAULT: '#e5e7eb',
+              light: '#f0f2f5',
+            }
+          }
+        }
+      }
+    };
+  </script>
+  <style>
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: #fafafa;
+      color: #111827;
+      margin: 0;
+      padding: 0;
+      -webkit-font-smoothing: antialiased;
+    }
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+    }
+  </style>
+</head>
+<body class="flex flex-col h-screen w-screen overflow-hidden text-gray-900 select-none">
+
+  <!-- Desktop Window Titlebar -->
+  <header class="h-8 min-h-[32px] bg-white border-b border-gray-200 px-3 flex items-center justify-between text-xs text-gray-600 z-30">
+    <div class="flex items-center space-x-2">
+      <span class="inline-block w-2.5 h-2.5 bg-blue-600 rounded-sm"></span>
+      <span class="font-medium text-gray-800">Skills Manager — Samsung SDS</span>
+      <span class="text-gray-400">|</span>
+      <span class="text-gray-500 font-mono text-[11px]">v2.4.1-enterprise</span>
+    </div>
+    <div class="flex items-center space-x-4">
+      <span class="inline-flex items-center text-[11px] text-emerald-600 font-medium">
+        <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full mr-1.5 animate-pulse"></span>
+        Internal Store connected
+      </span>
+      <div class="flex items-center space-x-2 text-gray-400 border-l border-gray-200 pl-3">
+        <button class="hover:text-gray-700 p-0.5" title="Minimize"><span class="material-symbols-outlined text-sm">remove</span></button>
+        <button class="hover:text-gray-700 p-0.5" title="Maximize"><span class="material-symbols-outlined text-sm">crop_square</span></button>
+        <button class="hover:text-red-600 p-0.5" title="Close"><span class="material-symbols-outlined text-sm">close</span></button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Application Body -->
+  <div class="flex flex-1 overflow-hidden">
+    
+    <!-- Sidebar (225px exactly as specified) -->
+    <aside class="w-[225px] min-w-[225px] max-w-[225px] bg-[#f8f9fa] border-r border-gray-200 flex flex-col justify-between overflow-y-auto" aria-label="App navigation">
+      <div class="p-3">
+        <!-- Brand Info -->
+        <div class="flex items-center space-x-2.5 mb-4 px-1 py-1">
+          <div class="w-7 h-7 bg-[#1657b8] text-white font-bold rounded flex items-center justify-center text-sm shadow-sm">
+            S
+          </div>
+          <div class="leading-tight">
+            <div class="font-semibold text-xs text-gray-900 tracking-tight">Skills Manager</div>
+            <div class="text-[10px] text-gray-500 font-medium">SAMSUNG SDS</div>
+          </div>
+        </div>
+
+        <!-- Navigation Section -->
+        <nav class="space-y-0.5">
+          <a class="flex items-center justify-between px-2.5 py-1.5 text-xs text-gray-700 rounded-md hover:bg-gray-200/60 transition-colors" href="#dashboard">
+            <span class="flex items-center gap-2.5">
+              <span class="material-symbols-outlined text-[17px] text-gray-500">grid_view</span>
+              <span>Dashboard</span>
+            </span>
+          </a>
+
+          <a class="flex items-center justify-between px-2.5 py-1.5 text-xs text-gray-700 rounded-md hover:bg-gray-200/60 transition-colors" href="#library">
+            <span class="flex items-center gap-2.5">
+              <span class="material-symbols-outlined text-[17px] text-gray-500">folder_open</span>
+              <span>Library</span>
+            </span>
+            <span class="bg-gray-200 text-gray-700 text-[10px] font-medium px-1.5 py-0.2 rounded-full">12</span>
+          </a>
+
+          <!-- Active tab: Skills Store -->
+          <a class="flex items-center justify-between px-2.5 py-1.5 text-xs font-semibold text-[#1657b8] bg-[#eef4ff] rounded-md border-l-2 border-[#1657b8] transition-colors" href="#store">
+            <span class="flex items-center gap-2.5">
+              <span class="material-symbols-outlined text-[17px] text-[#1657b8]">shopping_bag</span>
+              <span>Skills Store</span>
+            </span>
+            <span class="bg-blue-100 text-[#1657b8] text-[10px] font-semibold px-1.5 py-0.2 rounded-full">86</span>
+          </a>
+
+          <a class="flex items-center justify-between px-2.5 py-1.5 text-xs text-gray-700 rounded-md hover:bg-gray-200/60 transition-colors" href="#backup">
+            <span class="flex items-center gap-2.5">
+              <span class="material-symbols-outlined text-[17px] text-gray-500">history</span>
+              <span>Backup</span>
+            </span>
+          </a>
+
+          <!-- Presets -->
+          <div class="pt-3 pb-1 px-2.5 text-[10px] font-semibold tracking-wider text-gray-400 uppercase">
+            Presets
+          </div>
+
+          <a class="flex items-center justify-between px-2.5 py-1.5 text-xs text-gray-700 rounded-md hover:bg-gray-200/60 transition-colors" href="#workspace">
+            <span class="flex items-center gap-2.5">
+              <span class="material-symbols-outlined text-[17px] text-gray-500">tune</span>
+              <span>PM Essentials</span>
+            </span>
+            <span class="bg-gray-200 text-gray-700 text-[10px] font-medium px-1.5 py-0.2 rounded-full">3</span>
+          </a>
+
+          <a class="flex items-center gap-2.5 px-2.5 py-1.5 text-xs text-gray-600 rounded-md hover:bg-gray-200/60 transition-colors" href="#workspace">
+            <span class="material-symbols-outlined text-[17px] text-gray-400">add</span>
+            <span>New preset</span>
+          </a>
+
+          <!-- Global Workspace -->
+          <div class="pt-3 pb-1 px-2.5 text-[10px] font-semibold tracking-wider text-gray-400 uppercase">
+            Global Workspace
+          </div>
+
+          <a class="flex items-center justify-between px-2.5 py-1.5 text-xs text-gray-700 rounded-md hover:bg-gray-200/60 transition-colors" href="#workspace">
+            <span class="flex items-center gap-2.5">
+              <span class="material-symbols-outlined text-[17px] text-gray-500">smart_toy</span>
+              <span>All Agents</span>
+            </span>
+          </a>
+
+          <a class="flex items-center justify-between px-2.5 py-1.5 text-xs text-gray-700 rounded-md hover:bg-gray-200/60 transition-colors" href="#workspace">
+            <span class="flex items-center gap-2.5">
+              <span class="w-4 h-4 rounded-full bg-blue-600 text-white font-semibold text-[9px] flex items-center justify-center">A</span>
+              <span>AIPro</span>
+            </span>
+            <span class="text-gray-500 text-[11px]">8</span>
+          </a>
+
+          <a class="flex items-center justify-between px-2.5 py-1.5 text-xs text-gray-700 rounded-md hover:bg-gray-200/60 transition-colors" href="#workspace">
+            <span class="flex items-center gap-2.5">
+              <span class="w-4 h-4 rounded-full bg-amber-600 text-white font-semibold text-[9px] flex items-center justify-center">Cl</span>
+              <span>Claude</span>
+            </span>
+            <span class="text-gray-500 text-[11px]">4</span>
+          </a>
+
+          <a class="flex items-center justify-between px-2.5 py-1.5 text-xs text-gray-700 rounded-md hover:bg-gray-200/60 transition-colors" href="#workspace">
+            <span class="flex items-center gap-2.5">
+              <span class="w-4 h-4 rounded-full bg-purple-600 text-white font-semibold text-[9px] flex items-center justify-center">G</span>
+              <span>Gemini</span>
+            </span>
+            <span class="text-gray-500 text-[11px]">3</span>
+          </a>
+
+          <a class="flex items-center justify-between px-2.5 py-1.5 text-xs text-gray-700 rounded-md hover:bg-gray-200/60 transition-colors" href="#workspace">
+            <span class="flex items-center gap-2.5">
+              <span class="w-4 h-4 rounded-full bg-slate-700 text-white font-semibold text-[9px] flex items-center justify-center">Cx</span>
+              <span>Codex</span>
+            </span>
+            <span class="text-gray-500 text-[11px]">5</span>
+          </a>
+
+          <!-- Project Workspaces -->
+          <div class="pt-3 pb-1 px-2.5 text-[10px] font-semibold tracking-wider text-gray-400 uppercase">
+            Project Workspaces
+          </div>
+
+          <a class="flex items-center justify-between px-2.5 py-1.5 text-xs text-gray-700 rounded-md hover:bg-gray-200/60 transition-colors" href="#workspace">
+            <span class="flex items-center gap-2.5">
+              <span class="material-symbols-outlined text-[17px] text-gray-500">workspaces</span>
+              <span>Project Atlas</span>
+            </span>
+            <span class="text-gray-500 text-[11px]">3</span>
+          </a>
+
+          <a class="flex items-center gap-2.5 px-2.5 py-1.5 text-xs text-gray-600 rounded-md hover:bg-gray-200/60 transition-colors" href="#install">
+            <span class="material-symbols-outlined text-[17px] text-gray-400">add</span>
+            <span>Add project</span>
+          </a>
+        </nav>
+      </div>
+
+      <!-- Sidebar Footer -->
+      <div class="p-3 border-t border-gray-200 bg-white">
+        <a class="flex items-center gap-2 px-2.5 py-1.5 text-xs text-gray-700 rounded-md hover:bg-gray-100 transition-colors mb-2" href="#settings">
+          <span class="material-symbols-outlined text-[17px] text-gray-500">settings</span>
+          <span>Settings</span>
+        </a>
+        <div class="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-gray-50 cursor-pointer">
+          <div class="w-7 h-7 rounded-full bg-[#1657b8] text-white flex items-center justify-center font-medium text-xs">
+            E
+          </div>
+          <div class="overflow-hidden leading-tight">
+            <div class="text-xs font-medium text-gray-900 truncate">Example Employee</div>
+            <div class="text-[10px] text-gray-500 truncate">Skills Store account</div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Content Workspace Area -->
+    <main class="flex-1 bg-[#fafafa] overflow-y-auto" id="detail" aria-labelledby="detail-title">
+      <div class="max-w-6xl mx-auto px-8 py-7">
+
+        <!-- Top Header Breadcrumb / Return Area -->
+        <div class="flex items-center justify-between pb-6 border-b border-gray-200">
+          <div>
+            <div class="flex items-center gap-2 mb-1">
+              <span class="text-[11px] font-semibold text-gray-400 tracking-wider uppercase">Catalog</span>
+              <span class="text-gray-300">/</span>
+              <span class="text-[11px] font-semibold text-gray-500 uppercase">Project Management</span>
+            </div>
+            <h1 id="detail-title" class="text-2xl font-bold text-gray-900 tracking-tight">
+              Jira Weekly Report
+            </h1>
+            <p class="text-xs text-gray-500 mt-0.5">
+              Delivery Enablement · Project management
+            </p>
+          </div>
+
+          <div class="flex items-center gap-3">
+            <a href="#store" class="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 shadow-sm transition-colors">
+              <span class="material-symbols-outlined text-sm">arrow_back</span>
+              <span>Back to Store</span>
+            </a>
+          </div>
+        </div>
+
+        <!-- Main Two-Column Layout -->
+        <div class="grid grid-cols-12 gap-6 mt-6">
+
+          <!-- Left Column (Overview, Contents, Changelog, Supported Agents, MCP) -->
+          <div class="col-span-8 space-y-5">
+            
+            <!-- Skill Overview & Details Card -->
+            <div class="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
+              <!-- Version and Role Badges -->
+              <div class="flex items-center gap-2 mb-4">
+                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-50 text-[#1657b8] border border-blue-200">
+                  Version 1.2.0
+                </span>
+                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-700 border border-gray-200">
+                  PM
+                </span>
+                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-700 border border-gray-200">
+                  TPM
+                </span>
+              </div>
+
+              <!-- Main Pitch -->
+              <h2 class="text-base font-semibold text-gray-900 mb-2">
+                Turn sprint activity into a clear weekly report
+              </h2>
+              <p class="text-xs leading-relaxed text-gray-600 mb-5">
+                Summarize completed work, upcoming milestones and blocked issues. Use a consistent report format for project discussions.
+              </p>
+
+              <hr class="border-gray-200 mb-5">
+
+              <!-- Included Components -->
+              <h3 class="text-xs font-semibold text-gray-900 uppercase tracking-wider mb-3">
+                What this skill includes
+              </h3>
+              <ul class="space-y-2 mb-6">
+                <li class="flex items-start gap-2.5 text-xs text-gray-700">
+                  <span class="material-symbols-outlined text-[16px] text-emerald-600 mt-0.5">check_circle</span>
+                  <span><strong class="font-medium text-gray-900">SKILL.md instructions</strong> — Standardized prompt workflows and role parameters.</span>
+                </li>
+                <li class="flex items-start gap-2.5 text-xs text-gray-700">
+                  <span class="material-symbols-outlined text-[16px] text-emerald-600 mt-0.5">check_circle</span>
+                  <span><strong class="font-medium text-gray-900">Report templates and supporting resources</strong> — Formats formatted for executive summaries.</span>
+                </li>
+                <li class="flex items-start gap-2.5 text-xs text-gray-700">
+                  <span class="material-symbols-outlined text-[16px] text-emerald-600 mt-0.5">check_circle</span>
+                  <span><strong class="font-medium text-gray-900">A repeatable workflow for Jira summaries</strong> — Automated triage of issues, dependencies, and velocity.</span>
+                </li>
+              </ul>
+
+              <!-- What's new -->
+              <div class="bg-gray-50 border border-gray-200 rounded-md p-3.5 mb-6">
+                <div class="text-xs font-semibold text-gray-900 mb-1 flex items-center gap-1.5">
+                  <span class="material-symbols-outlined text-sm text-[#1657b8]">new_releases</span>
+                  <span>What's new in 1.2.0</span>
+                </div>
+                <p class="text-xs text-gray-600">
+                  Adds blocked-task summaries and clearer next actions.
+                </p>
+              </div>
+
+              <hr class="border-gray-200 mb-5">
+
+              <!-- Supported Agents List -->
+              <h3 class="text-xs font-semibold text-gray-900 uppercase tracking-wider mb-3">
+                Supported agents
+              </h3>
+              <div class="flex items-center gap-2.5">
+                <div class="inline-flex items-center gap-1.5 px-3 py-1 bg-gray-50 border border-gray-200 rounded-md text-xs font-medium text-gray-800">
+                  <span class="w-3.5 h-3.5 rounded-full bg-blue-600 text-white font-semibold text-[8px] flex items-center justify-center">A</span>
+                  <span>AIPro</span>
+                </div>
+                <div class="inline-flex items-center gap-1.5 px-3 py-1 bg-gray-50 border border-gray-200 rounded-md text-xs font-medium text-gray-800">
+                  <span class="w-3.5 h-3.5 rounded-full bg-amber-600 text-white font-semibold text-[8px] flex items-center justify-center">Cl</span>
+                  <span>Claude</span>
+                </div>
+                <div class="inline-flex items-center gap-1.5 px-3 py-1 bg-gray-50 border border-gray-200 rounded-md text-xs font-medium text-gray-800">
+                  <span class="w-3.5 h-3.5 rounded-full bg-purple-600 text-white font-semibold text-[8px] flex items-center justify-center">G</span>
+                  <span>Gemini</span>
+                </div>
+                <div class="inline-flex items-center gap-1.5 px-3 py-1 bg-gray-50 border border-gray-200 rounded-md text-xs font-medium text-gray-800">
+                  <span class="w-3.5 h-3.5 rounded-full bg-slate-700 text-white font-semibold text-[8px] flex items-center justify-center">Cx</span>
+                  <span>Codex</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Required MCP Panel -->
+            <div class="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
+              <div class="flex items-center justify-between pb-3 border-b border-gray-200 mb-4">
+                <h3 class="text-xs font-semibold text-gray-900 uppercase tracking-wider">
+                  Required MCP
+                </h3>
+                <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-amber-50 text-amber-800 border border-amber-200">
+                  Required
+                </span>
+              </div>
+
+              <div class="flex items-start justify-between bg-gray-50 border border-gray-200 rounded-md p-3.5 mb-3">
+                <div class="flex items-start gap-3">
+                  <div class="w-8 h-8 rounded bg-white border border-gray-200 flex items-center justify-center text-[#1657b8] mt-0.5">
+                    <span class="material-symbols-outlined text-lg">integration_instructions</span>
+                  </div>
+                  <div>
+                    <div class="font-semibold text-xs text-gray-900">Jira MCP</div>
+                    <div class="font-mono text-[11px] text-gray-500">jira-mcp</div>
+                  </div>
+                </div>
+                <span class="text-xs text-gray-500 font-medium">Protocol v1.2</span>
+              </div>
+
+              <!-- Product Guidance Alert -->
+              <div class="flex items-start gap-2 text-xs text-gray-600 bg-blue-50/60 border border-blue-100 rounded-md p-3">
+                <span class="material-symbols-outlined text-sm text-[#1657b8] mt-0.5">info</span>
+                <span>The app checks AIPro configuration when you install. For other agents, follow the skill's setup instructions.</span>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Right Column (Install Package Card, Notice & Destination paths) -->
+          <div class="col-span-4 space-y-4">
+            
+            <!-- Install Package Card -->
+            <div class="bg-white border border-gray-200 rounded-lg p-5 shadow-sm">
+              <h3 class="text-xs font-semibold text-gray-900 uppercase tracking-wider mb-4 pb-2 border-b border-gray-100">
+                Install package
+              </h3>
+
+              <dl class="space-y-2.5 text-xs">
+                <div class="flex items-center justify-between">
+                  <dt class="text-gray-500">Format</dt>
+                  <dd class="font-medium text-gray-900">ZIP</dd>
+                </div>
+                <div class="flex items-center justify-between">
+                  <dt class="text-gray-500">Size</dt>
+                  <dd class="font-medium text-gray-900 font-mono text-[11px]">42 KB</dd>
+                </div>
+                <div class="flex items-center justify-between">
+                  <dt class="text-gray-500">Version</dt>
+                  <dd class="font-medium text-gray-900">1.2.0</dd>
+                </div>
+                <div class="flex items-center justify-between">
+                  <dt class="text-gray-500">Source</dt>
+                  <dd class="font-medium text-gray-900">Internal Skills Store</dd>
+                </div>
+              </dl>
+
+              <div class="mt-6 pt-4 border-t border-gray-100">
+                <a href="#install" class="w-full inline-flex items-center justify-center gap-2 px-4 py-2 bg-[#1657b8] text-white font-medium text-xs rounded-md shadow-sm hover:bg-[#124696] active:bg-[#0e3674] transition-colors">
+                  <span class="material-symbols-outlined text-sm">download</span>
+                  <span>Install skill</span>
+                </a>
+                <p class="text-[11px] text-gray-500 text-center mt-2.5 leading-snug">
+                  Choose agents and a global or project location in the next step.
+                </p>
+              </div>
+            </div>
+
+            <!-- Notice card -->
+            <div class="bg-gray-50 border border-gray-200 rounded-lg p-4 text-xs text-gray-600 flex items-start gap-2.5">
+              <span class="material-symbols-outlined text-base text-gray-500 mt-0.5">shield</span>
+              <p class="leading-relaxed">
+                Skills install locally. Availability of the agent and required services determines whether the skill can run.
+              </p>
+            </div>
+
+            <!-- Destination Target Details / Path Preview -->
+            <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+              <div class="text-[11px] font-semibold text-gray-900 uppercase tracking-wider mb-2 flex items-center justify-between">
+                <span>Default install paths</span>
+                <span class="material-symbols-outlined text-xs text-gray-400">folder_zip</span>
+              </div>
+              <div class="space-y-2 text-[11px] font-mono text-gray-600 bg-gray-50 p-2.5 rounded border border-gray-200 overflow-x-auto">
+                <div><span class="text-blue-700 font-semibold font-sans">Global:</span> ~/.aipro/skills/jira-weekly-report</div>
+                <div><span class="text-blue-700 font-semibold font-sans">Project:</span> .aipro/skills/jira-weekly-report</div>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+    </main>
+
+  </div>
+
+</body>
+</html>

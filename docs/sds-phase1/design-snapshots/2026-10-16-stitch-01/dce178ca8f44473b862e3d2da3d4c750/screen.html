@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Skills Manager — Samsung SDS</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+            mono: ['JetBrains Mono', 'ui-monospace', 'monospace'],
+          },
+          colors: {
+            brand: {
+              DEFAULT: '#1657b8',
+              hover: '#124694',
+              light: '#eef4fc',
+              dark: '#0c3570'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      background-color: #fafafa;
+      color: #1e293b;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      overflow-x: hidden;
+      margin: 0;
+      padding: 0;
+    }
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+      display: inline-block;
+      vertical-align: middle;
+      line-height: 1;
+    }
+  </style>
+</head>
+<body class="bg-[#fafafa] text-slate-800 antialiased min-h-screen flex flex-col select-none">
+
+  <!-- Desktop App Window Chrome / Header Bar -->
+  <header class="h-8 bg-white border-b border-[#e1e3e7] flex items-center justify-between px-3 text-[12px] text-slate-500 font-medium z-30 shrink-0">
+    <div class="flex items-center gap-2">
+      <div class="flex items-center gap-1.5 mr-2">
+        <span class="w-3 h-3 rounded-full bg-[#ff5f56] inline-block border border-[#e0443e]"></span>
+        <span class="w-3 h-3 rounded-full bg-[#ffbd2e] inline-block border border-[#dea123]"></span>
+        <span class="w-3 h-3 rounded-full bg-[#27c93f] inline-block border border-[#1aab29]"></span>
+      </div>
+      <span class="text-slate-800 font-semibold tracking-tight">Skills Manager — Samsung SDS</span>
+      <span class="text-slate-300">/</span>
+      <span class="font-mono text-[11px] text-slate-400">v2.4.12-rc3</span>
+    </div>
+
+    <div class="flex items-center gap-3">
+      <div class="flex items-center gap-1.5 text-xs text-slate-600">
+        <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+        <span>Local Workspace Active</span>
+      </div>
+      <div class="flex items-center gap-2 ml-3 text-slate-400">
+        <button class="hover:text-slate-700 p-0.5" title="Minimize">
+          <span class="material-symbols-outlined text-[16px]">remove</span>
+        </button>
+        <button class="hover:text-slate-700 p-0.5" title="Maximize">
+          <span class="material-symbols-outlined text-[15px]">crop_square</span>
+        </button>
+        <button class="hover:text-red-600 p-0.5" title="Close">
+          <span class="material-symbols-outlined text-[16px]">close</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main View Area (Sidebar + Content Canvas) -->
+  <div class="flex flex-1 min-h-[calc(100vh-32px)]">
+
+    <!-- 225px Shared Sidebar -->
+    <aside class="w-[225px] bg-[#f4f4f5] border-r border-[#e1e3e7] flex flex-col justify-between shrink-0 text-[13px] text-slate-700 select-none py-3" aria-label="App navigation">
+      <div class="flex flex-col">
+        <!-- Brand Identity -->
+        <div class="px-3 pb-3 mb-2 border-b border-[#e1e3e7]/70 flex items-center gap-2.5">
+          <div class="w-7 h-7 rounded bg-[#1657b8] text-white flex items-center justify-center font-bold text-sm tracking-tighter shadow-sm">
+            S
+          </div>
+          <div class="leading-tight">
+            <div class="font-bold text-[13px] text-slate-900 tracking-tight">Skills Manager</div>
+            <div class="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Samsung SDS</div>
+          </div>
+        </div>
+
+        <!-- Primary Navigation -->
+        <div class="px-2 space-y-0.5">
+          <a href="#dashboard" class="flex items-center justify-between px-2.5 py-1.5 rounded-md hover:bg-slate-200/70 text-slate-700 transition-colors">
+            <div class="flex items-center gap-2.5">
+              <span class="material-symbols-outlined text-[18px] text-slate-500">dashboard</span>
+              <span>Dashboard</span>
+            </div>
+          </a>
+
+          <a href="#library" class="flex items-center justify-between px-2.5 py-1.5 rounded-md hover:bg-slate-200/70 text-slate-700 transition-colors">
+            <div class="flex items-center gap-2.5">
+              <span class="material-symbols-outlined text-[18px] text-slate-500">folder_open</span>
+              <span>Library</span>
+            </div>
+            <span class="text-[11px] font-medium text-slate-500 bg-slate-200/80 px-1.5 py-0.2 rounded-full">12</span>
+          </a>
+
+          <a href="#store" class="flex items-center justify-between px-2.5 py-1.5 rounded-md hover:bg-slate-200/70 text-slate-700 transition-colors">
+            <div class="flex items-center gap-2.5">
+              <span class="material-symbols-outlined text-[18px] text-slate-500">storefront</span>
+              <span>Skills Store</span>
+            </div>
+          </a>
+
+          <a href="#backup" class="flex items-center justify-between px-2.5 py-1.5 rounded-md hover:bg-slate-200/70 text-slate-700 transition-colors">
+            <div class="flex items-center gap-2.5">
+              <span class="material-symbols-outlined text-[18px] text-slate-500">schedule</span>
+              <span>Backup</span>
+            </div>
+          </a>
+        </div>
+
+        <!-- Presets Section -->
+        <div class="mt-4 px-2">
+          <div class="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">Presets</div>
+          <div class="space-y-0.5">
+            <a href="#workspace" class="flex items-center justify-between px-2.5 py-1.5 rounded-md hover:bg-slate-200/70 text-slate-700 transition-colors">
+              <div class="flex items-center gap-2.5">
+                <span class="material-symbols-outlined text-[17px] text-slate-500">tune</span>
+                <span class="truncate">PM Essentials</span>
+              </div>
+              <span class="text-[11px] font-medium text-slate-500 bg-slate-200/80 px-1.5 py-0.2 rounded-full">3</span>
+            </a>
+            <a href="#workspace" class="flex items-center gap-2.5 px-2.5 py-1.5 rounded-md hover:bg-slate-200/70 text-slate-500 hover:text-slate-800 transition-colors">
+              <span class="material-symbols-outlined text-[17px]">add</span>
+              <span>New preset</span>
+            </a>
+          </div>
+        </div>
+
+        <!-- Global Workspace Section -->
+        <div class="mt-4 px-2">
+          <div class="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">Global Workspace</div>
+          <div class="space-y-0.5">
+            <a href="#workspace" class="flex items-center gap-2.5 px-2.5 py-1.5 rounded-md hover:bg-slate-200/70 text-slate-700 transition-colors">
+              <span class="material-symbols-outlined text-[17px] text-slate-500">hub</span>
+              <span>All Agents</span>
+            </a>
+            <a href="#workspace" class="flex items-center justify-between px-2.5 py-1.5 rounded-md hover:bg-slate-200/70 text-slate-700 transition-colors">
+              <div class="flex items-center gap-2.5">
+                <span class="w-4 h-4 rounded-full bg-[#1657b8] text-white text-[10px] flex items-center justify-center font-bold">A</span>
+                <span>AIPro</span>
+              </div>
+              <span class="text-[11px] font-medium text-slate-500 bg-slate-200/80 px-1.5 py-0.2 rounded-full">8</span>
+            </a>
+            <a href="#workspace" class="flex items-center justify-between px-2.5 py-1.5 rounded-md hover:bg-slate-200/70 text-slate-700 transition-colors">
+              <div class="flex items-center gap-2.5">
+                <span class="w-4 h-4 rounded-full bg-[#d97706] text-white text-[9px] flex items-center justify-center font-bold">Cl</span>
+                <span>Claude</span>
+              </div>
+              <span class="text-[11px] font-medium text-slate-500 bg-slate-200/80 px-1.5 py-0.2 rounded-full">4</span>
+            </a>
+            <a href="#workspace" class="flex items-center justify-between px-2.5 py-1.5 rounded-md hover:bg-slate-200/70 text-slate-700 transition-colors">
+              <div class="flex items-center gap-2.5">
+                <span class="w-4 h-4 rounded-full bg-[#9333ea] text-white text-[10px] flex items-center justify-center font-bold">G</span>
+                <span>Gemini</span>
+              </div>
+              <span class="text-[11px] font-medium text-slate-500 bg-slate-200/80 px-1.5 py-0.2 rounded-full">3</span>
+            </a>
+            <a href="#workspace" class="flex items-center justify-between px-2.5 py-1.5 rounded-md hover:bg-slate-200/70 text-slate-700 transition-colors">
+              <div class="flex items-center gap-2.5">
+                <span class="w-4 h-4 rounded-full bg-[#0f172a] text-white text-[9px] flex items-center justify-center font-bold">Cx</span>
+                <span>Codex</span>
+              </div>
+              <span class="text-[11px] font-medium text-slate-500 bg-slate-200/80 px-1.5 py-0.2 rounded-full">5</span>
+            </a>
+          </div>
+        </div>
+
+        <!-- Project Workspaces Section -->
+        <div class="mt-4 px-2">
+          <div class="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">Project Workspaces</div>
+          <div class="space-y-0.5">
+            <!-- Active Project Item -->
+            <a href="#workspace" class="flex items-center justify-between px-2.5 py-1.5 rounded-md bg-[#1657b8]/10 text-[#1657b8] font-medium transition-colors">
+              <div class="flex items-center gap-2.5">
+                <span class="material-symbols-outlined text-[17px] text-[#1657b8]">workspaces</span>
+                <span>Project Atlas</span>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <span class="text-[11px] font-semibold text-[#1657b8] bg-[#1657b8]/15 px-1.5 py-0.2 rounded-full">3</span>
+                <span class="w-1.5 h-1.5 rounded-full bg-[#1657b8]"></span>
+              </div>
+            </a>
+            <a href="#install" class="flex items-center gap-2.5 px-2.5 py-1.5 rounded-md hover:bg-slate-200/70 text-slate-500 hover:text-slate-800 transition-colors">
+              <span class="material-symbols-outlined text-[17px]">add</span>
+              <span>Add project</span>
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sidebar Footer -->
+      <div class="px-2 pt-3 border-t border-[#e1e3e7]/80 space-y-1">
+        <a href="#settings" class="flex items-center gap-2.5 px-2.5 py-1.5 rounded-md hover:bg-slate-200/70 text-slate-700 transition-colors">
+          <span class="material-symbols-outlined text-[18px] text-slate-500">settings</span>
+          <span>Settings</span>
+        </a>
+
+        <div class="flex items-center gap-2.5 px-2.5 py-2 mt-1 rounded-md bg-white border border-[#e1e3e7] shadow-sm">
+          <div class="w-7 h-7 rounded-full bg-[#1657b8]/15 text-[#1657b8] font-bold text-xs flex items-center justify-center shrink-0">
+            E
+          </div>
+          <div class="leading-tight overflow-hidden">
+            <div class="text-[12px] font-semibold text-slate-800 truncate">Example Employee</div>
+            <div class="text-[10px] text-slate-400 truncate">Skills Store account</div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 overflow-y-auto px-8 py-6 max-w-[1215px]">
+      
+      <!-- Top Action/Context Bar -->
+      <div class="flex items-center justify-between pb-4 mb-6 border-b border-[#e1e3e7]/80">
+        <div class="flex items-center gap-2 text-xs text-slate-500">
+          <a href="#workspace" class="hover:text-slate-800 font-medium flex items-center gap-1 text-slate-600">
+            <span class="material-symbols-outlined text-[15px]">arrow_back</span>
+            Project Atlas
+          </a>
+          <span class="text-slate-300">/</span>
+          <span>Skills Management</span>
+          <span class="text-slate-300">/</span>
+          <span class="text-slate-700 font-medium">Remove Skill</span>
+        </div>
+
+        <div class="flex items-center gap-2 bg-white px-2.5 py-1 rounded border border-[#e1e3e7] text-xs shadow-xs">
+          <span class="text-slate-400">Target Environment:</span>
+          <span class="inline-flex items-center gap-1.5 font-medium text-slate-800">
+            <span class="w-2 h-2 rounded-full bg-[#1657b8]"></span>
+            AIPro / Project Atlas
+          </span>
+        </div>
+      </div>
+
+      <!-- Centered / Focused Confirmation Panel -->
+      <div class="max-w-2xl mx-auto space-y-6">
+
+        <!-- Primary Dialog Card -->
+        <div class="bg-white rounded-lg border border-[#e1e3e7] shadow-xs p-6 relative">
+          
+          <!-- Header block with icon and status tag -->
+          <div class="flex items-start justify-between">
+            <div class="flex items-start gap-4">
+              <div class="w-10 h-10 rounded-lg bg-rose-50 border border-rose-100 flex items-center justify-center text-rose-600 shrink-0">
+                <span class="material-symbols-outlined text-[22px]">delete_sweep</span>
+              </div>
+              <div>
+                <h1 id="remove-title" class="text-lg font-bold text-slate-900 tracking-tight">
+                  Remove Jira Weekly Report?
+                </h1>
+                <p class="text-[13px] text-slate-500 mt-1">
+                  This removes the skill from <strong class="text-slate-700 font-semibold">AIPro</strong> in <strong class="text-slate-700 font-semibold">Project Atlas</strong>.
+                </p>
+              </div>
+            </div>
+            <span class="px-2 py-0.5 rounded bg-slate-100 border border-slate-200 text-[11px] font-mono text-slate-600 shrink-0">
+              RELEASE 3.4.1
+            </span>
+          </div>
+
+          <!-- Target Directory Specifier -->
+          <div class="mt-5">
+            <div class="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">
+              Skill Target Directory
+            </div>
+            <div class="flex items-center justify-between px-3 py-2 bg-slate-50 rounded border border-[#e1e3e7] font-mono text-[12px] text-slate-700">
+              <div class="flex items-center gap-2 truncate">
+                <span class="material-symbols-outlined text-[16px] text-slate-400">folder</span>
+                <span class="truncate">D:\Projects\Atlas\.aipro\skills\jira-weekly-report</span>
+              </div>
+              <button type="button" class="text-[11px] font-sans font-medium text-[#1657b8] hover:underline shrink-0 ml-3">
+                Reveal
+              </button>
+            </div>
+          </div>
+
+          <!-- Warning Notice: Local Changes -->
+          <div class="mt-4 p-3.5 rounded-lg bg-amber-50/70 border border-amber-200/90 text-amber-900 text-[13px] flex items-start gap-3">
+            <span class="material-symbols-outlined text-[19px] text-amber-600 shrink-0 mt-0.5">warning</span>
+            <div class="leading-relaxed">
+              <span class="font-semibold block text-amber-950 text-[13px]">Unsaved Modifications Detected</span>
+              <span>This copy has local changes. Save a snapshot if you may need them later.</span>
+            </div>
+          </div>
+
+          <!-- Checkbox Card: Save local backup -->
+          <label class="mt-4 flex items-start gap-3 p-3.5 bg-slate-50/90 hover:bg-slate-100/70 transition-colors rounded-lg border border-[#e1e3e7] cursor-pointer">
+            <input type="checkbox" checked class="mt-0.5 h-4 w-4 rounded border-slate-300 text-[#1657b8] focus:ring-[#1657b8] cursor-pointer accent-[#1657b8]">
+            <div class="text-[13px] leading-tight">
+              <span class="font-semibold text-slate-900 block">Save a local backup before removing</span>
+              <span class="text-slate-500 font-mono text-[11px] mt-1 block">
+                Will write archive to D:\Projects\Atlas\.aipro\backups\jira-weekly-report-20250514-local.zip
+              </span>
+            </div>
+          </label>
+
+          <!-- Divider -->
+          <hr class="my-5 border-[#e1e3e7]">
+
+          <!-- Safety Clarification Note -->
+          <div class="flex items-center gap-2 text-[12px] text-slate-500">
+            <span class="material-symbols-outlined text-[16px] text-slate-400">info</span>
+            <span>The Library copy and installations in other agents or projects are kept.</span>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="mt-6 flex items-center justify-between pt-4 border-t border-[#e1e3e7]">
+            <span class="text-[11px] text-slate-400">Press ESC to cancel</span>
+            <div class="flex items-center gap-2.5">
+              <a href="#workspace" class="px-4 py-2 rounded-md border border-[#e1e3e7] bg-white text-slate-700 hover:bg-slate-50 text-[13px] font-medium transition-colors">
+                Cancel
+              </a>
+              <a href="#remove-result" class="px-4 py-2 rounded-md bg-rose-600 hover:bg-rose-700 text-white text-[13px] font-medium shadow-xs transition-colors flex items-center gap-1.5">
+                <span class="material-symbols-outlined text-[16px]">delete</span>
+                Back up and remove
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Removal Protocol & Behavioral Rules (collapsible specification / guidance panel) -->
+        <div class="bg-white rounded-lg border border-[#e1e3e7] shadow-xs overflow-hidden">
+          <details class="group" open>
+            <summary class="px-4 py-3 bg-slate-50 hover:bg-slate-100/70 transition-colors flex items-center justify-between cursor-pointer border-b border-[#e1e3e7] select-none">
+              <div class="flex items-center gap-2 text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                <span class="material-symbols-outlined text-[16px] text-slate-500">verified_user</span>
+                <span>Removal Result Protocol & Rules</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="text-[11px] font-mono text-slate-400">SYS-REF-W13</span>
+                <span class="material-symbols-outlined text-[16px] text-slate-400 group-open:rotate-180 transition-transform">expand_more</span>
+              </div>
+            </summary>
+            
+            <div class="p-4 space-y-3.5 text-[12px] text-slate-600 bg-white">
+              
+              <!-- Result preview box -->
+              <div>
+                <div class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                  <span class="material-symbols-outlined text-[14px] text-emerald-600">check_circle</span>
+                  Removal result example:
+                </div>
+                <div class="p-2.5 bg-emerald-50/60 rounded border border-emerald-200/80 font-mono text-[12px] text-emerald-900">
+                  “Removed from AIPro · Project Atlas. Local backup saved.”
+                </div>
+              </div>
+
+              <!-- Rule cards grid -->
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+                <div class="p-3 bg-slate-50 rounded border border-[#e1e3e7] flex items-start gap-2.5">
+                  <span class="material-symbols-outlined text-[18px] text-rose-500 shrink-0 mt-0.5">shield_with_heart</span>
+                  <div class="leading-normal">
+                    <span class="font-semibold text-slate-800 block text-[12px]">Backup failure protection</span>
+                    <span>A failure to save the requested backup stops removal automatically to prevent catastrophic data loss.</span>
+                  </div>
+                </div>
+
+                <div class="p-3 bg-slate-50 rounded border border-[#e1e3e7] flex items-start gap-2.5">
+                  <span class="material-symbols-outlined text-[18px] text-amber-500 shrink-0 mt-0.5">lock</span>
+                  <div class="leading-normal">
+                    <span class="font-semibold text-slate-800 block text-[12px]">Library retention policy</span>
+                    <span>The separate Delete from Library action is unavailable while deployments still reference that release.</span>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </details>
+        </div>
+
+      </div>
+    </main>
+
+  </div>
+
+</body>
+</html>

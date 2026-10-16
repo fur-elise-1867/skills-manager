@@ -1,6 +1,8 @@
 # SDS Skills Manager — thiết kế bàn giao từ pilot đến 1.0
 
-Ngày: 2026-10-16 (Asia/Saigon). Trạng thái: **Đề xuất để người dùng review; chưa phê duyệt triển khai**.
+Ngày: 2026-10-16 (Asia/Saigon). Trạng thái: **Người dùng đã duyệt spec qua tin nhắn “Duyệt spec”; implementation plan chưa được duyệt**.
+
+Bản này là spec chính cho lượt triển khai, thay cho draft cục bộ `2026-10-16-sds-app-first-design.md`. Các lựa chọn mang nhãn đề xuất bên dưới đã được chấp nhận trong lần duyệt spec, nhưng không tự mở rộng thành phê duyệt implementation plan hoặc chọn phương thức thực thi.
 
 ## 1. Mục tiêu và quyết định từ trao đổi
 

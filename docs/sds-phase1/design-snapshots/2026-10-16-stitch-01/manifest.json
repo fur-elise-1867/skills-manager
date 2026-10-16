@@ -1,0 +1,413 @@
+{
+  "projectId": "9226348915970684263",
+  "retrievedAtUtc": "2026-10-16T15:23:09.095Z",
+  "projectUpdateTime": "2026-10-16T15:14:10.500363Z",
+  "screenCount": 29,
+  "htmlCount": 28,
+  "screenshotCount": 29,
+  "imageFormats": {
+    "png": 14,
+    "jpeg": 15
+  },
+  "assets": [
+    {
+      "screenId": "15301958397873624784",
+      "title": "image.png",
+      "path": "15301958397873624784/screen.png",
+      "bytes": 13046,
+      "sha256": "10cb86573430dbe91ccd494cec9196e38bf46c2367f967124159b71f768be3ae"
+    },
+    {
+      "screenId": "dce178ca8f44473b862e3d2da3d4c750",
+      "title": "W13 Remove skill",
+      "path": "dce178ca8f44473b862e3d2da3d4c750/screen.html",
+      "bytes": 21199,
+      "sha256": "aa6ba1c365cccc9af3f2e454d500a280640289a035cb87508b9408a8fc5e5077"
+    },
+    {
+      "screenId": "dce178ca8f44473b862e3d2da3d4c750",
+      "title": "W13 Remove skill",
+      "path": "dce178ca8f44473b862e3d2da3d4c750/screen.png",
+      "bytes": 54750,
+      "sha256": "f2e5d67baf13170e347ed2700688f7d141fa929e2776dc8ae7fb0fd9b1557e9b"
+    },
+    {
+      "screenId": "c4c7355ac0aa416eb275e610be3e916a",
+      "title": "W07 Library (#library)",
+      "path": "c4c7355ac0aa416eb275e610be3e916a/screen.html",
+      "bytes": 27678,
+      "sha256": "ada7d1c55f468229f332ed895312820a0435fe760fc73fc9f2a412c9384f84de"
+    },
+    {
+      "screenId": "c4c7355ac0aa416eb275e610be3e916a",
+      "title": "W07 Library (#library)",
+      "path": "c4c7355ac0aa416eb275e610be3e916a/screen.jpg",
+      "bytes": 35353,
+      "sha256": "3abcd3732e1207ec621c20768226d78908b733a0d6c3a1bd868d6383a12ae42c"
+    },
+    {
+      "screenId": "518f46085b834b8ca3012bebfce57f04",
+      "title": "W01 Sign in",
+      "path": "518f46085b834b8ca3012bebfce57f04/screen.html",
+      "bytes": 23292,
+      "sha256": "48efc2f3cd1a44babf9799e7ceb67753c151ef39763d9758fe13b1e9a4469d5d"
+    },
+    {
+      "screenId": "518f46085b834b8ca3012bebfce57f04",
+      "title": "W01 Sign in",
+      "path": "518f46085b834b8ca3012bebfce57f04/screen.png",
+      "bytes": 29830,
+      "sha256": "784e681ccde793e01d2db091a769c7143c44490eaf25ff2acdefff43135ce8bd"
+    },
+    {
+      "screenId": "130b37c6484947239f62b2802e1b7dea",
+      "title": "W12 Settings",
+      "path": "130b37c6484947239f62b2802e1b7dea/screen.html",
+      "bytes": 36034,
+      "sha256": "84d5e836a2ad481e54836bb8c8eb44cf228a6be6579e0cf8348168a602564580"
+    },
+    {
+      "screenId": "130b37c6484947239f62b2802e1b7dea",
+      "title": "W12 Settings",
+      "path": "130b37c6484947239f62b2802e1b7dea/screen.png",
+      "bytes": 53659,
+      "sha256": "29868375469616a4890556ccbbf2fed9d7a00be6960c990e393e528a4f3712a6"
+    },
+    {
+      "screenId": "a3cca1f7d09646bca0f0a74a0fbbc1c2",
+      "title": "W04 Install skill (#install)",
+      "path": "a3cca1f7d09646bca0f0a74a0fbbc1c2/screen.html",
+      "bytes": 25782,
+      "sha256": "52e752973f1c6fabe1af404cec7f7aef3cbd14d0593678a2be4032c260f231ec"
+    },
+    {
+      "screenId": "a3cca1f7d09646bca0f0a74a0fbbc1c2",
+      "title": "W04 Install skill (#install)",
+      "path": "a3cca1f7d09646bca0f0a74a0fbbc1c2/screen.jpg",
+      "bytes": 33032,
+      "sha256": "8a19fcd96b2925ecb85e5c4f33f67815409a4ab3b7558b9bc3b12a9bf4c0b703"
+    },
+    {
+      "screenId": "fa378c55ac4f40e9beba11b2b19bbd2b",
+      "title": "W06 Installation result",
+      "path": "fa378c55ac4f40e9beba11b2b19bbd2b/screen.html",
+      "bytes": 23281,
+      "sha256": "c5c379fe9a1649ced0ac0814461421223ebc7e88307869df94cf3722a4c275c3"
+    },
+    {
+      "screenId": "fa378c55ac4f40e9beba11b2b19bbd2b",
+      "title": "W06 Installation result",
+      "path": "fa378c55ac4f40e9beba11b2b19bbd2b/screen.png",
+      "bytes": 44584,
+      "sha256": "d013f05f1f8df45f84aa84a7ebc3f6e1c7fc2c6277d32e13628d5183d22ffb1e"
+    },
+    {
+      "screenId": "ca797a30d9a14f298953483347c4546f",
+      "title": "W01 Sign in (#login)",
+      "path": "ca797a30d9a14f298953483347c4546f/screen.html",
+      "bytes": 20593,
+      "sha256": "ca36abb1e7c6bfcfef98bdeb1a39489bc31f2fa808bee6444821511ae1c7dff3"
+    },
+    {
+      "screenId": "ca797a30d9a14f298953483347c4546f",
+      "title": "W01 Sign in (#login)",
+      "path": "ca797a30d9a14f298953483347c4546f/screen.jpg",
+      "bytes": 29296,
+      "sha256": "79fbf3a91467f470c0d05e3748126e9609880203d74c9ecaaf8887c19212777d"
+    },
+    {
+      "screenId": "95909941e1ca4fcda5e927598d08ed53",
+      "title": "W05 AIPro MCP check",
+      "path": "95909941e1ca4fcda5e927598d08ed53/screen.html",
+      "bytes": 27240,
+      "sha256": "b23446fd0b2fae3366c7325601f10997eb3a6125022d15548cd3fac959f9085e"
+    },
+    {
+      "screenId": "95909941e1ca4fcda5e927598d08ed53",
+      "title": "W05 AIPro MCP check",
+      "path": "95909941e1ca4fcda5e927598d08ed53/screen.png",
+      "bytes": 56163,
+      "sha256": "2dc6987be2aceef8accb606da27a45aff1080ac62280bc74c9ae154fceb911f4"
+    },
+    {
+      "screenId": "e297f1843ce04ab9a2189dd690f7f7ee",
+      "title": "W05 AIPro MCP check (#mcp)",
+      "path": "e297f1843ce04ab9a2189dd690f7f7ee/screen.html",
+      "bytes": 27937,
+      "sha256": "30a8f20bcacbf5c87009b9cfe058d25517e5f81340954669249d517ce6b57543"
+    },
+    {
+      "screenId": "e297f1843ce04ab9a2189dd690f7f7ee",
+      "title": "W05 AIPro MCP check (#mcp)",
+      "path": "e297f1843ce04ab9a2189dd690f7f7ee/screen.jpg",
+      "bytes": 44472,
+      "sha256": "f9f4b8ab774bf68a009aaa800f4c19a8e719477cb5103e1f15aa53aeea448a9c"
+    },
+    {
+      "screenId": "662d6089aed24f248081b81a4a9fb2ed",
+      "title": "W12 Settings (#settings)",
+      "path": "662d6089aed24f248081b81a4a9fb2ed/screen.html",
+      "bytes": 31095,
+      "sha256": "6000abeff0bed48194c84f5b7dd5c4d3cba366cfe312529f64dd147da1abf635"
+    },
+    {
+      "screenId": "662d6089aed24f248081b81a4a9fb2ed",
+      "title": "W12 Settings (#settings)",
+      "path": "662d6089aed24f248081b81a4a9fb2ed/screen.jpg",
+      "bytes": 46215,
+      "sha256": "41323a63a5d60a121209092aa52048430fb86e7598856e23e6feec773ce2cfb0"
+    },
+    {
+      "screenId": "7dcd2666d80d43dd8ae20556de775abc",
+      "title": "W03 Skill detail (#detail)",
+      "path": "7dcd2666d80d43dd8ae20556de775abc/screen.html",
+      "bytes": 22151,
+      "sha256": "aa11bdae856f0b5ed786c4df474d148b0eec95d791e3b13945a6e6d3f36a9c0f"
+    },
+    {
+      "screenId": "7dcd2666d80d43dd8ae20556de775abc",
+      "title": "W03 Skill detail (#detail)",
+      "path": "7dcd2666d80d43dd8ae20556de775abc/screen.jpg",
+      "bytes": 35579,
+      "sha256": "f2c782e4cfeeeeb8f78d801b7876c7da944a85d75f9cc9e0d03923032ba5c343"
+    },
+    {
+      "screenId": "b6fe75bbad4240a69b78d5c5d5ec99af",
+      "title": "W08 Workspace and preset (#workspace)",
+      "path": "b6fe75bbad4240a69b78d5c5d5ec99af/screen.html",
+      "bytes": 27848,
+      "sha256": "9be41cc9a7435a8aa041081fa21293a1238a2a72afbcb098460bacf1bf97cf3b"
+    },
+    {
+      "screenId": "b6fe75bbad4240a69b78d5c5d5ec99af",
+      "title": "W08 Workspace and preset (#workspace)",
+      "path": "b6fe75bbad4240a69b78d5c5d5ec99af/screen.png",
+      "bytes": 58421,
+      "sha256": "b25fa6bd767af6debd6e88a86e4c430ddfe9180d8ed48955424cd2961537c186"
+    },
+    {
+      "screenId": "47e723baede14b0cb331426b055b6f8f",
+      "title": "W09 Update review (#update)",
+      "path": "47e723baede14b0cb331426b055b6f8f/screen.html",
+      "bytes": 22427,
+      "sha256": "90704b2c769a71c278848847af19b29fa4048d64577862d42ca0101e8c09957a"
+    },
+    {
+      "screenId": "47e723baede14b0cb331426b055b6f8f",
+      "title": "W09 Update review (#update)",
+      "path": "47e723baede14b0cb331426b055b6f8f/screen.jpg",
+      "bytes": 41532,
+      "sha256": "c2933d67b407e46ac8a3a870906ee3fdc7f321f675fef20799939a5ca4e8f402"
+    },
+    {
+      "screenId": "634184e5dd9d48889bb8659b67932d56",
+      "title": "W09 Update review",
+      "path": "634184e5dd9d48889bb8659b67932d56/screen.html",
+      "bytes": 22280,
+      "sha256": "28f7b9c3874aef129015abb7449393551404517e2e104eadc2635718d51f7f59"
+    },
+    {
+      "screenId": "634184e5dd9d48889bb8659b67932d56",
+      "title": "W09 Update review",
+      "path": "634184e5dd9d48889bb8659b67932d56/screen.png",
+      "bytes": 45624,
+      "sha256": "454a009926225c0aead5034b899a2f8c520b9b09125480c72d06e3fbb998c538"
+    },
+    {
+      "screenId": "3192846cd64643279bae03f34f7dcddf",
+      "title": "W14 Dashboard",
+      "path": "3192846cd64643279bae03f34f7dcddf/screen.html",
+      "bytes": 22919,
+      "sha256": "ae09c9fb01ba7533e27b416074851af4724e98c63013c729254ea064f8d20ded"
+    },
+    {
+      "screenId": "3192846cd64643279bae03f34f7dcddf",
+      "title": "W14 Dashboard",
+      "path": "3192846cd64643279bae03f34f7dcddf/screen.png",
+      "bytes": 55673,
+      "sha256": "4e58cd6026e32778c0d71bdcd582817d8ecc0d0e9987a447c0cf269d2b74070f"
+    },
+    {
+      "screenId": "727ccba2e7f14f37abce39cfcb41ad8d",
+      "title": "W06 Installation result (#result)",
+      "path": "727ccba2e7f14f37abce39cfcb41ad8d/screen.html",
+      "bytes": 23083,
+      "sha256": "e336c7344452722d8f9319c92edee5258e347cce334cc9332bd9122e0c8d9139"
+    },
+    {
+      "screenId": "727ccba2e7f14f37abce39cfcb41ad8d",
+      "title": "W06 Installation result (#result)",
+      "path": "727ccba2e7f14f37abce39cfcb41ad8d/screen.jpg",
+      "bytes": 33844,
+      "sha256": "45dc6b14e28e3b4aff98a879824d5b430a91062628df2789eab9a7daf1c81402"
+    },
+    {
+      "screenId": "9f7fa1d49a4a468bb88a18dc58def5f1",
+      "title": "W11 Backup - local snapshots (#backup)",
+      "path": "9f7fa1d49a4a468bb88a18dc58def5f1/screen.html",
+      "bytes": 24119,
+      "sha256": "1390bc769b6a3eb5e7ceef2b28d8734608221c9a15e97f0b376a0356ed684d72"
+    },
+    {
+      "screenId": "9f7fa1d49a4a468bb88a18dc58def5f1",
+      "title": "W11 Backup - local snapshots (#backup)",
+      "path": "9f7fa1d49a4a468bb88a18dc58def5f1/screen.jpg",
+      "bytes": 40497,
+      "sha256": "bbb2e80aee70d921684223d1a48b9c79a8f57ce6533d0ac39fcd0c3aa64d2670"
+    },
+    {
+      "screenId": "e2a4a81be76f47678beb4b0976b8bc55",
+      "title": "W03 Skill detail",
+      "path": "e2a4a81be76f47678beb4b0976b8bc55/screen.html",
+      "bytes": 23213,
+      "sha256": "d38777cdf1027764af579cb5e81f5bbadd7ee4517847f01b311d05dc9339cce6"
+    },
+    {
+      "screenId": "e2a4a81be76f47678beb4b0976b8bc55",
+      "title": "W03 Skill detail",
+      "path": "e2a4a81be76f47678beb4b0976b8bc55/screen.png",
+      "bytes": 60225,
+      "sha256": "f02d7374545678e381062034185359c61fb7919b77180227362ce3c41bc0e68c"
+    },
+    {
+      "screenId": "e921a2c10a034eca80e4af20e760ad1f",
+      "title": "W02 Skills Store (#store)",
+      "path": "e921a2c10a034eca80e4af20e760ad1f/screen.html",
+      "bytes": 39185,
+      "sha256": "c334bd10a4121036e87ddc7546c4fcd5dafdae7888a2dec9e14677c19b0ba76a"
+    },
+    {
+      "screenId": "e921a2c10a034eca80e4af20e760ad1f",
+      "title": "W02 Skills Store (#store)",
+      "path": "e921a2c10a034eca80e4af20e760ad1f/screen.jpg",
+      "bytes": 41703,
+      "sha256": "0bc52afb8d7785e7efab80405e325c2c082ebdba3d986295090824b2d5e689ab"
+    },
+    {
+      "screenId": "a88f85f148a248648319965997ff478e",
+      "title": "W11 Backup - local snapshots",
+      "path": "a88f85f148a248648319965997ff478e/screen.html",
+      "bytes": 22302,
+      "sha256": "4b3fd18267f15b3d0720fe5d73846c62c2d72dd54eef993a059fdd15a12ac92a"
+    },
+    {
+      "screenId": "a88f85f148a248648319965997ff478e",
+      "title": "W11 Backup - local snapshots",
+      "path": "a88f85f148a248648319965997ff478e/screen.png",
+      "bytes": 53085,
+      "sha256": "99dee704ad1a44ccd71659f92af57fc63194a9e3f076bf837d3ef77cda891c19"
+    },
+    {
+      "screenId": "9c91f3d8eaae489e887790fa7bfd3113",
+      "title": "W10 Offline Library (#offline)",
+      "path": "9c91f3d8eaae489e887790fa7bfd3113/screen.html",
+      "bytes": 26158,
+      "sha256": "4507c79dc6fcfcf2e82b5a71f33366eb855fea1824a84ca59c3af37729c8d115"
+    },
+    {
+      "screenId": "9c91f3d8eaae489e887790fa7bfd3113",
+      "title": "W10 Offline Library (#offline)",
+      "path": "9c91f3d8eaae489e887790fa7bfd3113/screen.jpg",
+      "bytes": 40848,
+      "sha256": "e59dc7f567fa857f41ed733a0c5c66409920f7524b4014b2fd6eb3d8326b9377"
+    },
+    {
+      "screenId": "12113535d43548f8ac089a41897ef8b9",
+      "title": "W02 Skills Store",
+      "path": "12113535d43548f8ac089a41897ef8b9/screen.html",
+      "bytes": 29875,
+      "sha256": "87aac6f599ee8ae7036f6afe61516e54faaf2a9ab7605e504d6321c78bc83a9e"
+    },
+    {
+      "screenId": "12113535d43548f8ac089a41897ef8b9",
+      "title": "W02 Skills Store",
+      "path": "12113535d43548f8ac089a41897ef8b9/screen.jpg",
+      "bytes": 39596,
+      "sha256": "9e15f235b33bae01eae3f801698587ce04e77503c47c5b832366a63d1acdc8b1"
+    },
+    {
+      "screenId": "629741bbcca2475fabdd7b80e0f29c77",
+      "title": "W08 Workspace and preset (#workspace)",
+      "path": "629741bbcca2475fabdd7b80e0f29c77/screen.html",
+      "bytes": 29939,
+      "sha256": "3e6ee843b355a3c5fbabf260f354b2f719c73b9039a16dd79231fdc6767ebfe0"
+    },
+    {
+      "screenId": "629741bbcca2475fabdd7b80e0f29c77",
+      "title": "W08 Workspace and preset (#workspace)",
+      "path": "629741bbcca2475fabdd7b80e0f29c77/screen.jpg",
+      "bytes": 42805,
+      "sha256": "0d46dd0a0e2601711c0888634658f461938b0d43c5cf4627bde55620634cc547"
+    },
+    {
+      "screenId": "7f90de67b26746b3bb047c078b4e9fbe",
+      "title": "W13 Remove skill (#remove)",
+      "path": "7f90de67b26746b3bb047c078b4e9fbe/screen.html",
+      "bytes": 21383,
+      "sha256": "fcaec1fccb913ce3b046f6fe54ce21c252fd3244ea2766eac67d6ec158dee7d3"
+    },
+    {
+      "screenId": "7f90de67b26746b3bb047c078b4e9fbe",
+      "title": "W13 Remove skill (#remove)",
+      "path": "7f90de67b26746b3bb047c078b4e9fbe/screen.jpg",
+      "bytes": 33838,
+      "sha256": "8cfe7e4d8952abad12d5449d1675a4bb82a457b63e5c7e39efdb1b673edc8874"
+    },
+    {
+      "screenId": "98709e85496747fab8697a4f69e4c441",
+      "title": "W10 Offline Library",
+      "path": "98709e85496747fab8697a4f69e4c441/screen.html",
+      "bytes": 25102,
+      "sha256": "a5595f5a6c69e359c1bdb8ee1325a90344c7763a3cda701efa5a718cbd82e70d"
+    },
+    {
+      "screenId": "98709e85496747fab8697a4f69e4c441",
+      "title": "W10 Offline Library",
+      "path": "98709e85496747fab8697a4f69e4c441/screen.png",
+      "bytes": 52109,
+      "sha256": "8d3d5adbdde6f33e94abf8559a15b3af644f6c00e3e14bf21cb786718a44be5d"
+    },
+    {
+      "screenId": "8ba8f16c850b46d28e693af308e555ae",
+      "title": "W04 Install skill",
+      "path": "8ba8f16c850b46d28e693af308e555ae/screen.html",
+      "bytes": 27170,
+      "sha256": "225a10e35b61d11755511165e799119fde55872ff1e797c536fc9c88c543a3cf"
+    },
+    {
+      "screenId": "8ba8f16c850b46d28e693af308e555ae",
+      "title": "W04 Install skill",
+      "path": "8ba8f16c850b46d28e693af308e555ae/screen.png",
+      "bytes": 41322,
+      "sha256": "111924647a6ce589ed3d0a440ac1e47631cf615b4a23f1f96665416f355527a0"
+    },
+    {
+      "screenId": "6f5a4b08c21c4b4e98da2eb105bb29a3",
+      "title": "W07 Library",
+      "path": "6f5a4b08c21c4b4e98da2eb105bb29a3/screen.html",
+      "bytes": 30257,
+      "sha256": "394d0d91aedb2fac0585a9c423f4a5c74d79d491baaa63a67e96cee1ca28402e"
+    },
+    {
+      "screenId": "6f5a4b08c21c4b4e98da2eb105bb29a3",
+      "title": "W07 Library",
+      "path": "6f5a4b08c21c4b4e98da2eb105bb29a3/screen.png",
+      "bytes": 46230,
+      "sha256": "5031312db97afa31e2ce9f3f7ff43b418be492f1c4797dce3b7c54cf56c70d08"
+    },
+    {
+      "screenId": "da58f733eb074f4aa714cb22457e12c8",
+      "title": "W14 Dashboard (#dashboard)",
+      "path": "da58f733eb074f4aa714cb22457e12c8/screen.html",
+      "bytes": 28229,
+      "sha256": "fab505c2c87f279aed9f1415232a67506a3ab0a6c536e5f7cf8c44276fbaa23d"
+    },
+    {
+      "screenId": "da58f733eb074f4aa714cb22457e12c8",
+      "title": "W14 Dashboard (#dashboard)",
+      "path": "da58f733eb074f4aa714cb22457e12c8/screen.jpg",
+      "bytes": 42065,
+      "sha256": "a361ff33a8245bc644dd6a3e28aee31c11cc1559a7e3b67870fd43638d315321"
+    }
+  ]
+}

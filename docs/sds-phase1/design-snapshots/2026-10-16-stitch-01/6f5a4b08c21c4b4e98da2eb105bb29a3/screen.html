@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+
+<html class="h-full" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Skills Manager — Samsung SDS</title>
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS v3 -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "on-tertiary-fixed": "#002115",
+            "on-secondary-container": "#60646e",
+            "surface-container": "#eceef3",
+            "outline-variant": "#c3c6d4",
+            "tertiary-fixed": "#96f5ca",
+            "on-tertiary": "#ffffff",
+            "surface-container-lowest": "#ffffff",
+            "on-error-container": "#93000a",
+            "on-background": "#191c20",
+            "secondary-fixed": "#dfe2ee",
+            "inverse-on-surface": "#eff0f6",
+            "background": "#f8f9ff",
+            "on-primary-container": "#c2d3ff",
+            "inverse-surface": "#2e3135",
+            "secondary": "#5a5e68",
+            "primary-fixed-dim": "#afc6ff",
+            "tertiary": "#004e36",
+            "outline": "#737784",
+            "on-tertiary-fixed-variant": "#005139",
+            "secondary-fixed-dim": "#c3c6d1",
+            "on-secondary": "#ffffff",
+            "tertiary-fixed-dim": "#7ad9af",
+            "surface-dim": "#d8dadf",
+            "surface-bright": "#f8f9ff",
+            "surface": "#f8f9ff",
+            "on-secondary-fixed-variant": "#434750",
+            "error": "#ba1a1a",
+            "on-secondary-fixed": "#171c24",
+            "inverse-primary": "#afc6ff",
+            "on-primary-fixed-variant": "#004397",
+            "on-primary-fixed": "#001a43",
+            "on-error": "#ffffff",
+            "error-container": "#ffdad6",
+            "secondary-container": "#dfe2ee",
+            "on-primary": "#ffffff",
+            "surface-container-low": "#f2f3f9",
+            "surface-tint": "#1c5abc",
+            "surface-container-highest": "#e1e2e8",
+            "primary": "#004091",
+            "on-tertiary-container": "#87e6bb",
+            "primary-fixed": "#d8e2ff",
+            "on-surface": "#191c20",
+            "on-surface-variant": "#424752",
+            "surface-variant": "#e1e2e8",
+            "primary-container": "#1657b8",
+            "surface-container-high": "#e6e8ed",
+            "tertiary-container": "#006849"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.125rem",
+            "lg": "0.25rem",
+            "xl": "0.5rem",
+            "full": "0.75rem"
+          },
+          "spacing": {
+            "space-xl": "1.5rem",
+            "gutter": "1rem",
+            "space-md": "0.75rem",
+            "space-xs": "0.25rem",
+            "space-lg": "1rem",
+            "space-sm": "0.5rem",
+            "margin": "1rem"
+          },
+          "fontFamily": {
+            "code-sm": ["JetBrains Mono"],
+            "body-default": ["Inter"],
+            "titlebar-caption": ["Inter"],
+            "headline-lg": ["Inter"],
+            "body-medium": ["Inter"],
+            "headline-sm": ["Inter"],
+            "caption-medium": ["Inter"],
+            "headline-md": ["Inter"],
+            "caption-regular": ["Inter"]
+          },
+          "fontSize": {
+            "code-sm": ["12px", { "lineHeight": "16px", "fontWeight": "400" }],
+            "body-default": ["13px", { "lineHeight": "18px", "fontWeight": "400" }],
+            "titlebar-caption": ["12px", { "lineHeight": "16px", "fontWeight": "500" }],
+            "headline-lg": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+            "body-medium": ["13px", { "lineHeight": "18px", "fontWeight": "500" }],
+            "headline-sm": ["14px", { "lineHeight": "20px", "fontWeight": "600" }],
+            "caption-medium": ["11px", { "lineHeight": "16px", "fontWeight": "500" }],
+            "headline-md": ["16px", { "lineHeight": "24px", "fontWeight": "600" }],
+            "caption-regular": ["11px", { "lineHeight": "16px", "fontWeight": "400" }]
+          }
+        }
+      }
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+      font-size: 16px;
+      line-height: 1;
+      display: inline-block;
+      vertical-align: middle;
+    }
+    /* Brand-specific micro styles */
+    .agent-dot-aipro { background-color: #1657b8; color: #ffffff; }
+    .agent-dot-claude { background-color: #b94b29; color: #ffffff; }
+    .agent-dot-gemini { background-color: #6a3ebd; color: #ffffff; }
+    .agent-dot-codex { background-color: #464a53; color: #ffffff; }
+  </style>
+</head>
+<body class="bg-[#fafafa] text-on-surface font-body-default text-body-default antialiased select-none overflow-x-hidden min-h-screen flex flex-col">
+<!-- ========================================================================= -->
+<!-- TOP WINDOW CHROME TITLEBAR (Fixed 32px height)                           -->
+<!-- ========================================================================= -->
+<header class="flex justify-between items-center w-full h-8 px-3 select-none bg-[#f4f4f5] border-b border-[#e1e3e7] fixed top-0 left-0 right-0 z-50">
+<div class="flex items-center space-x-2">
+<span class="w-3.5 h-3.5 bg-primary-container text-white flex items-center justify-center font-bold text-[9px] rounded-[2px] leading-none">S</span>
+<span class="text-titlebar-caption font-titlebar-caption text-on-surface font-medium">Skills Manager — Samsung SDS</span>
+</div>
+<!-- Center Status Indicator -->
+<div class="flex items-center space-x-2 px-2.5 py-0.5 rounded-full bg-white border border-[#e1e3e7] shadow-sm">
+<span class="w-1.5 h-1.5 rounded-full bg-[#087b58] animate-pulse"></span>
+<span class="text-[11px] font-caption-medium font-medium text-on-surface-variant">Registry v2.4.0 (Sync Active)</span>
+</div>
+<!-- Window Controls -->
+<div class="flex items-center -mr-3 h-full">
+<button class="w-11 h-8 flex items-center justify-center text-on-surface-variant hover:bg-[#e1e3e7] transition-colors duration-150" title="Minimize">
+<span class="material-symbols-outlined text-[15px]">minimize</span>
+</button>
+<button class="w-11 h-8 flex items-center justify-center text-on-surface-variant hover:bg-[#e1e3e7] transition-colors duration-150" title="Maximize">
+<span class="material-symbols-outlined text-[14px]">crop_square</span>
+</button>
+<button class="w-11 h-8 flex items-center justify-center text-on-surface-variant hover:bg-[#ac3535] hover:text-white transition-colors duration-150" title="Close">
+<span class="material-symbols-outlined text-[16px]">close</span>
+</button>
+</div>
+</header>
+<!-- ========================================================================= -->
+<!-- MAIN SHELL LAYOUT: SIDEBAR (225px) + WORKSPACE CANVAS                     -->
+<!-- ========================================================================= -->
+<div class="flex flex-1 pt-8 w-full min-h-[calc(100vh-32px)]">
+<!-- SHARED NAVIGATION SIDEBAR (225px FIXED) -->
+<aside aria-label="App navigation" class="sidebar w-[225px] h-[calc(100vh-32px)] fixed top-8 left-0 flex flex-col justify-between p-space-sm border-r border-[#e1e3e7] bg-[#f4f4f5] select-none z-40 overflow-y-auto">
+<div class="flex flex-col space-y-0.5">
+<!-- Brand Header Lockup -->
+<div class="brand flex items-center space-x-2.5 px-2 py-2 mb-2 bg-white rounded-lg border border-[#e1e3e7]">
+<span class="brandmark w-6 h-6 rounded bg-primary-container text-white flex items-center justify-center text-xs font-bold leading-none shadow-xs">S</span>
+<div class="leading-tight">
+<strong class="block text-body-medium font-body-medium text-on-surface">Skills Manager</strong>
+<small class="block text-[10px] font-caption-medium tracking-wider text-outline">SAMSUNG SDS</small>
+</div>
+</div>
+<!-- Primary Destinations -->
+<a class="navitem nav-dashboard flex items-center justify-between text-on-surface-variant hover:bg-surface-container hover:text-on-surface rounded-lg px-2 py-1.5 transition-colors duration-150 ease-in-out font-caption-medium" href="#dashboard">
+<div class="flex items-center space-x-2">
+<span class="material-symbols-outlined text-outline">dashboard</span>
+<span>Dashboard</span>
+</div>
+</a>
+<!-- Active Tab: Library -->
+<a class="navitem nav-library active bg-secondary-container text-primary font-medium rounded-lg px-2 py-1.5 border-l-2 border-primary flex items-center justify-between transition-colors duration-150 ease-in-out text-body-medium font-body-medium" href="#library">
+<div class="flex items-center space-x-2">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">folder</span>
+<span class="font-medium text-primary">Library</span>
+</div>
+<span class="navcount text-[11px] font-caption-medium bg-primary text-white rounded-full px-1.5 py-0.2 leading-tight">12</span>
+</a>
+<a class="navitem nav-store flex items-center justify-between text-on-surface-variant hover:bg-surface-container hover:text-on-surface rounded-lg px-2 py-1.5 transition-colors duration-150 ease-in-out font-caption-medium" href="#store">
+<div class="flex items-center space-x-2">
+<span class="material-symbols-outlined text-outline">storefront</span>
+<span>Skills Store</span>
+</div>
+</a>
+<a class="navitem nav-backup flex items-center justify-between text-on-surface-variant hover:bg-surface-container hover:text-on-surface rounded-lg px-2 py-1.5 transition-colors duration-150 ease-in-out font-caption-medium" href="#backup">
+<div class="flex items-center space-x-2">
+<span class="material-symbols-outlined text-outline">backup</span>
+<span>Backup</span>
+</div>
+</a>
+<!-- Nav Group: Presets -->
+<div class="navlabel text-[10px] font-caption-medium font-semibold text-outline uppercase tracking-wider px-2 pt-3 pb-1">Presets</div>
+<a class="navitem flex items-center justify-between text-on-surface-variant hover:bg-surface-container hover:text-on-surface rounded-lg px-2 py-1.5 transition-colors duration-150 ease-in-out font-caption-medium" href="#workspace">
+<div class="flex items-center space-x-2">
+<span class="material-symbols-outlined text-outline">tune</span>
+<span>PM Essentials</span>
+</div>
+<span class="navcount text-[11px] font-caption-medium text-outline">3</span>
+</a>
+<a class="navitem flex items-center space-x-2 text-primary hover:bg-surface-container rounded-lg px-2 py-1.5 transition-colors duration-150 ease-in-out font-caption-medium" href="#workspace">
+<span class="material-symbols-outlined text-primary text-[15px]">add</span>
+<span class="font-medium">New preset</span>
+</a>
+<!-- Nav Group: Global Workspace -->
+<div class="navlabel text-[10px] font-caption-medium font-semibold text-outline uppercase tracking-wider px-2 pt-3 pb-1">Global Workspace</div>
+<a class="navitem flex items-center space-x-2 text-on-surface-variant hover:bg-surface-container hover:text-on-surface rounded-lg px-2 py-1.5 transition-colors duration-150 ease-in-out font-caption-medium" href="#workspace">
+<span class="material-symbols-outlined text-outline">smart_toy</span>
+<span>All Agents</span>
+</a>
+<a class="navitem flex items-center justify-between text-on-surface-variant hover:bg-surface-container hover:text-on-surface rounded-lg px-2 py-1.5 transition-colors duration-150 ease-in-out font-caption-medium" href="#workspace">
+<div class="flex items-center space-x-2">
+<span class="agentdot aipro w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold agent-dot-aipro">A</span>
+<span>AIPro</span>
+</div>
+<span class="navcount text-[11px] font-caption-medium text-outline">8</span>
+</a>
+<a class="navitem flex items-center justify-between text-on-surface-variant hover:bg-surface-container hover:text-on-surface rounded-lg px-2 py-1.5 transition-colors duration-150 ease-in-out font-caption-medium" href="#workspace">
+<div class="flex items-center space-x-2">
+<span class="agentdot claude w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-bold agent-dot-claude">Cl</span>
+<span>Claude</span>
+</div>
+<span class="navcount text-[11px] font-caption-medium text-outline">4</span>
+</a>
+<a class="navitem flex items-center justify-between text-on-surface-variant hover:bg-surface-container hover:text-on-surface rounded-lg px-2 py-1.5 transition-colors duration-150 ease-in-out font-caption-medium" href="#workspace">
+<div class="flex items-center space-x-2">
+<span class="agentdot gemini w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold agent-dot-gemini">G</span>
+<span>Gemini</span>
+</div>
+<span class="navcount text-[11px] font-caption-medium text-outline">3</span>
+</a>
+<a class="navitem flex items-center justify-between text-on-surface-variant hover:bg-surface-container hover:text-on-surface rounded-lg px-2 py-1.5 transition-colors duration-150 ease-in-out font-caption-medium" href="#workspace">
+<div class="flex items-center space-x-2">
+<span class="agentdot codex w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-bold agent-dot-codex">Cx</span>
+<span>Codex</span>
+</div>
+<span class="navcount text-[11px] font-caption-medium text-outline">5</span>
+</a>
+<!-- Nav Group: Project Workspaces -->
+<div class="navlabel text-[10px] font-caption-medium font-semibold text-outline uppercase tracking-wider px-2 pt-3 pb-1">Project Workspaces</div>
+<a class="navitem nav-workspace flex items-center justify-between text-on-surface-variant hover:bg-surface-container hover:text-on-surface rounded-lg px-2 py-1.5 transition-colors duration-150 ease-in-out font-caption-medium" href="#workspace">
+<div class="flex items-center space-x-2">
+<span class="material-symbols-outlined text-outline">workspaces</span>
+<span>Project Atlas</span>
+</div>
+<span class="navcount text-[11px] font-caption-medium text-outline">3</span>
+</a>
+<a class="navitem flex items-center space-x-2 text-primary hover:bg-surface-container rounded-lg px-2 py-1.5 transition-colors duration-150 ease-in-out font-caption-medium" href="#install">
+<span class="material-symbols-outlined text-primary text-[15px]">add</span>
+<span class="font-medium">Add project</span>
+</a>
+</div>
+<!-- Sidebar Foot -->
+<div class="sidebarfoot pt-2 border-t border-[#e1e3e7] flex flex-col space-y-1">
+<a class="navitem nav-settings flex items-center space-x-2 text-on-surface-variant hover:bg-surface-container hover:text-on-surface rounded-lg px-2 py-1.5 transition-colors duration-150 ease-in-out font-caption-medium" href="#settings">
+<span class="material-symbols-outlined text-outline">settings</span>
+<span>Settings</span>
+</a>
+<div class="account flex items-center space-x-2 px-2 py-2 rounded-lg bg-white border border-[#e1e3e7] mt-1 shadow-xs">
+<span class="avatar w-6 h-6 rounded-full bg-secondary-fixed text-on-secondary-fixed flex items-center justify-center text-xs font-semibold">E</span>
+<div class="leading-tight truncate">
+<span class="text-caption-medium font-caption-medium text-on-surface font-medium block truncate">Example Employee</span>
+<span class="muted text-[10px] font-caption-regular text-outline block truncate">Skills Store account</span>
+</div>
+</div>
+</div>
+</aside>
+<!-- ========================================================================= -->
+<!-- MAIN WORKING CANVAS (Offset by 225px)                                    -->
+<!-- ========================================================================= -->
+<main class="ml-[225px] flex-1 min-w-0 p-6 flex flex-col space-y-5 max-w-[1215px]">
+<!-- Header Section -->
+<section class="flex items-center justify-between">
+<div class="flex items-center space-x-3">
+<h1 class="text-headline-lg font-headline-lg text-on-surface tracking-tight flex items-center gap-2.5">
+            Library
+            <span class="number text-caption-medium font-caption-medium font-semibold text-primary bg-[#edf4ff] border border-[#c2d3ff] rounded-full px-2 py-0.5">12</span>
+</h1>
+</div>
+<!-- Action Buttons -->
+<div class="flex items-center space-x-2">
+<button class="h-8 px-3 rounded-lg border border-[#e1e3e7] bg-white text-on-surface hover:bg-[#f4f4f5] hover:border-[#d2d5dc] text-body-medium font-body-medium flex items-center space-x-1.5 transition-colors duration-150 shadow-xs">
+<span class="material-symbols-outlined text-[15px] text-outline">sync</span>
+<span>Check for updates</span>
+</button>
+<button class="h-8 px-3 rounded-lg bg-primary-container text-white hover:bg-[#124491] text-body-medium font-body-medium flex items-center space-x-1.5 transition-colors duration-150 shadow-xs">
+<span class="material-symbols-outlined text-[16px]">add</span>
+<span>Get skills</span>
+</button>
+</div>
+</section>
+<!-- Toolbar & Filters -->
+<section class="flex flex-col space-y-3 bg-white p-3 rounded-xl border border-[#e1e3e7] shadow-xs">
+<div class="flex items-center justify-between gap-4">
+<!-- Search input box -->
+<div class="relative flex-1 max-w-md">
+<span class="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-outline text-[16px]">search</span>
+<input class="w-full h-8 pl-8 pr-3 text-body-default font-body-default bg-[#ffffff] border border-[#e1e3e7] rounded-lg text-on-surface placeholder:text-outline focus:outline-none focus:border-primary-container focus:ring-1 focus:ring-primary-container/20 transition-all duration-150" placeholder="Search skills in your Library..." type="text"/>
+</div>
+<!-- Filter segmented chips -->
+<div class="flex items-center space-x-1 bg-[#f4f4f5] p-0.5 rounded-lg border border-[#e1e3e7]">
+<button class="px-3 py-1 rounded-[3px] text-caption-medium font-caption-medium bg-white text-on-surface font-medium shadow-xs">
+              All
+            </button>
+<button class="px-3 py-1 rounded-[3px] text-caption-medium font-caption-medium text-on-surface-variant hover:text-on-surface transition-colors">
+              Installed
+            </button>
+<button class="px-3 py-1 rounded-[3px] text-caption-medium font-caption-medium text-on-surface-variant hover:text-on-surface transition-colors">
+              Available
+            </button>
+<button class="px-2.5 py-1 rounded-[3px] text-caption-medium font-caption-medium text-[#92580b] bg-[#fff5e4] border border-[#fbd38d]/40 flex items-center space-x-1 font-medium">
+<span class="w-1.5 h-1.5 rounded-full bg-[#d69e2e]"></span>
+<span>Updates · 1</span>
+</button>
+</div>
+</div>
+<!-- Secondary category filter tags -->
+<div class="flex items-center space-x-2 pt-1 border-t border-[#f4f4f5]">
+<span class="text-[11px] font-caption-medium text-outline uppercase tracking-wider mr-1">Categories:</span>
+<button class="px-2 py-0.5 rounded border border-[#e1e3e7] bg-[#fafafa] text-on-surface-variant hover:bg-white text-caption-regular font-caption-regular transition-colors">
+            Store
+          </button>
+<button class="px-2 py-0.5 rounded border border-[#e1e3e7] bg-[#fafafa] text-on-surface-variant hover:bg-white text-caption-regular font-caption-regular transition-colors">
+            Reporting
+          </button>
+<button class="px-2 py-0.5 rounded border border-[#e1e3e7] bg-[#fafafa] text-on-surface-variant hover:bg-white text-caption-regular font-caption-regular transition-colors">
+            Development
+          </button>
+<button class="px-2 py-0.5 rounded border border-[#e1e3e7] bg-[#fafafa] text-on-surface-variant hover:bg-white text-caption-regular font-caption-regular transition-colors">
+            Documentation
+          </button>
+</div>
+</section>
+<!-- 3-Column Skills Grid -->
+<section class="grid grid-cols-3 gap-4">
+<!-- CARD 1: Jira Weekly Report (Needs attention) -->
+<div class="bg-white rounded-xl border-2 border-primary-container p-4 shadow-xs flex flex-col justify-between relative hover:border-primary transition-all duration-150">
+<div>
+<div class="flex items-start justify-between">
+<div class="flex items-center space-x-2">
+<div class="w-7 h-7 rounded-lg bg-[#edf4ff] border border-[#c2d3ff] flex items-center justify-center text-primary-container font-semibold">
+<span class="material-symbols-outlined text-[17px]">assignment</span>
+</div>
+<div>
+<h2 class="text-headline-sm font-headline-sm text-on-surface leading-snug">Jira Weekly Report</h2>
+<p class="text-caption-regular font-caption-regular text-outline">Installed 1.1.0 · Latest 1.2.0</p>
+</div>
+</div>
+<span class="px-1.5 py-0.5 text-[11px] font-caption-medium font-medium rounded-[3px] bg-[#fff5e4] text-[#92580b] border border-[#fbd38d]/50">
+                Update
+              </span>
+</div>
+<p class="mt-3 text-caption-regular font-caption-regular text-on-surface-variant leading-relaxed">
+              Versions differ across targets.
+            </p>
+<!-- Tags -->
+<div class="flex flex-wrap gap-1.5 mt-3">
+<span class="px-1.5 py-0.5 text-[11px] font-caption-medium rounded-[3px] bg-[#fff5e4] text-[#92580b] border border-[#fbd38d]/40 flex items-center space-x-1">
+<span>Local changes</span>
+</span>
+<span class="px-1.5 py-0.5 text-[11px] font-caption-medium rounded-[3px] bg-[#fff5e4] text-[#92580b] border border-[#fbd38d]/40 flex items-center space-x-1">
+<span class="material-symbols-outlined text-[13px] text-[#b7791f]">warning</span>
+<span>AIPro MCP missing</span>
+</span>
+</div>
+</div>
+<!-- Card Footer -->
+<div class="mt-5 pt-3 border-t border-[#e1e3e7] flex items-center justify-between">
+<div class="flex items-center space-x-1">
+<span class="w-5 h-5 rounded-full agent-dot-aipro flex items-center justify-center text-[9px] font-bold" title="AIPro">A</span>
+<span class="w-5 h-5 rounded-full agent-dot-claude flex items-center justify-center text-[9px] font-bold" title="Claude">Cl</span>
+</div>
+<a class="text-caption-medium font-caption-medium text-primary-container hover:text-primary font-medium flex items-center space-x-0.5 group" href="#review">
+<span>Review update</span>
+<span class="group-hover:translate-x-0.5 transition-transform duration-150">→</span>
+</a>
+</div>
+</div>
+<!-- CARD 2: Meeting Notes -->
+<div class="bg-white rounded-xl border border-[#e1e3e7] p-4 shadow-xs flex flex-col justify-between hover:border-[#c3c6d4] transition-all duration-150">
+<div>
+<div class="flex items-start justify-between">
+<div class="flex items-center space-x-2">
+<div class="w-7 h-7 rounded-lg bg-[#f4f4f5] border border-[#e1e3e7] flex items-center justify-center text-on-surface-variant font-semibold">
+<span class="material-symbols-outlined text-[17px]">notes</span>
+</div>
+<div>
+<h2 class="text-headline-sm font-headline-sm text-on-surface leading-snug">Meeting Notes</h2>
+<p class="text-caption-regular font-caption-regular text-outline">Version 1.0.0</p>
+</div>
+</div>
+<span class="px-1.5 py-0.5 text-[11px] font-caption-medium font-medium rounded-[3px] bg-[#e8f6ef] text-[#087b58] border border-[#a3e2c5]/50">
+                Current
+              </span>
+</div>
+<p class="mt-3 text-caption-regular font-caption-regular text-on-surface-variant leading-relaxed">
+              Installed in AIPro global.
+            </p>
+<!-- Tags -->
+<div class="flex flex-wrap gap-1.5 mt-3">
+<span class="px-1.5 py-0.5 text-[11px] font-caption-medium rounded-[3px] bg-[#f4f4f5] text-on-surface-variant border border-[#e1e3e7]">
+                Documentation
+              </span>
+</div>
+</div>
+<!-- Card Footer -->
+<div class="mt-5 pt-3 border-t border-[#e1e3e7] flex items-center justify-between">
+<div class="flex items-center space-x-1">
+<span class="w-5 h-5 rounded-full agent-dot-aipro flex items-center justify-center text-[9px] font-bold" title="AIPro">A</span>
+</div>
+<a class="text-caption-medium font-caption-medium text-primary-container hover:text-primary font-medium flex items-center space-x-0.5 group" href="#workspace">
+<span>View workspace</span>
+<span class="group-hover:translate-x-0.5 transition-transform duration-150">→</span>
+</a>
+</div>
+</div>
+<!-- CARD 3: Release Notes -->
+<div class="bg-white rounded-xl border border-[#e1e3e7] p-4 shadow-xs flex flex-col justify-between hover:border-[#c3c6d4] transition-all duration-150">
+<div>
+<div class="flex items-start justify-between">
+<div class="flex items-center space-x-2">
+<div class="w-7 h-7 rounded-lg bg-[#f4f4f5] border border-[#e1e3e7] flex items-center justify-center text-on-surface-variant font-semibold">
+<span class="material-symbols-outlined text-[17px]">new_releases</span>
+</div>
+<div>
+<h2 class="text-headline-sm font-headline-sm text-on-surface leading-snug">Release Notes</h2>
+<p class="text-caption-regular font-caption-regular text-outline">Version 1.3.0</p>
+</div>
+</div>
+<span class="px-1.5 py-0.5 text-[11px] font-caption-medium font-medium rounded-[3px] bg-[#f4f4f5] text-on-surface-variant border border-[#e1e3e7]">
+                In Library
+              </span>
+</div>
+<p class="mt-3 text-caption-regular font-caption-regular text-on-surface-variant leading-relaxed">
+              Ready to add to an agent or project.
+            </p>
+<!-- Tags -->
+<div class="flex flex-wrap gap-1.5 mt-3">
+<span class="px-1.5 py-0.5 text-[11px] font-caption-medium rounded-[3px] bg-[#f4f4f5] text-on-surface-variant border border-[#e1e3e7]">
+                Dev
+              </span>
+<span class="px-1.5 py-0.5 text-[11px] font-caption-medium rounded-[3px] bg-[#f4f4f5] text-on-surface-variant border border-[#e1e3e7]">
+                BSE
+              </span>
+</div>
+</div>
+<!-- Card Footer -->
+<div class="mt-5 pt-3 border-t border-[#e1e3e7] flex items-center justify-between">
+<span class="text-caption-regular font-caption-regular text-outline">No deployments</span>
+<span class="text-caption-regular font-caption-regular text-outline">Sample skill</span>
+</div>
+</div>
+</section>
+<!-- Detailed Installed Locations Panel (Jira Weekly Report) -->
+<section class="bg-white rounded-xl border border-[#e1e3e7] shadow-xs overflow-hidden">
+<!-- Panel Header -->
+<div class="px-4 py-3 border-b border-[#e1e3e7] bg-[#ffffff] flex items-center justify-between">
+<div class="flex items-center space-x-2">
+<span class="material-symbols-outlined text-primary-container text-[18px]">hub</span>
+<h3 class="text-headline-sm font-headline-sm text-on-surface font-semibold">Jira Weekly Report · Installed locations</h3>
+</div>
+<span class="px-2 py-0.5 rounded text-[11px] font-caption-medium bg-[#f4f4f5] text-on-surface-variant border border-[#e1e3e7]">
+            3 active targets detected
+          </span>
+</div>
+<!-- Enterprise Data Table -->
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-[#f4f4f5] border-b border-[#e1e3e7] text-outline text-[11px] font-caption-medium font-semibold uppercase tracking-wider h-7">
+<th class="py-1 px-4 w-[240px]">Agent</th>
+<th class="py-1 px-4 w-[220px]">Scope</th>
+<th class="py-1 px-4 w-[140px]">Version</th>
+<th class="py-1 px-4">Local state</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-[#e1e3e7] text-body-default font-body-default">
+<!-- Row 1 -->
+<tr class="hover:bg-[#edf4ff] transition-colors duration-150 h-9">
+<td class="py-1.5 px-4 font-body-medium">
+<div class="flex items-center space-x-2">
+<span class="w-4 h-4 rounded-full agent-dot-aipro flex items-center justify-center text-[9px] font-bold">A</span>
+<span class="text-on-surface font-medium">AIPro</span>
+</div>
+</td>
+<td class="py-1.5 px-4 text-on-surface-variant flex items-center space-x-1.5">
+<span class="material-symbols-outlined text-[14px] text-outline">workspaces</span>
+<span>Project Atlas</span>
+</td>
+<td class="py-1.5 px-4 font-code-sm text-code-sm text-on-surface">1.1.0</td>
+<td class="py-1.5 px-4">
+<span class="px-1.5 py-0.5 text-[11px] font-caption-medium font-medium rounded-[3px] bg-[#fff5e4] text-[#92580b] border border-[#fbd38d]/50">
+                    Modified
+                  </span>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="hover:bg-[#edf4ff] transition-colors duration-150 h-9">
+<td class="py-1.5 px-4 font-body-medium">
+<div class="flex items-center space-x-2">
+<span class="w-4 h-4 rounded-full agent-dot-aipro flex items-center justify-center text-[9px] font-bold">A</span>
+<span class="text-on-surface font-medium">AIPro</span>
+</div>
+</td>
+<td class="py-1.5 px-4 text-on-surface-variant flex items-center space-x-1.5">
+<span class="material-symbols-outlined text-[14px] text-outline">public</span>
+<span>Global</span>
+</td>
+<td class="py-1.5 px-4 font-code-sm text-code-sm text-on-surface">1.1.0</td>
+<td class="py-1.5 px-4">
+<span class="text-caption-regular font-caption-regular text-outline">
+                    Unchanged
+                  </span>
+</td>
+</tr>
+<!-- Row 3 -->
+<tr class="hover:bg-[#edf4ff] transition-colors duration-150 h-9">
+<td class="py-1.5 px-4 font-body-medium">
+<div class="flex items-center space-x-2">
+<span class="w-4 h-4 rounded-full agent-dot-claude flex items-center justify-center text-[8px] font-bold">Cl</span>
+<span class="text-on-surface font-medium">Claude</span>
+</div>
+</td>
+<td class="py-1.5 px-4 text-on-surface-variant flex items-center space-x-1.5">
+<span class="material-symbols-outlined text-[14px] text-outline">public</span>
+<span>Global</span>
+</td>
+<td class="py-1.5 px-4 font-code-sm text-code-sm text-on-surface">1.2.0</td>
+<td class="py-1.5 px-4">
+<span class="px-1.5 py-0.5 text-[11px] font-caption-medium font-medium rounded-[3px] bg-[#e8f6ef] text-[#087b58] border border-[#a3e2c5]/50">
+                    Current
+                  </span>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Info Notice Banner Below Table -->
+<div class="px-4 py-2.5 bg-[#f8f9ff] border-t border-[#e1e3e7] flex items-center space-x-2 text-caption-regular font-caption-regular text-on-surface-variant">
+<span class="material-symbols-outlined text-primary-container text-[16px]">info</span>
+<span>Each target keeps its own version. Updating Library does not silently update other locations.</span>
+</div>
+</section>
+</main>
+</div>
+</body></html>

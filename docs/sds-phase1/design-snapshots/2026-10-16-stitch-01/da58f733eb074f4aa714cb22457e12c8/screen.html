@@ -1,0 +1,530 @@
+<!DOCTYPE html><html class="h-full" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Skills Manager — Samsung SDS</title>
+<!-- Material Symbols Outlined font -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<!-- Inter & JetBrains Mono fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect">
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "primary-fixed-dim": "#afc6ff",
+            "surface-container-lowest": "#ffffff",
+            "surface-bright": "#f8f9ff",
+            "surface-variant": "#e1e2e8",
+            "on-secondary-fixed-variant": "#434750",
+            "primary-container": "#1657b8",
+            "surface-dim": "#d8dadf",
+            "on-primary-container": "#c2d3ff",
+            "background": "#f8f9ff",
+            "error-container": "#ffdad6",
+            "surface-container-high": "#e6e8ed",
+            "tertiary-fixed": "#96f5ca",
+            "outline-variant": "#c3c6d4",
+            "on-primary-fixed": "#001a43",
+            "on-tertiary-fixed-variant": "#005139",
+            "on-error-container": "#93000a",
+            "inverse-on-surface": "#eff0f6",
+            "tertiary-fixed-dim": "#7ad9af",
+            "on-secondary-fixed": "#171c24",
+            "on-primary-fixed-variant": "#004397",
+            "surface": "#f8f9ff",
+            "on-tertiary": "#ffffff",
+            "secondary-fixed-dim": "#c3c6d1",
+            "surface-tint": "#1c5abc",
+            "on-surface": "#191c20",
+            "on-error": "#ffffff",
+            "on-surface-variant": "#424752",
+            "surface-container": "#eceef3",
+            "on-secondary-container": "#60646e",
+            "surface-container-low": "#f2f3f9",
+            "tertiary-container": "#006849",
+            "secondary-fixed": "#dfe2ee",
+            "primary": "#004091",
+            "error": "#ba1a1a",
+            "on-tertiary-container": "#87e6bb",
+            "surface-container-highest": "#e1e2e8",
+            "tertiary": "#004e36",
+            "inverse-surface": "#2e3135",
+            "on-background": "#191c20",
+            "inverse-primary": "#afc6ff",
+            "primary-fixed": "#d8e2ff",
+            "secondary": "#5a5e68",
+            "on-tertiary-fixed": "#002115",
+            "secondary-container": "#dfe2ee",
+            "on-primary": "#ffffff",
+            "outline": "#737784",
+            "on-secondary": "#ffffff"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.125rem",
+            "lg": "0.25rem",
+            "xl": "0.5rem",
+            "full": "0.75rem"
+          },
+          "spacing": {
+            "margin": "1rem",
+            "space-md": "0.75rem",
+            "space-xl": "1.5rem",
+            "gutter": "1rem",
+            "space-sm": "0.5rem",
+            "space-xs": "0.25rem",
+            "space-lg": "1rem"
+          },
+          "fontFamily": {
+            "headline-md": ["Inter"],
+            "code-sm": ["JetBrains Mono"],
+            "caption-regular": ["Inter"],
+            "headline-lg": ["Inter"],
+            "caption-medium": ["Inter"],
+            "body-default": ["Inter"],
+            "titlebar-caption": ["Inter"],
+            "headline-sm": ["Inter"],
+            "body-medium": ["Inter"]
+          },
+          "fontSize": {
+            "headline-md": ["16px", { "lineHeight": "24px", "fontWeight": "600" }],
+            "code-sm": ["12px", { "lineHeight": "16px", "fontWeight": "400" }],
+            "caption-regular": ["11px", { "lineHeight": "16px", "fontWeight": "400" }],
+            "headline-lg": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+            "caption-medium": ["11px", { "lineHeight": "16px", "fontWeight": "500" }],
+            "body-default": ["13px", { "lineHeight": "18px", "fontWeight": "400" }],
+            "titlebar-caption": ["12px", { "lineHeight": "16px", "fontWeight": "500" }],
+            "headline-sm": ["14px", { "lineHeight": "20px", "fontWeight": "600" }],
+            "body-medium": ["13px", { "lineHeight": "18px", "fontWeight": "500" }]
+          }
+        },
+      },
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+      font-size: 16px;
+      line-height: 1;
+      display: inline-block;
+      vertical-align: middle;
+    }
+    /* Custom Scrollbar for dense desktop application */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f8f9ff;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #c3c6d4;
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #737784;
+    }
+  </style>
+</head>
+<body class="bg-background text-on-surface h-full flex flex-col font-body-default text-body-default antialiased select-none overflow-hidden">
+<!-- TOP TITLEBAR (Docked full-width top-0 h-8 from JSON) -->
+<header class="bg-surface-container text-on-surface flex justify-between items-center w-full h-8 px-3 select-none border-b border-outline-variant z-50 shrink-0">
+<!-- Brand / Document Info -->
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[15px]" data-icon="hub">hub</span>
+<span class="text-titlebar-caption font-titlebar-caption text-on-surface tracking-tight">AX Portal — Samsung SDS</span>
+<span class="text-caption-regular font-caption-regular text-outline bg-surface-container-high px-1.5 py-0.5 rounded ml-2">v2.4.1-enterprise</span>
+</div>
+<!-- Window Controls Trailing -->
+<div class="flex items-center -mr-3 h-full">
+<button aria-label="Minimize" class="w-[44px] h-8 inline-flex items-center justify-center text-on-surface hover:bg-surface-variant transition-colors duration-150" title="Minimize">
+<span class="material-symbols-outlined text-[14px]" data-icon="minimize">minimize</span>
+</button>
+<button aria-label="Maximize" class="w-[44px] h-8 inline-flex items-center justify-center text-on-surface hover:bg-surface-variant transition-colors duration-150" title="Maximize">
+<span class="material-symbols-outlined text-[13px]" data-icon="crop_square">crop_square</span>
+</button>
+<button aria-label="Close" class="w-[44px] h-8 inline-flex items-center justify-center text-on-surface hover:bg-[#ac3535] hover:text-white transition-colors duration-150" title="Close">
+<span class="material-symbols-outlined text-[15px]" data-icon="close">close</span>
+</button>
+</div>
+</header>
+<!-- WORKSPACE BODY (Sidebar + Stage) -->
+<div class="flex flex-1 h-[calc(100vh-32px)] overflow-hidden">
+<!-- SIDEBAR NAVIGATION (w-[225px] h-full from JSON) -->
+<aside class="w-[225px] h-full flex flex-col justify-between p-space-sm border-r border-outline-variant bg-surface-container-lowest shrink-0 select-none">
+<div class="flex flex-col gap-3">
+<!-- Logo Header -->
+<div class="px-2 py-1 flex items-center gap-2.5">
+<div class="w-6 h-6 rounded bg-primary-container flex items-center justify-center text-white font-bold text-[12px] shadow-sm">
+            S
+          </div>
+<div class="flex flex-col leading-none">
+<span class="text-headline-sm font-headline-sm text-primary font-bold tracking-tight">AX Portal</span>
+<span class="text-caption-regular font-caption-regular text-outline tracking-wider text-[10px] mt-0.5">SAMSUNG SDS</span>
+</div>
+</div>
+<!-- Action CTA -->
+<div class="px-1">
+<button class="w-full h-7 bg-surface-container-low hover:bg-surface-container text-on-surface border border-outline-variant rounded-lg px-2 flex items-center justify-between text-caption-medium font-caption-medium transition-colors duration-150">
+<span class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[15px] text-primary" data-icon="tune">tune</span>
+              New preset
+            </span>
+<span class="text-[10px] text-outline font-code-sm">Ctrl+N</span>
+</button>
+</div>
+<!-- Navigation Tabs Group -->
+<nav class="flex flex-col gap-0.5 mt-1">
+<span class="text-[10px] font-semibold text-outline uppercase tracking-wider px-2 py-1">Registry</span>
+<!-- Tab: Dashboard (ACTIVE) -->
+<a class="bg-secondary-container text-primary font-medium rounded-lg px-2 py-1.5 border-l-2 border-primary flex items-center gap-2 transition-colors duration-150 ease-in-out" href="#dashboard">
+<span class="material-symbols-outlined text-[16px]" data-icon="dashboard">dashboard</span>
+<span class="text-body-default font-body-default">Dashboard</span>
+</a>
+<!-- Tab: Library -->
+<a class="text-on-surface-variant font-normal rounded-lg px-2 py-1.5 hover:bg-surface-container hover:text-on-surface flex items-center gap-2 transition-colors duration-150 ease-in-out" href="#library">
+<span class="material-symbols-outlined text-[16px] text-secondary" data-icon="folder">folder</span>
+<span class="text-body-default font-body-default">Library</span>
+</a>
+<!-- Tab: Skills Store -->
+<a class="text-on-surface-variant font-normal rounded-lg px-2 py-1.5 hover:bg-surface-container hover:text-on-surface flex items-center gap-2 transition-colors duration-150 ease-in-out" href="#store">
+<span class="material-symbols-outlined text-[16px] text-secondary" data-icon="storefront">storefront</span>
+<span class="text-body-default font-body-default">Skills Store</span>
+</a>
+<!-- Tab: Backup -->
+<a class="text-on-surface-variant font-normal rounded-lg px-2 py-1.5 hover:bg-surface-container hover:text-on-surface flex items-center gap-2 transition-colors duration-150 ease-in-out" href="#backup">
+<span class="material-symbols-outlined text-[16px] text-secondary" data-icon="backup">backup</span>
+<span class="text-body-default font-body-default">Backup</span>
+</a>
+<span class="text-[10px] font-semibold text-outline uppercase tracking-wider px-2 pt-3 pb-1">Target Environments</span>
+<!-- Tab: PM Essentials -->
+<a class="text-on-surface-variant font-normal rounded-lg px-2 py-1.5 hover:bg-surface-container hover:text-on-surface flex items-center gap-2 transition-colors duration-150 ease-in-out" href="#pm">
+<span class="material-symbols-outlined text-[16px] text-secondary" data-icon="tune">tune</span>
+<span class="text-body-default font-body-default">PM Essentials</span>
+</a>
+<!-- Tab: All Agents -->
+<a class="text-on-surface-variant font-normal rounded-lg px-2 py-1.5 hover:bg-surface-container hover:text-on-surface flex items-center gap-2 transition-colors duration-150 ease-in-out" href="#agents">
+<span class="material-symbols-outlined text-[16px] text-secondary" data-icon="smart_toy">smart_toy</span>
+<span class="text-body-default font-body-default">All Agents</span>
+</a>
+<!-- Tab: AIPro -->
+<a class="text-on-surface-variant font-normal rounded-lg px-2 py-1 hover:bg-surface-container hover:text-on-surface flex items-center gap-2 transition-colors duration-150 ease-in-out text-caption-medium pl-4" href="#aipro">
+<span class="w-1.5 h-1.5 rounded-full bg-[#1657b8]"></span>
+<span class="">AIPro</span>
+</a>
+<!-- Tab: Claude -->
+<a class="text-on-surface-variant font-normal rounded-lg px-2 py-1 hover:bg-surface-container hover:text-on-surface flex items-center gap-2 transition-colors duration-150 ease-in-out text-caption-medium pl-4" href="#claude">
+<span class="w-1.5 h-1.5 rounded-full bg-[#b94b29]"></span>
+<span class="">Claude</span>
+</a>
+<!-- Tab: Gemini -->
+<a class="text-on-surface-variant font-normal rounded-lg px-2 py-1 hover:bg-surface-container hover:text-on-surface flex items-center gap-2 transition-colors duration-150 ease-in-out text-caption-medium pl-4" href="#gemini">
+<span class="w-1.5 h-1.5 rounded-full bg-[#6a3ebd]"></span>
+<span class="">Gemini</span>
+</a>
+<!-- Tab: Codex -->
+<a class="text-on-surface-variant font-normal rounded-lg px-2 py-1 hover:bg-surface-container hover:text-on-surface flex items-center gap-2 transition-colors duration-150 ease-in-out text-caption-medium pl-4" href="#codex">
+<span class="w-1.5 h-1.5 rounded-full bg-[#464a53]"></span>
+<span class="">Codex</span>
+</a>
+<!-- Tab: Project Atlas -->
+<a class="text-on-surface-variant font-normal rounded-lg px-2 py-1.5 hover:bg-surface-container hover:text-on-surface flex items-center gap-2 transition-colors duration-150 ease-in-out" href="#atlas">
+<span class="material-symbols-outlined text-[16px] text-secondary" data-icon="workspaces">workspaces</span>
+<span class="text-body-default font-body-default">Project Atlas</span>
+</a>
+</nav>
+</div>
+<!-- Footer Actions / Profile -->
+<div class="border-t border-outline-variant pt-2 flex flex-col gap-1">
+<a class="text-on-surface-variant font-normal rounded-lg px-2 py-1.5 hover:bg-surface-container hover:text-on-surface flex items-center gap-2 transition-colors duration-150 ease-in-out" href="#settings">
+<span class="material-symbols-outlined text-[16px] text-secondary" data-icon="settings">settings</span>
+<span class="text-body-default font-body-default">Settings</span>
+</a>
+<div class="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-surface-container-low border border-outline-variant/60">
+<span class="material-symbols-outlined text-[18px] text-primary" data-icon="account_circle">account_circle</span>
+<div class="flex flex-col leading-tight overflow-hidden">
+<span class="text-caption-medium font-caption-medium text-on-surface truncate">Example Employee</span>
+<span class="text-[10px] text-outline truncate">SDS AI Arch Team</span>
+</div>
+</div>
+</div>
+</aside>
+<!-- MAIN WORKING CANVAS (Fluid 1fr desktop area) -->
+<main class="flex-1 overflow-y-auto bg-surface-bright flex flex-col p-6">
+<div class="max-w-[1180px] w-full mx-auto flex flex-col space-y-5">
+<!-- Screen Header -->
+<header class="flex items-start justify-between pb-1 border-b border-outline-variant/50">
+<div>
+<div class="text-caption-medium font-caption-medium tracking-wider text-outline uppercase font-code-sm">
+              W14 · GET STARTED
+            </div>
+<h1 class="text-headline-lg font-headline-lg text-on-surface mt-0.5 tracking-tight font-bold">Welcome to AX Portal</h1>
+<p class="text-body-default font-body-default text-on-surface-variant mt-0.5">
+              Find useful skills and make them available to your agents.
+            </p>
+</div>
+<!-- Primary CTA Button (Blue #1657b8) -->
+<div class="pt-2">
+<button class="bg-primary-container hover:bg-[#124491] text-white h-8 px-3.5 rounded-lg text-body-medium font-body-medium inline-flex items-center gap-1.5 shadow-sm transition-all duration-150 cursor-pointer">
+<span class="">Browse Skills Store</span>
+<span class="material-symbols-outlined text-[15px]" data-icon="arrow_forward">arrow_forward</span>
+</button>
+</div>
+</header>
+<!-- Metric Grid (3 Columns) -->
+<section aria-label="Key Metrics" class="grid grid-cols-3 gap-4">
+<!-- Card 1 -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-lg p-4 flex flex-col justify-between hover:border-primary transition-colors">
+<div class="flex items-center justify-between text-outline">
+<span class="text-caption-medium font-caption-medium uppercase tracking-wider text-[10px]">Registered Inventory</span>
+<span class="material-symbols-outlined text-[16px]" data-icon="folder">folder</span>
+</div>
+<div class="mt-2">
+<div class="text-headline-lg font-headline-lg text-on-surface font-bold text-[28px] leading-none">12</div>
+<div class="text-caption-medium font-caption-medium text-on-surface-variant mt-1.5">Skills in Library</div>
+</div>
+</div>
+<!-- Card 2 -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-lg p-4 flex flex-col justify-between hover:border-primary transition-colors">
+<div class="flex items-center justify-between text-outline">
+<span class="text-caption-medium font-caption-medium uppercase tracking-wider text-[10px]">Active Orchestration</span>
+<span class="material-symbols-outlined text-[16px]" data-icon="smart_toy">smart_toy</span>
+</div>
+<div class="mt-2">
+<div class="text-headline-lg font-headline-lg text-on-surface font-bold text-[28px] leading-none">4</div>
+<div class="text-caption-medium font-caption-medium text-on-surface-variant mt-1.5">Agents configured</div>
+</div>
+</div>
+<!-- Card 3 -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-lg p-4 flex flex-col justify-between hover:border-primary transition-colors">
+<div class="flex items-center justify-between text-outline">
+<span class="text-caption-medium font-caption-medium uppercase tracking-wider text-[10px]">Registry Alert</span>
+<span class="material-symbols-outlined text-[16px] text-[#92580b]" data-icon="notification_important">notification_important</span>
+</div>
+<div class="mt-2">
+<div class="text-headline-lg font-headline-lg text-[#92580b] font-bold text-[28px] leading-none">1</div>
+<div class="text-caption-medium font-caption-medium text-on-surface-variant mt-1.5">Skill update available</div>
+</div>
+</div>
+</section>
+<!-- Three-step Onboarding Panel (margin-top: 22px / ~1.375rem) -->
+<section class="mt-[22px] bg-surface-container-lowest border border-outline-variant rounded-lg p-4">
+<div class="flex items-center justify-between pb-3 mb-3 border-b border-outline-variant/60">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[18px]" data-icon="flag">flag</span>
+<h2 class="text-headline-sm font-headline-sm text-on-surface font-bold">Your first skill, in three steps</h2>
+</div>
+<span class="text-caption-regular font-caption-regular text-outline">Guided Enterprise Onboarding</span>
+</div>
+<!-- 3 Steps Grid -->
+<div class="grid grid-cols-3 gap-4">
+<!-- Step 1 -->
+<div class="bg-surface-bright border border-outline-variant/60 rounded-lg p-3 flex flex-col justify-between">
+<div>
+<div class="inline-flex items-center px-2 py-0.5 rounded bg-[#edf4ff] text-[#1657b8] border border-[#1657b8]/20 text-[11px] font-medium leading-tight mb-2">
+                  1 · Discover
+                </div>
+<p class="text-body-default font-body-default text-on-surface-variant leading-relaxed">
+                  Find a skill for your task in the internal Store. Read its instructions and requirements.
+                </p>
+</div>
+<div class="mt-3 pt-2 border-t border-outline-variant/40 flex items-center justify-between">
+<span class="text-[11px] text-outline font-code-sm">Store Catalog</span>
+<span class="material-symbols-outlined text-[14px] text-outline" data-icon="search">search</span>
+</div>
+</div>
+<!-- Step 2 -->
+<div class="bg-surface-bright border border-outline-variant/60 rounded-lg p-3 flex flex-col justify-between">
+<div>
+<div class="inline-flex items-center px-2 py-0.5 rounded bg-[#edf4ff] text-[#1657b8] border border-[#1657b8]/20 text-[11px] font-medium leading-tight mb-2">
+                  2 · Choose
+                </div>
+<p class="text-body-default font-body-default text-on-surface-variant leading-relaxed">
+                  Select agents and choose Global for general use, or Project for one workspace.
+                </p>
+</div>
+<div class="mt-3 pt-2 border-t border-outline-variant/40 flex items-center justify-between">
+<span class="text-[11px] text-outline font-code-sm">Scope Routing</span>
+<span class="material-symbols-outlined text-[14px] text-outline" data-icon="rule">rule</span>
+</div>
+</div>
+<!-- Step 3 -->
+<div class="bg-surface-bright border border-outline-variant/60 rounded-lg p-3 flex flex-col justify-between">
+<div>
+<div class="inline-flex items-center px-2 py-0.5 rounded bg-[#edf4ff] text-[#1657b8] border border-[#1657b8]/20 text-[11px] font-medium leading-tight mb-2">
+                  3 · Install
+                </div>
+<p class="text-body-default font-body-default text-on-surface-variant leading-relaxed">
+                  Review AIPro MCP warnings, install and check the result for each destination.
+                </p>
+</div>
+<div class="mt-3 pt-2 border-t border-outline-variant/40 flex items-center justify-between">
+<span class="text-[11px] text-outline font-code-sm">MCP Verification</span>
+<span class="material-symbols-outlined text-[14px] text-outline" data-icon="verified">verified</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Two-column Bottom Section -->
+<section class="grid grid-cols-12 gap-4">
+<!-- Left Panel: 'Your agents' (7 cols) -->
+<div class="col-span-7 bg-surface-container-lowest border border-outline-variant rounded-lg p-4 flex flex-col justify-between">
+<div>
+<div class="flex items-center justify-between mb-3 pb-2 border-b border-outline-variant/60">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-primary text-[18px]" data-icon="smart_toy">smart_toy</span>
+<h3 class="text-headline-sm font-headline-sm text-on-surface font-bold">Your agents</h3>
+</div>
+<span class="text-caption-medium font-caption-medium text-outline">4 of 4 Ready</span>
+</div>
+<!-- Agents Table -->
+<div class="w-full border border-outline-variant rounded overflow-hidden">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-surface-container-low h-7 border-b border-outline-variant">
+<th class="text-caption-medium font-caption-medium text-outline uppercase tracking-wider text-[11px] px-3 font-semibold">Agent Provider</th>
+<th class="text-caption-medium font-caption-medium text-outline uppercase tracking-wider text-[11px] px-3 font-semibold">Protocol</th>
+<th class="text-caption-medium font-caption-medium text-outline uppercase tracking-wider text-[11px] px-3 text-right font-semibold">Status</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant">
+<!-- Row 1: AIPro -->
+<tr class="h-8 hover:bg-[#edf4ff] transition-colors">
+<td class="px-3 flex items-center gap-2 h-8">
+<span class="w-2 h-2 rounded-full bg-[#1657b8]"></span>
+<span class="text-body-medium font-body-medium text-on-surface">AIPro</span>
+</td>
+<td class="px-3 text-caption-regular font-caption-regular text-on-surface-variant font-code-sm">MCP v1.2</td>
+<td class="px-3 text-right">
+<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-medium leading-none bg-[#e8f6ef] text-[#087b58]">
+<span class="w-1 h-1 rounded-full bg-[#087b58]"></span>
+                          Detected
+                        </span>
+</td>
+</tr>
+<!-- Row 2: Claude -->
+<tr class="h-8 hover:bg-[#edf4ff] transition-colors">
+<td class="px-3 flex items-center gap-2 h-8">
+<span class="w-2 h-2 rounded-full bg-[#b94b29]"></span>
+<span class="text-body-medium font-body-medium text-on-surface">Claude</span>
+</td>
+<td class="px-3 text-caption-regular font-caption-regular text-on-surface-variant font-code-sm">Desktop SDK</td>
+<td class="px-3 text-right">
+<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-medium leading-none bg-[#e8f6ef] text-[#087b58]">
+<span class="w-1 h-1 rounded-full bg-[#087b58]"></span>
+                          Detected
+                        </span>
+</td>
+</tr>
+<!-- Row 3: Gemini -->
+<tr class="h-8 hover:bg-[#edf4ff] transition-colors">
+<td class="px-3 flex items-center gap-2 h-8">
+<span class="w-2 h-2 rounded-full bg-[#6a3ebd]"></span>
+<span class="text-body-medium font-body-medium text-on-surface">Gemini</span>
+</td>
+<td class="px-3 text-caption-regular font-caption-regular text-on-surface-variant font-code-sm">CLI Daemon</td>
+<td class="px-3 text-right">
+<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-medium leading-none bg-[#e8f6ef] text-[#087b58]">
+<span class="w-1 h-1 rounded-full bg-[#087b58]"></span>
+                          Detected
+                        </span>
+</td>
+</tr>
+<!-- Row 4: Codex -->
+<tr class="h-8 hover:bg-[#edf4ff] transition-colors">
+<td class="px-3 flex items-center gap-2 h-8">
+<span class="w-2 h-2 rounded-full bg-[#464a53]"></span>
+<span class="text-body-medium font-body-medium text-on-surface">Codex</span>
+</td>
+<td class="px-3 text-caption-regular font-caption-regular text-on-surface-variant font-code-sm">Local Runtime</td>
+<td class="px-3 text-right">
+<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-medium leading-none bg-[#e8f6ef] text-[#087b58]">
+<span class="w-1 h-1 rounded-full bg-[#087b58]"></span>
+                          Detected
+                        </span>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<!-- Footer link -->
+<div class="mt-3 pt-2 flex items-center justify-between border-t border-outline-variant/50">
+<span class="text-caption-regular font-caption-regular text-outline">Paths auto-discovered via system daemon</span>
+<a class="text-body-medium font-body-medium text-primary hover:underline inline-flex items-center gap-1" href="#manage-paths">
+<span class="">Manage agent paths →</span>
+</a>
+</div>
+</div>
+<!-- Right Panel: 'Needs attention' (5 cols) -->
+<div class="col-span-5 bg-surface-container-lowest border border-outline-variant rounded-lg p-4 flex flex-col justify-between">
+<div>
+<div class="flex items-center justify-between mb-3 pb-2 border-b border-outline-variant/60">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[#92580b] text-[18px]" data-icon="warning">warning</span>
+<h3 class="text-headline-sm font-headline-sm text-on-surface font-bold">Needs attention</h3>
+</div>
+<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-[#fff5e4] text-[#92580b] border border-[#92580b]/30">2 ACTION ITEMS</span>
+</div>
+<!-- Notice Item 1: Amber Box -->
+<div class="p-3 rounded-lg bg-[#fff9ed] border border-[#f1d29d] mb-3">
+<div class="flex items-start gap-2">
+<span class="material-symbols-outlined text-[#92580b] text-[16px] mt-0.5 shrink-0" data-icon="system_update_alt">system_update_alt</span>
+<div class="flex-1">
+<p class="text-body-default font-body-medium text-[#92580b] leading-tight">
+                      Jira Weekly Report has a new version.
+                    </p>
+<p class="text-caption-regular font-caption-regular text-on-surface-variant mt-1 leading-snug">
+                      Version 3.4.0 adds support for sprint milestone rollups and OAuth refresh.
+                    </p>
+<div class="mt-2">
+<a class="text-caption-medium font-caption-medium text-[#1657b8] hover:underline inline-flex items-center gap-1" href="#review-update">
+                        Review update →
+                      </a>
+</div>
+</div>
+</div>
+</div>
+<!-- Divider -->
+<div class="border-t border-outline-variant my-2.5"></div>
+<!-- Notice Item 2: AIPro Missing Config -->
+<div class="px-2 py-1">
+<div class="flex items-start gap-2">
+<span class="material-symbols-outlined text-[#ac3535] text-[16px] mt-0.5 shrink-0" data-icon="error_outline">error_outline</span>
+<div class="flex-1">
+<p class="text-body-default font-body-default text-on-surface leading-tight">
+                      AIPro is missing the Jira MCP configuration.
+                    </p>
+<p class="text-caption-regular font-caption-regular text-on-surface-variant mt-0.5">
+                      Endpoint token or bridge socket required before installation can proceed.
+                    </p>
+<div class="mt-1.5">
+<a class="text-caption-medium font-caption-medium text-[#1657b8] hover:underline inline-flex items-center gap-1" href="#review-requirements">
+                        Review requirements →
+                      </a>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Health check summary caption -->
+<div class="mt-3 pt-2 border-t border-outline-variant/50 flex items-center justify-between text-caption-regular font-caption-regular text-outline">
+<span class="flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-[#087b58]"></span>
+                Diagnostics sync: 42s ago
+              </span>
+<button class="hover:text-primary transition-colors text-[11px] font-caption-medium">Refresh</button>
+</div>
+</div>
+</section>
+</div>
+</main>
+</div>
+
+
+</body></html>

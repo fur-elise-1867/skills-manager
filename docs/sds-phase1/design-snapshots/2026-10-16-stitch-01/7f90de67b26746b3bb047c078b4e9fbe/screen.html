@@ -1,0 +1,358 @@
+<!DOCTYPE html><html class="h-full" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Skills Manager — Samsung SDS</title>
+<link href="https://fonts.googleapis.com" rel="preconnect">
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "primary-fixed-dim": "#afc6ff",
+            "surface-container-lowest": "#ffffff",
+            "surface-bright": "#f8f9ff",
+            "surface-variant": "#e1e2e8",
+            "on-secondary-fixed-variant": "#434750",
+            "primary-container": "#1657b8",
+            "surface-dim": "#d8dadf",
+            "on-primary-container": "#c2d3ff",
+            "background": "#f8f9ff",
+            "error-container": "#ffdad6",
+            "surface-container-high": "#e6e8ed",
+            "tertiary-fixed": "#96f5ca",
+            "outline-variant": "#c3c6d4",
+            "on-primary-fixed": "#001a43",
+            "on-tertiary-fixed-variant": "#005139",
+            "on-error-container": "#93000a",
+            "inverse-on-surface": "#eff0f6",
+            "tertiary-fixed-dim": "#7ad9af",
+            "on-secondary-fixed": "#171c24",
+            "on-primary-fixed-variant": "#004397",
+            "surface": "#f8f9ff",
+            "on-tertiary": "#ffffff",
+            "secondary-fixed-dim": "#c3c6d1",
+            "surface-tint": "#1c5abc",
+            "on-surface": "#191c20",
+            "on-error": "#ffffff",
+            "on-surface-variant": "#424752",
+            "surface-container": "#eceef3",
+            "on-secondary-container": "#60646e",
+            "surface-container-low": "#f2f3f9",
+            "tertiary-container": "#006849",
+            "secondary-fixed": "#dfe2ee",
+            "primary": "#004091",
+            "error": "#ba1a1a",
+            "on-tertiary-container": "#87e6bb",
+            "surface-container-highest": "#e1e2e8",
+            "tertiary": "#004e36",
+            "inverse-surface": "#2e3135",
+            "on-background": "#191c20",
+            "inverse-primary": "#afc6ff",
+            "primary-fixed": "#d8e2ff",
+            "secondary": "#5a5e68",
+            "on-tertiary-fixed": "#002115",
+            "secondary-container": "#dfe2ee",
+            "on-primary": "#ffffff",
+            "outline": "#737784",
+            "on-secondary": "#ffffff"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.125rem",
+            "lg": "0.25rem",
+            "xl": "0.5rem",
+            "full": "0.75rem"
+          },
+          "spacing": {
+            "margin": "1rem",
+            "space-md": "0.75rem",
+            "space-xl": "1.5rem",
+            "gutter": "1rem",
+            "space-sm": "0.5rem",
+            "space-xs": "0.25rem",
+            "space-lg": "1rem"
+          },
+          "fontFamily": {
+            "headline-md": ["Inter"],
+            "code-sm": ["JetBrains Mono"],
+            "caption-regular": ["Inter"],
+            "headline-lg": ["Inter"],
+            "caption-medium": ["Inter"],
+            "body-default": ["Inter"],
+            "titlebar-caption": ["Inter"],
+            "headline-sm": ["Inter"],
+            "body-medium": ["Inter"]
+          },
+          "fontSize": {
+            "headline-md": ["16px", { "lineHeight": "24px", "fontWeight": "600" }],
+            "code-sm": ["12px", { "lineHeight": "16px", "fontWeight": "400" }],
+            "caption-regular": ["11px", { "lineHeight": "16px", "fontWeight": "400" }],
+            "headline-lg": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+            "caption-medium": ["11px", { "lineHeight": "16px", "fontWeight": "500" }],
+            "body-default": ["13px", { "lineHeight": "18px", "fontWeight": "400" }],
+            "titlebar-caption": ["12px", { "lineHeight": "16px", "fontWeight": "500" }],
+            "headline-sm": ["14px", { "lineHeight": "20px", "fontWeight": "600" }],
+            "body-medium": ["13px", { "lineHeight": "18px", "fontWeight": "500" }]
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-surface-container-low text-on-surface antialiased select-none overflow-hidden h-screen flex flex-col font-body-default text-body-default">
+<!-- TopNavBar (32px Desktop Window Chrome Titlebar) -->
+<header class="bg-surface-container text-on-surface border-b border-outline-variant flex justify-between items-center w-full h-8 px-3 select-none z-50 shrink-0">
+<!-- Brand / Titlebar caption -->
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[15px]" data-icon="memory">memory</span>
+<span class="text-titlebar-caption font-titlebar-caption tracking-tight">AX Portal — Samsung SDS</span>
+<span class="text-outline text-caption-regular font-caption-regular ml-2">v2.4.12-rc3</span>
+</div>
+<!-- Window System Controls -->
+<div class="flex items-center h-full -mr-3">
+<button class="w-11 h-8 flex items-center justify-center text-on-surface hover:bg-surface-variant transition-colors duration-150" title="Minimize">
+<span class="material-symbols-outlined text-[14px]" data-icon="minimize">minimize</span>
+</button>
+<button class="w-11 h-8 flex items-center justify-center text-on-surface hover:bg-surface-variant transition-colors duration-150" title="Maximize">
+<span class="material-symbols-outlined text-[13px]" data-icon="crop_square">crop_square</span>
+</button>
+<button class="w-11 h-8 flex items-center justify-center text-on-surface hover:bg-error hover:text-on-error transition-colors duration-150" title="Close">
+<span class="material-symbols-outlined text-[14px]" data-icon="close">close</span>
+</button>
+</div>
+</header>
+<!-- Desktop Main Shell Grid -->
+<div class="flex flex-1 h-[calc(100vh-32px)] overflow-hidden">
+<!-- SideNavBar (Fixed 225px width docked left) -->
+<aside class="w-[225px] h-full flex flex-col justify-between p-space-sm bg-surface-container-lowest text-primary border-r border-outline-variant shrink-0">
+<div class="flex flex-col gap-3">
+<!-- Sidebar Brand Header -->
+<div class="px-2 pt-1 pb-1 flex flex-col">
+<div class="flex items-center justify-between">
+<span class="text-headline-sm font-headline-sm text-primary font-bold tracking-tight">AX Portal</span>
+<span class="text-caption-regular font-caption-regular px-1.5 py-0.5 rounded bg-surface-container text-on-surface-variant font-code-sm">CORP</span>
+</div>
+<span class="text-caption-medium font-caption-medium text-outline tracking-wider uppercase mt-0.5">SAMSUNG SDS</span>
+</div>
+<!-- Sidebar CTA Action -->
+<div class="px-1">
+<button class="w-full flex items-center justify-center gap-1.5 bg-surface-container-low hover:bg-surface-container border border-outline-variant text-on-surface rounded-lg py-1 px-2 text-body-medium font-body-medium transition-colors duration-150 shadow-none">
+<span class="material-symbols-outlined text-[16px] text-primary" data-icon="add">add</span>
+<span class="">New preset</span>
+</button>
+</div>
+<!-- Section: General -->
+<div class="flex flex-col gap-0.5 mt-1">
+<div class="px-2 pb-1 text-caption-regular font-caption-regular uppercase tracking-wider text-outline">WORKSPACE</div>
+<!-- Tab: Dashboard -->
+<a class="text-on-surface-variant font-normal rounded-lg px-2 py-1.5 flex items-center gap-2 hover:bg-surface-container hover:text-on-surface transition-colors duration-150" href="#">
+<span class="material-symbols-outlined text-[16px] text-secondary" data-icon="dashboard">dashboard</span>
+<span class="text-body-default font-body-default">Dashboard</span>
+</a>
+<!-- Tab: Library -->
+<a class="text-on-surface-variant font-normal rounded-lg px-2 py-1.5 flex items-center gap-2 hover:bg-surface-container hover:text-on-surface transition-colors duration-150" href="#">
+<span class="material-symbols-outlined text-[16px] text-secondary" data-icon="folder">folder</span>
+<span class="text-body-default font-body-default">Library</span>
+</a>
+<!-- Tab: Skills Store -->
+<a class="text-on-surface-variant font-normal rounded-lg px-2 py-1.5 flex items-center gap-2 hover:bg-surface-container hover:text-on-surface transition-colors duration-150" href="#">
+<span class="material-symbols-outlined text-[16px] text-secondary" data-icon="storefront">storefront</span>
+<span class="text-body-default font-body-default">Skills Store</span>
+</a>
+<!-- Tab: Backup -->
+<a class="text-on-surface-variant font-normal rounded-lg px-2 py-1.5 flex items-center gap-2 hover:bg-surface-container hover:text-on-surface transition-colors duration-150" href="#">
+<span class="material-symbols-outlined text-[16px] text-secondary" data-icon="backup">backup</span>
+<span class="text-body-default font-body-default">Backup</span>
+</a>
+<!-- Tab: PM Essentials -->
+<a class="text-on-surface-variant font-normal rounded-lg px-2 py-1.5 flex items-center gap-2 hover:bg-surface-container hover:text-on-surface transition-colors duration-150" href="#">
+<span class="material-symbols-outlined text-[16px] text-secondary" data-icon="tune">tune</span>
+<span class="text-body-default font-body-default">PM Essentials</span>
+</a>
+</div>
+<!-- Section: Agents & Targets -->
+<div class="flex flex-col gap-0.5 mt-2">
+<div class="px-2 pb-1 text-caption-regular font-caption-regular uppercase tracking-wider text-outline">TARGET RUNTIMES</div>
+<!-- Tab: All Agents -->
+<a class="text-on-surface-variant font-normal rounded-lg px-2 py-1.5 flex items-center gap-2 hover:bg-surface-container hover:text-on-surface transition-colors duration-150" href="#">
+<span class="material-symbols-outlined text-[16px] text-secondary" data-icon="smart_toy">smart_toy</span>
+<span class="text-body-default font-body-default">All Agents</span>
+</a>
+<!-- Tab: AIPro -->
+<a class="text-on-surface-variant font-normal rounded-lg px-2 py-1.5 flex items-center gap-2 hover:bg-surface-container hover:text-on-surface transition-colors duration-150" href="#">
+<span class="material-symbols-outlined text-[16px] text-secondary" data-icon="hub">hub</span>
+<span class="text-body-default font-body-default">AIPro</span>
+</a>
+<!-- Tab: Claude -->
+<a class="text-on-surface-variant font-normal rounded-lg px-2 py-1.5 flex items-center gap-2 hover:bg-surface-container hover:text-on-surface transition-colors duration-150" href="#">
+<span class="material-symbols-outlined text-[16px] text-secondary" data-icon="psychology">psychology</span>
+<span class="text-body-default font-body-default">Claude</span>
+</a>
+<!-- Tab: Gemini -->
+<a class="text-on-surface-variant font-normal rounded-lg px-2 py-1.5 flex items-center gap-2 hover:bg-surface-container hover:text-on-surface transition-colors duration-150" href="#">
+<span class="material-symbols-outlined text-[16px] text-secondary" data-icon="neurology">neurology</span>
+<span class="text-body-default font-body-default">Gemini</span>
+</a>
+<!-- Tab: Codex -->
+<a class="text-on-surface-variant font-normal rounded-lg px-2 py-1.5 flex items-center gap-2 hover:bg-surface-container hover:text-on-surface transition-colors duration-150" href="#">
+<span class="material-symbols-outlined text-[16px] text-secondary" data-icon="terminal">terminal</span>
+<span class="text-body-default font-body-default">Codex</span>
+</a>
+<!-- Tab: Project Atlas (ACTIVE TAB) -->
+<a class="bg-secondary-container text-primary font-medium rounded-lg px-2 py-1.5 border-l-2 border-primary flex items-center justify-between" href="#">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[16px] text-primary" data-icon="workspaces" data-weight="fill" style="font-variation-settings: 'FILL' 1;">workspaces</span>
+<span class="text-body-medium font-body-medium text-primary">Project Atlas</span>
+</div>
+<span class="w-1.5 h-1.5 rounded-full bg-primary"></span>
+</a>
+</div>
+</div>
+<!-- Sidebar Footer Group -->
+<div class="flex flex-col gap-1 border-t border-outline-variant pt-2">
+<a class="text-on-surface-variant font-normal rounded-lg px-2 py-1 flex items-center gap-2 hover:bg-surface-container hover:text-on-surface transition-colors duration-150" href="#">
+<span class="material-symbols-outlined text-[16px] text-secondary" data-icon="settings">settings</span>
+<span class="text-body-default font-body-default">Settings</span>
+</a>
+<div class="flex items-center gap-2 px-2 py-1 text-on-surface">
+<span class="material-symbols-outlined text-[18px] text-secondary" data-icon="account_circle">account_circle</span>
+<div class="flex flex-col truncate">
+<span class="text-caption-medium font-caption-medium truncate leading-none">Example Employee</span>
+<span class="text-caption-regular font-caption-regular text-outline truncate leading-none mt-1">Enterprise Lead</span>
+</div>
+</div>
+</div>
+</aside>
+<!-- Main Content Stage Area -->
+<main class="flex-1 overflow-y-auto bg-surface-container-low flex flex-col items-center px-6 py-6">
+<!-- Eyebrow Ribbon -->
+<div class="w-full max-w-[750px] flex items-center justify-between mb-4">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[16px] text-outline" data-icon="subdirectory_arrow_right">subdirectory_arrow_right</span>
+<span class="text-caption-medium font-caption-medium tracking-wider text-outline uppercase">W13 · REMOVE FROM TARGET</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-caption-regular font-caption-regular text-secondary">Target Environment:</span>
+<span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-surface-container-lowest border border-outline-variant text-caption-medium font-caption-medium text-on-surface">
+<span class="w-1.5 h-1.5 rounded-full bg-primary-container"></span>
+            AIPro / Project Atlas
+          </span>
+</div>
+</div>
+<!-- Modal Dialog Panel (Max-width ~750px, centered with margin-top 40px) -->
+<section class="w-full max-w-[750px] mt-2 bg-surface-container-lowest border border-outline-variant rounded-lg shadow-sm flex flex-col overflow-hidden">
+<!-- Modal Header -->
+<div class="px-6 pt-5 pb-4 border-b border-outline-variant flex items-start justify-between bg-surface-bright">
+<div class="flex items-center gap-3">
+<div class="w-9 h-9 rounded-lg bg-[#fff0f0] border border-[#ffdad6] flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-[20px] text-[#ac3535]" data-icon="delete_sweep">delete_sweep</span>
+</div>
+<div>
+<h1 class="text-headline-md font-headline-md text-on-surface">Remove Jira Weekly Report?</h1>
+<p class="text-body-default font-body-default text-on-surface-variant mt-0.5">This removes the skill from AIPro in Project Atlas.</p>
+</div>
+</div>
+<span class="text-caption-regular font-caption-regular px-2 py-0.5 rounded bg-surface-container border border-outline-variant text-secondary font-code-sm">RELEASE 3.4.1</span>
+</div>
+<!-- Modal Body Contents -->
+<div class="px-6 py-5 flex flex-col gap-4">
+<!-- Deployment Source / Target Path Block -->
+<div class="flex flex-col gap-1.5">
+<label class="text-caption-medium font-caption-medium text-outline uppercase tracking-wider">Skill Target Directory</label>
+<div class="flex items-center justify-between bg-surface-container-low border border-outline-variant px-3 py-2 rounded font-code-sm text-code-sm text-on-surface">
+<div class="flex items-center gap-2 truncate">
+<span class="material-symbols-outlined text-[16px] text-secondary shrink-0" data-icon="folder_open">folder_open</span>
+<span class="truncate selection:bg-primary-fixed">D:\Projects\Atlas\.aipro\skills\jira-weekly-report</span>
+</div>
+<button class="text-caption-regular font-caption-regular text-primary hover:underline ml-3 shrink-0" title="Reveal in File Explorer">Reveal</button>
+</div>
+</div>
+<!-- Amber Warning Notice Box -->
+<div class="p-3 bg-[#fff8eb] border border-[#f5dfa8] rounded flex items-start gap-2.5">
+<span class="material-symbols-outlined text-[18px] text-[#92580b] shrink-0 mt-0.5" data-icon="warning" data-weight="fill" style="font-variation-settings: 'FILL' 1;">warning</span>
+<div class="flex-1">
+<div class="text-caption-medium font-caption-medium text-[#92580b]">Unsaved Modifications Detected</div>
+<p class="text-body-default font-body-default text-[#714408] mt-0.5">
+                This copy has local changes. Save a snapshot if you may need them later.
+              </p>
+</div>
+</div>
+<!-- Checkbox Selectable Row -->
+<label class="flex items-center gap-3 p-3 bg-surface-bright border border-outline-variant rounded hover:border-outline cursor-pointer transition-colors duration-150">
+<input checked="" class="w-4 h-4 rounded border-outline text-primary focus:ring-primary focus:ring-offset-0 cursor-pointer" type="checkbox">
+<div class="flex flex-col">
+<span class="text-body-medium font-body-medium text-on-surface">Save a local backup before removing</span>
+<span class="text-caption-regular font-caption-regular text-outline">Will write archive to <span class="font-code-sm">D:\Projects\Atlas\.aipro\backups\jira-weekly-report-20250514-local.zip</span></span>
+</div>
+</label>
+<!-- Divider -->
+<div class="w-full border-t border-outline-variant my-1"></div>
+<!-- Scope Clarification Subtext -->
+<div class="flex items-start gap-2 text-on-surface-variant">
+<span class="material-symbols-outlined text-[16px] text-secondary mt-0.5 shrink-0" data-icon="info">info</span>
+<p class="text-body-default font-body-default leading-tight">
+              The Library copy and installations in other agents or projects are kept.
+            </p>
+</div>
+</div>
+<!-- Footer Actions Bar -->
+<div class="px-6 py-3 bg-surface-bright border-t border-outline-variant flex items-center justify-between">
+<span class="text-caption-regular font-caption-regular text-outline">Press ESC to discard</span>
+<div class="flex items-center gap-2">
+<button class="px-4 py-1.5 bg-surface-container-lowest hover:bg-surface-container border border-outline-variant text-on-surface rounded text-body-medium font-body-medium transition-colors duration-150" type="button">
+              Cancel
+            </button>
+<button class="px-4 py-1.5 bg-[#ac3535] hover:bg-[#922b2b] text-on-primary rounded text-body-medium font-body-medium font-medium transition-colors duration-150 shadow-none flex items-center gap-1.5" type="button">
+<span class="material-symbols-outlined text-[15px]" data-icon="delete_forever">delete_forever</span>
+<span class="">Back up and remove</span>
+</button>
+</div>
+</div>
+</section>
+<!-- Collapsible Detail Box Below Dialog -->
+<div class="w-full max-w-[750px] mt-4 border border-outline-variant rounded bg-surface-container-lowest overflow-hidden">
+<details class="group" open="">
+<summary class="list-none flex items-center justify-between px-4 py-2.5 cursor-pointer bg-surface-container select-none hover:bg-surface-variant transition-colors duration-150">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[16px] text-outline group-open:rotate-90 transition-transform duration-150" data-icon="chevron_right">chevron_right</span>
+<span class="text-caption-medium font-caption-medium uppercase tracking-wider text-on-surface-variant">Removal Result Protocol &amp; Rules</span>
+</div>
+<span class="text-caption-regular font-caption-regular text-outline font-code-sm">SYS-REF-W13</span>
+</summary>
+<div class="p-4 border-t border-outline-variant bg-surface-bright flex flex-col gap-3">
+<div class="flex items-start gap-3">
+<span class="material-symbols-outlined text-[16px] text-primary shrink-0 mt-0.5" data-icon="terminal">terminal</span>
+<div class="flex flex-col gap-1">
+<span class="text-caption-medium font-caption-medium text-on-surface">Removal result example:</span>
+<div class="bg-surface-container-lowest border border-outline-variant rounded px-3 py-1.5 font-code-sm text-code-sm text-on-surface">
+                  “Removed from AIPro · Project Atlas. Local backup saved.”
+                </div>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-3 mt-1">
+<div class="p-2.5 rounded bg-surface-container-low border border-outline-variant flex items-start gap-2">
+<span class="material-symbols-outlined text-[16px] text-[#ac3535] shrink-0 mt-0.5" data-icon="shield">shield</span>
+<p class="text-caption-regular font-caption-regular text-on-surface-variant leading-relaxed">
+                  A failure to save the requested backup stops removal automatically to prevent catastrophic data loss.
+                </p>
+</div>
+<div class="p-2.5 rounded bg-surface-container-low border border-outline-variant flex items-start gap-2">
+<span class="material-symbols-outlined text-[16px] text-outline shrink-0 mt-0.5" data-icon="lock">lock</span>
+<p class="text-caption-regular font-caption-regular text-on-surface-variant leading-relaxed">
+                  The separate Delete from Library action is unavailable while deployments still reference that release.
+                </p>
+</div>
+</div>
+</div>
+</details>
+</div>
+</main>
+</div>
+
+
+</body></html>

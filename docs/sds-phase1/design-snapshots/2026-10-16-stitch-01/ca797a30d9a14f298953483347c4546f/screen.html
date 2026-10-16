@@ -1,0 +1,376 @@
+<!DOCTYPE html><html class="h-full" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Skills Manager — Samsung SDS</title>
+<link href="https://fonts.googleapis.com" rel="preconnect">
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "primary-fixed-dim": "#afc6ff",
+            "surface-container-lowest": "#ffffff",
+            "surface-bright": "#f8f9ff",
+            "surface-variant": "#e1e2e8",
+            "on-secondary-fixed-variant": "#434750",
+            "primary-container": "#1657b8",
+            "surface-dim": "#d8dadf",
+            "on-primary-container": "#c2d3ff",
+            "background": "#f8f9ff",
+            "error-container": "#ffdad6",
+            "surface-container-high": "#e6e8ed",
+            "tertiary-fixed": "#96f5ca",
+            "outline-variant": "#c3c6d4",
+            "on-primary-fixed": "#001a43",
+            "on-tertiary-fixed-variant": "#005139",
+            "on-error-container": "#93000a",
+            "inverse-on-surface": "#eff0f6",
+            "tertiary-fixed-dim": "#7ad9af",
+            "on-secondary-fixed": "#171c24",
+            "on-primary-fixed-variant": "#004397",
+            "surface": "#f8f9ff",
+            "on-tertiary": "#ffffff",
+            "secondary-fixed-dim": "#c3c6d1",
+            "surface-tint": "#1c5abc",
+            "on-surface": "#191c20",
+            "on-error": "#ffffff",
+            "on-surface-variant": "#424752",
+            "surface-container": "#eceef3",
+            "on-secondary-container": "#60646e",
+            "surface-container-low": "#f2f3f9",
+            "tertiary-container": "#006849",
+            "secondary-fixed": "#dfe2ee",
+            "primary": "#004091",
+            "error": "#ba1a1a",
+            "on-tertiary-container": "#87e6bb",
+            "surface-container-highest": "#e1e2e8",
+            "tertiary": "#004e36",
+            "inverse-surface": "#2e3135",
+            "on-background": "#191c20",
+            "inverse-primary": "#afc6ff",
+            "primary-fixed": "#d8e2ff",
+            "secondary": "#5a5e68",
+            "on-tertiary-fixed": "#002115",
+            "secondary-container": "#dfe2ee",
+            "on-primary": "#ffffff",
+            "outline": "#737784",
+            "on-secondary": "#ffffff"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.125rem",
+            "lg": "0.25rem",
+            "xl": "0.5rem",
+            "full": "0.75rem"
+          },
+          "spacing": {
+            "margin": "1rem",
+            "space-md": "0.75rem",
+            "space-xl": "1.5rem",
+            "gutter": "1rem",
+            "space-sm": "0.5rem",
+            "space-xs": "0.25rem",
+            "space-lg": "1rem"
+          },
+          "fontFamily": {
+            "headline-md": ["Inter"],
+            "code-sm": ["JetBrains Mono"],
+            "caption-regular": ["Inter"],
+            "headline-lg": ["Inter"],
+            "caption-medium": ["Inter"],
+            "body-default": ["Inter"],
+            "titlebar-caption": ["Inter"],
+            "headline-sm": ["Inter"],
+            "body-medium": ["Inter"]
+          },
+          "fontSize": {
+            "headline-md": ["16px", { "lineHeight": "24px", "fontWeight": "600" }],
+            "code-sm": ["12px", { "lineHeight": "16px", "fontWeight": "400" }],
+            "caption-regular": ["11px", { "lineHeight": "16px", "fontWeight": "400" }],
+            "headline-lg": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+            "caption-medium": ["11px", { "lineHeight": "16px", "fontWeight": "500" }],
+            "body-default": ["13px", { "lineHeight": "18px", "fontWeight": "400" }],
+            "titlebar-caption": ["12px", { "lineHeight": "16px", "fontWeight": "500" }],
+            "headline-sm": ["14px", { "lineHeight": "20px", "fontWeight": "600" }],
+            "body-medium": ["13px", { "lineHeight": "18px", "fontWeight": "500" }]
+          }
+        }
+      }
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+      font-size: 16px;
+      line-height: 1;
+      display: inline-block;
+    }
+  </style>
+</head>
+<body class="bg-background text-on-surface antialiased h-full flex flex-col overflow-hidden select-none">
+<!-- Window Chrome Titlebar (32px) -->
+<header class="bg-surface-container text-on-surface flex justify-between items-center w-full h-8 px-3 border-b border-outline-variant z-50 select-none shrink-0">
+<div class="flex items-center gap-2">
+<div class="w-2.5 h-2.5 rounded-full bg-primary-container"></div>
+<span class="text-titlebar-caption font-titlebar-caption text-on-surface tracking-tight">AX Portal — Samsung SDS</span>
+</div>
+<div class="flex items-center space-x-1 h-full -mr-3">
+<button aria-label="Minimize" class="w-11 h-8 flex items-center justify-center hover:bg-surface-variant transition-colors duration-150 text-on-surface" title="Minimize">
+<span class="material-symbols-outlined text-[14px]">minimize</span>
+</button>
+<button aria-label="Maximize" class="w-11 h-8 flex items-center justify-center hover:bg-surface-variant transition-colors duration-150 text-on-surface" title="Maximize">
+<span class="material-symbols-outlined text-[13px]">crop_square</span>
+</button>
+<button aria-label="Close" class="w-11 h-8 flex items-center justify-center hover:bg-error hover:text-on-error transition-colors duration-150 text-on-surface" title="Close">
+<span class="material-symbols-outlined text-[15px]">close</span>
+</button>
+</div>
+</header>
+<div class="flex flex-1 h-[calc(100vh-32px)] overflow-hidden">
+<!-- Sidebar Navigation Dock (225px) -->
+<aside class="w-[225px] h-full bg-surface-container-lowest border-r border-outline-variant flex flex-col justify-between shrink-0 select-none text-body-default font-body-default">
+<!-- Top Section & Primary Links -->
+<div class="flex flex-col overflow-y-auto overflow-x-hidden pt-3 px-2 gap-4">
+<!-- App Brand Lockup -->
+<div class="flex items-center gap-2.5 px-2 pb-1">
+<div class="w-7 h-7 rounded-lg bg-primary-container flex items-center justify-center shadow-sm">
+<span class="text-on-primary font-headline-sm text-sm font-bold tracking-tight">AX Portal</span>
+</div>
+<div class="flex flex-col">
+<span class="text-headline-sm font-headline-sm text-on-surface leading-tight font-bold">AX Portal</span>
+<span class="text-caption-regular font-caption-regular text-outline tracking-wider font-semibold">SAMSUNG SDS</span>
+</div>
+</div>
+<!-- Navigation Tabs Group -->
+<nav class="flex flex-col gap-0.5">
+<!-- Dashboard -->
+<a class="flex items-center gap-2 text-on-surface-variant font-normal rounded-lg px-2 py-1.5 hover:bg-surface-container hover:text-on-surface transition-colors duration-150" href="#">
+<span class="material-symbols-outlined text-outline">dashboard</span>
+<span class="">Dashboard</span>
+</a>
+<!-- Library -->
+<a class="flex items-center justify-between text-on-surface-variant font-normal rounded-lg px-2 py-1.5 hover:bg-surface-container hover:text-on-surface transition-colors duration-150" href="#">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-outline">folder</span>
+<span class="">Library</span>
+</div>
+<span class="text-caption-medium font-caption-medium bg-surface-container px-1.5 py-0.5 rounded text-secondary">12</span>
+</a>
+<!-- Skills Store (Active destination mapping to W01 Account Login) -->
+<a class="flex items-center gap-2 bg-secondary-container text-primary font-medium rounded-lg px-2 py-1.5 border-l-2 border-primary transition-colors duration-150" href="#">
+<span class="material-symbols-outlined text-primary">storefront</span>
+<span class="">Skills Store</span>
+</a>
+<!-- Backup -->
+<a class="flex items-center gap-2 text-on-surface-variant font-normal rounded-lg px-2 py-1.5 hover:bg-surface-container hover:text-on-surface transition-colors duration-150" href="#">
+<span class="material-symbols-outlined text-outline">backup</span>
+<span class="">Backup</span>
+</a>
+<!-- Divider / Category: Presets -->
+<div class="pt-3 pb-1 px-2 flex items-center justify-between">
+<span class="text-caption-regular font-caption-regular text-outline uppercase tracking-wider font-semibold">Presets</span>
+<span class="text-caption-regular font-caption-regular text-outline">1</span>
+</div>
+<!-- PM Essentials -->
+<a class="flex items-center justify-between text-on-surface-variant font-normal rounded-lg px-2 py-1.5 hover:bg-surface-container hover:text-on-surface transition-colors duration-150" href="#">
+<div class="flex items-center gap-2 truncate">
+<span class="material-symbols-outlined text-outline">tune</span>
+<span class="truncate">PM Essentials</span>
+</div>
+<span class="text-caption-medium font-caption-medium bg-surface-container px-1.5 py-0.5 rounded text-secondary">3</span>
+</a>
+<button class="flex items-center gap-1.5 px-2 py-1 text-primary hover:text-primary-container text-caption-medium font-caption-medium transition-colors text-left">
+<span class="material-symbols-outlined text-[14px]">add</span>
+<span class="">New preset</span>
+</button>
+<!-- Category: Global Workspace -->
+<div class="pt-3 pb-1 px-2 flex items-center justify-between">
+<span class="text-caption-regular font-caption-regular text-outline uppercase tracking-wider font-semibold">Global Workspace</span>
+</div>
+<!-- All Agents -->
+<a class="flex items-center gap-2 text-on-surface-variant font-normal rounded-lg px-2 py-1.5 hover:bg-surface-container hover:text-on-surface transition-colors duration-150" href="#">
+<span class="material-symbols-outlined text-outline">smart_toy</span>
+<span class="">All Agents</span>
+</a>
+<!-- AIPro -->
+<a class="flex items-center justify-between text-on-surface-variant font-normal rounded-lg px-2 py-1.5 hover:bg-surface-container hover:text-on-surface transition-colors duration-150" href="#">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-[#1657b8]"></span>
+<span class="">AIPro</span>
+</div>
+<span class="text-caption-medium font-caption-medium text-outline">8</span>
+</a>
+<!-- Claude -->
+<a class="flex items-center justify-between text-on-surface-variant font-normal rounded-lg px-2 py-1.5 hover:bg-surface-container hover:text-on-surface transition-colors duration-150" href="#">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-[#b94b29]"></span>
+<span class="">Claude</span>
+</div>
+<span class="text-caption-medium font-caption-medium text-outline">4</span>
+</a>
+<!-- Gemini -->
+<a class="flex items-center justify-between text-on-surface-variant font-normal rounded-lg px-2 py-1.5 hover:bg-surface-container hover:text-on-surface transition-colors duration-150" href="#">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-[#6a3ebd]"></span>
+<span class="">Gemini</span>
+</div>
+<span class="text-caption-medium font-caption-medium text-outline">3</span>
+</a>
+<!-- Codex -->
+<a class="flex items-center justify-between text-on-surface-variant font-normal rounded-lg px-2 py-1.5 hover:bg-surface-container hover:text-on-surface transition-colors duration-150" href="#">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-[#464a53]"></span>
+<span class="">Codex</span>
+</div>
+<span class="text-caption-medium font-caption-medium text-outline">5</span>
+</a>
+<!-- Category: Project Workspaces -->
+<div class="pt-3 pb-1 px-2 flex items-center justify-between">
+<span class="text-caption-regular font-caption-regular text-outline uppercase tracking-wider font-semibold">Project Workspaces</span>
+</div>
+<!-- Project Atlas -->
+<a class="flex items-center justify-between text-on-surface-variant font-normal rounded-lg px-2 py-1.5 hover:bg-surface-container hover:text-on-surface transition-colors duration-150" href="#">
+<div class="flex items-center gap-2 truncate">
+<span class="material-symbols-outlined text-outline">workspaces</span>
+<span class="truncate">Project Atlas</span>
+</div>
+<span class="text-caption-medium font-caption-medium bg-surface-container px-1.5 py-0.5 rounded text-secondary">3</span>
+</a>
+<button class="flex items-center gap-1.5 px-2 py-1 text-primary hover:text-primary-container text-caption-medium font-caption-medium transition-colors text-left">
+<span class="material-symbols-outlined text-[14px]">add</span>
+<span class="">Add project</span>
+</button>
+</nav>
+</div>
+<!-- Footer Account & Settings -->
+<div class="p-2 border-t border-outline-variant flex flex-col gap-0.5 bg-surface-container-lowest">
+<a class="flex items-center gap-2 text-on-surface-variant font-normal rounded-lg px-2 py-1.5 hover:bg-surface-container hover:text-on-surface transition-colors duration-150" href="#">
+<span class="material-symbols-outlined text-outline">settings</span>
+<span class="">Settings</span>
+</a>
+<div class="flex items-center justify-between px-2 py-1.5 rounded-lg text-on-surface-variant bg-surface-container-low">
+<div class="flex items-center gap-2 truncate">
+<span class="material-symbols-outlined text-primary">account_circle</span>
+<span class="text-caption-medium font-caption-medium truncate text-on-surface">Example Employee</span>
+</div>
+<span class="w-2 h-2 rounded-full bg-outline-variant"></span>
+</div>
+</div>
+</aside>
+<!-- Main Content Canvas (Dynamic Fluid Working Stage) -->
+<main class="flex-1 overflow-y-auto bg-surface-bright flex flex-col">
+<!-- Screen Context Eyebrow & Sub-header Area -->
+<div class="h-10 px-8 border-b border-outline-variant bg-surface-container-lowest flex items-center justify-between shrink-0">
+<div class="flex items-center gap-2">
+<span class="text-code-sm font-code-sm text-outline font-medium tracking-wide">W01 · ACCOUNT</span>
+<span class="text-outline-variant">/</span>
+<span class="text-caption-medium font-caption-medium text-secondary">Sign in</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-caption-regular font-caption-regular bg-surface-container text-secondary">
+<span class="w-1.5 h-1.5 rounded-full bg-outline"></span>
+            Disconnected
+          </span>
+</div>
+</div>
+<!-- Centered Working Canvas Area -->
+<div class="flex-1 flex flex-col items-center justify-start pt-10 pb-16 px-4">
+<!-- Max-Width 410px Sign-In Container Card -->
+<div class="w-full max-w-[410px] bg-surface-container-lowest border border-outline-variant rounded-xl p-8 shadow-sm flex flex-col">
+<!-- Brand Identity Centerpiece -->
+<div class="flex flex-col items-center text-center mb-6">
+<div class="w-12 h-12 rounded-xl bg-primary-container flex items-center justify-center shadow-md mb-3.5">
+<span class="text-on-primary font-headline-lg text-xl font-bold">S</span>
+</div>
+<h1 class="text-headline-md font-headline-md text-on-surface font-semibold tracking-tight">Sign in to Skills Store</h1>
+<p class="text-body-default font-body-default text-on-surface-variant mt-1.5 leading-relaxed">
+              Use your existing Skills Store account to discover and install skills for work.
+            </p>
+</div>
+<!-- Sign-In Form Elements -->
+<form class="flex flex-col gap-4" onsubmit="event.preventDefault();">
+<!-- Email Input Field -->
+<div class="flex flex-col gap-1.5">
+<label class="text-caption-medium font-caption-medium text-on-surface font-medium" for="email-field">Email</label>
+<input class="w-full h-8 px-2.5 rounded border border-outline-variant bg-surface-container-lowest text-on-surface text-body-default font-body-default placeholder:text-outline focus:border-primary-container focus:ring-1 focus:ring-primary-container outline-none transition-colors" id="email-field" placeholder="name@company.example" type="email">
+</div>
+<!-- Password Input Field -->
+<div class="flex flex-col gap-1.5">
+<label class="text-caption-medium font-caption-medium text-on-surface font-medium" for="password-field">Password</label>
+<input class="w-full h-8 px-2.5 rounded border border-outline-variant bg-surface-container-lowest text-on-surface text-body-default font-body-default placeholder:text-outline focus:border-primary-container focus:ring-1 focus:ring-primary-container outline-none transition-colors" id="password-field" placeholder="Do not enter real credentials in this wireframe" type="password">
+</div>
+<!-- Primary Action Button -->
+<button class="w-full h-8 mt-1 rounded bg-primary-container hover:bg-primary text-on-primary text-body-medium font-body-medium font-medium flex items-center justify-center gap-1.5 shadow-sm transition-colors duration-150 active:scale-[0.99]" type="submit">
+<span class="">Sign in</span>
+<span class="text-sm font-bold">→</span>
+</button>
+</form>
+<!-- Subordinate Action Link -->
+<div class="text-center mt-3.5 mb-5">
+<a class="text-caption-medium font-caption-medium text-primary hover:underline transition-all" href="#">
+              Forgot password?
+            </a>
+</div>
+<!-- Network Environment Callout Notice -->
+<div class="bg-surface-container-low border border-outline-variant rounded-lg p-3 flex items-start gap-2.5">
+<span class="material-symbols-outlined text-primary text-[18px] shrink-0 mt-0.5">info</span>
+<p class="text-caption-regular font-caption-regular text-on-surface-variant leading-snug">
+              Connect to the company network to sign in. Your existing skills stay on this computer.
+            </p>
+</div>
+</div>
+<!-- Wireframe Specification States Collapsible Panel -->
+<div class="w-full max-w-[410px] mt-6 bg-surface-container-lowest border border-outline-variant rounded-lg overflow-hidden shadow-sm">
+<details class="group" open="">
+<summary class="flex items-center justify-between px-4 py-2.5 bg-surface-container-low cursor-pointer hover:bg-surface-container transition-colors select-none">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-outline text-[16px]">bug_report</span>
+<span class="text-caption-medium font-caption-medium text-on-surface font-semibold">Example error and support states</span>
+</div>
+<span class="material-symbols-outlined text-outline group-open:rotate-180 transition-transform duration-200 text-[16px]">expand_more</span>
+</summary>
+<div class="p-3.5 flex flex-col gap-2.5 divide-y divide-outline-variant/60">
+<!-- State 1: Incorrect credentials -->
+<div class="pt-1 first:pt-0 flex items-start gap-2.5">
+<span class="material-symbols-outlined text-error text-[16px] shrink-0 mt-0.5">error</span>
+<div class="flex flex-col">
+<span class="text-caption-medium font-caption-medium text-error font-medium">Authentication Error</span>
+<p class="text-caption-regular font-caption-regular text-on-surface-variant mt-0.5">
+                    Incorrect email or password. Check your details and try again.
+                  </p>
+</div>
+</div>
+<!-- State 2: Store Unavailable -->
+<div class="pt-2.5 flex items-start gap-2.5">
+<span class="material-symbols-outlined text-[#92580b] text-[16px] shrink-0 mt-0.5">cloud_off</span>
+<div class="flex flex-col">
+<span class="text-caption-medium font-caption-medium text-[#92580b] font-medium">Connectivity Warning</span>
+<p class="text-caption-regular font-caption-regular text-on-surface-variant mt-0.5">
+                    Store unavailable. Check your company network connection. Previously signed-in users can open their local Library.
+                  </p>
+</div>
+</div>
+<!-- State 3: Account Unavailable -->
+<div class="pt-2.5 flex items-start gap-2.5">
+<span class="material-symbols-outlined text-secondary text-[16px] shrink-0 mt-0.5">contact_support</span>
+<div class="flex flex-col">
+<span class="text-caption-medium font-caption-medium text-secondary font-medium">Account Administration</span>
+<p class="text-caption-regular font-caption-regular text-on-surface-variant mt-0.5">
+                    Account unavailable. Contact your Store administrator. Password reset opens the internal Store web page in the implemented app.
+                  </p>
+</div>
+</div>
+</div>
+</details>
+</div>
+</div>
+</main>
+</div>
+
+
+</body></html>
