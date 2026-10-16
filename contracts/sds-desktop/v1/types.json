@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:sds:desktop:v1",
+  "definitions": {
+    "auth-login": {
+      "type": "object",
+      "required": ["success", "data"],
+      "properties": {
+        "success": { "const": true },
+        "data": {
+          "type": "object",
+          "required": ["userId", "userName", "accessToken", "refreshToken"],
+          "properties": {
+            "userId": { "type": ["integer", "string"] },
+            "userName": { "type": "string", "minLength": 1 },
+            "accessToken": { "type": "string", "minLength": 1 },
+            "refreshToken": { "type": "string", "minLength": 1 }
+          }
+        }
+      }
+    },
+    "auth-refresh": {
+      "type": "object",
+      "required": ["success", "data"],
+      "properties": {
+        "success": { "const": true },
+        "data": {
+          "type": "object",
+          "required": ["accessToken", "refreshToken"],
+          "properties": {
+            "accessToken": { "type": "string", "minLength": 1 },
+            "refreshToken": { "type": "string", "minLength": 1 }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,7 +1,14 @@
 use super::profile::SdsProfile;
 use tauri::Manager;
 
-pub const COMMANDS: &[&str] = &["runtime_profile"];
+pub const COMMANDS: &[&str] = &[
+    "runtime_profile",
+    "sds_get_connection",
+    "sds_set_connection",
+    "sds_session_status",
+    "sds_login",
+    "sds_logout",
+];
 
 /// A mismatched binary/config pair exposes only its identity, never storage.
 pub fn run_mismatch(context: tauri::Context<tauri::Wry>) {
@@ -21,8 +28,12 @@ pub fn run() {
     let profile = SdsProfile::resolve().expect("Invalid SDS build profile");
     std::fs::create_dir_all(profile.data_root()).expect("Cannot create SDS data directory");
     let logs = profile.data_root().join("logs");
+    let services =
+        super::commands::SdsServices::new(profile.data_root(), profile.info().environment)
+            .expect("Cannot initialize SDS services");
     tauri::Builder::default()
         .manage(profile)
+        .manage(services)
         .plugin(tauri_plugin_single_instance::init(|app, _, _| {
             if let Some(window) = app.get_webview_window("main") {
                 let _ = window.show();
@@ -44,7 +55,14 @@ pub fn run() {
                 )])
                 .build(),
         )
-        .invoke_handler(tauri::generate_handler![super::runtime_profile])
+        .invoke_handler(tauri::generate_handler![
+            super::runtime_profile,
+            super::commands::sds_get_connection,
+            super::commands::sds_set_connection,
+            super::commands::sds_session_status,
+            super::commands::sds_login,
+            super::commands::sds_logout
+        ])
         .run(tauri::generate_context!())
         .expect("Error running SDS desktop");
 }

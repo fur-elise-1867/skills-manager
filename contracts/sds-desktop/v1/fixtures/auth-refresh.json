@@ -1,0 +1,9 @@
+{
+  "success": true,
+  "data": {
+    "token": "synthetic-access-two",
+    "accessToken": "synthetic-access-two",
+    "refreshToken": "synthetic-refresh-two",
+    "tokenType": "Bearer"
+  }
+}

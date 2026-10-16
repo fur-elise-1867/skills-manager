@@ -1,0 +1,13 @@
+{
+  "success": true,
+  "data": {
+    "userId": 1001,
+    "userName": "Example Employee",
+    "email": "employee@example.invalid",
+    "role": "NORMAL_USER",
+    "orgs": [],
+    "avatarUrl": null,
+    "accessToken": "synthetic-access-one",
+    "refreshToken": "synthetic-refresh-one"
+  }
+}

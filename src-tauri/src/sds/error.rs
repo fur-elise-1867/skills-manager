@@ -10,6 +10,14 @@ pub struct SdsError {
 }
 
 impl SdsError {
+    pub fn new(code: &str, message: &str, retryable: bool) -> Self {
+        Self {
+            code: code.into(),
+            message: message.into(),
+            retryable,
+            operation_id: None,
+        }
+    }
     pub fn invalid(message: &str) -> Self {
         Self {
             code: "INVALID_CONFIGURATION".into(),

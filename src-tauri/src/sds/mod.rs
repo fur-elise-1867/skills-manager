@@ -1,6 +1,11 @@
+pub mod commands;
+pub mod contracts;
+pub mod credentials;
 pub mod error;
 pub mod profile;
 pub mod runtime;
+pub mod session;
+pub mod store_client;
 
 #[tauri::command]
 pub fn runtime_profile() -> Result<profile::ProfileInfo, error::SdsError> {

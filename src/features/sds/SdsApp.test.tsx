@@ -7,8 +7,10 @@ vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn() }));
 
 beforeEach(() => {
   vi.mocked(invoke).mockImplementation(async (command) => {
-    if (command !== "runtime_profile") throw new Error(`Unexpected upstream command: ${command}`);
-    return { kind: "sds", environment: "internal", fixtureMode: false } as never;
+    if (command === "runtime_profile") return { kind: "sds", environment: "internal", fixtureMode: false } as never;
+    if (command === "sds_get_connection") return null as never;
+    if (command === "sds_session_status") return { status: "signedOut", user: null } as never;
+    throw new Error(`Unexpected upstream command: ${command}`);
   });
 });
 
@@ -22,7 +24,28 @@ test("rejects_runtime_profile_mismatch", async () => {
 test("does_not_mount_upstream_context", async () => {
   render(<SdsApp />);
   await screen.findByRole("navigation");
-  expect(vi.mocked(invoke).mock.calls.map(([command]) => command)).toEqual(["runtime_profile"]);
+  await waitFor(() => expect(vi.mocked(invoke).mock.calls.map(([command]) => command).sort()).toEqual(["runtime_profile", "sds_get_connection", "sds_session_status"]));
+});
+
+test("configures a real Store profile and signs in through the SDS shell", async () => {
+  let connection: unknown = null;
+  let session = { status: "signedOut", user: null } as unknown;
+  vi.mocked(invoke).mockImplementation(async (command) => {
+    if (command === "runtime_profile") return { kind: "sds", environment: "internal", fixtureMode: false } as never;
+    if (command === "sds_get_connection") return connection as never;
+    if (command === "sds_session_status") return session as never;
+    if (command === "sds_set_connection") { connection = { id: "profile-one", baseUrl: "https://store.example.invalid/skm", environment: "internal" }; return connection as never; }
+    if (command === "sds_login") { session = { status: "authenticated", user: { id: "1001", displayName: "Example Employee" } }; return session as never; }
+    throw new Error(`Unexpected upstream command: ${command}`);
+  });
+  render(<SdsApp />);
+  fireEvent.change(await screen.findByLabelText("Store URL"), { target: { value: "https://store.example.invalid/skm" } });
+  fireEvent.click(screen.getByRole("button", { name: "Save connection" }));
+  await screen.findByRole("button", { name: "Sign in" });
+  fireEvent.change(screen.getByLabelText("Email"), { target: { value: "employee@example.invalid" } });
+  fireEvent.change(screen.getByLabelText("Password"), { target: { value: "synthetic-password" } });
+  fireEvent.click(screen.getByRole("button", { name: "Sign in" }));
+  expect(await screen.findByText("Example Employee")).toBeInTheDocument();
 });
 
 test("renders_keyboard_accessible_shell", async () => {

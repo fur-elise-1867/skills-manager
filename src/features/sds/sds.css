@@ -55,12 +55,21 @@ button, input { font: inherit; }
 .sds-main h2 { font-size: 16px; line-height: 24px; font-weight: 600; margin: 14px 0 8px; }
 .sds-page-heading p:last-child { color: var(--sds-muted); margin-bottom: 0; }
 .sds-badge { flex-shrink: 0; color: var(--sds-warning); border: 1px solid var(--sds-border); border-radius: 3px; padding: 3px 8px; font-size: 11px; }
+.sds-badge[data-status="authenticated"] { color: var(--sds-success); }
+.sds-sidebar button[aria-current="page"] { background: var(--sds-primary-soft); color: var(--sds-primary); }
 .sds-welcome { max-width: 720px; margin: 44px auto; padding: 32px; background: var(--sds-surface); border: 1px solid var(--sds-border); border-radius: var(--sds-radius); }
 .sds-welcome > p { color: var(--sds-muted); max-width: 500px; }
 .sds-welcome-icon { display: inline-flex; padding: 12px; color: var(--sds-primary); background: var(--sds-primary-soft); border-radius: var(--sds-radius); }
 .sds-notice { display: flex; align-items: flex-start; gap: 10px; border-top: 1px solid var(--sds-border); margin-top: 24px; padding-top: 18px; color: var(--sds-muted); font-size: 12px; }
 .sds-notice svg { flex-shrink: 0; }
 .sds-fixture { color: var(--sds-warning); }
+.sds-form { display: grid; gap: 8px; margin-top: 20px; }
+.sds-form label { font-weight: 500; margin-top: 8px; }
+.sds-form input { width: 100%; min-height: 32px; padding: 7px 10px; color: var(--sds-text); background: var(--sds-canvas); border: 1px solid var(--sds-border); border-radius: var(--sds-radius); }
+.sds-primary-button { justify-self: start; margin-top: 12px; padding: 7px 14px; min-height: 32px; border: 0; border-radius: var(--sds-radius); background: var(--sds-primary); color: var(--sds-surface); cursor: pointer; font-weight: 500; }
+.sds-primary-button:disabled { cursor: wait; opacity: .65; }
+.sds-error { color: var(--sds-error); }
+.sds-field-help { font-size: 12px; line-height: 18px; color: var(--sds-muted); }
 .sds-startup { padding: 40px; font-size: 14px; }
 .sds-startup h1 { font-size: 20px; }
 .sds-skip { position: fixed; top: -100px; left: 12px; z-index: 100; padding: 8px; color: var(--sds-primary); background: var(--sds-surface); border: 1px solid var(--sds-primary); border-radius: var(--sds-radius); }

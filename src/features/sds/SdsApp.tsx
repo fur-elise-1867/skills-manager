@@ -5,6 +5,7 @@ import SdsShell from "./SdsShell";
 import SdsThemeProvider from "./SdsThemeProvider";
 import "./sds.css";
 import { assertRuntimeProfile } from "../../runtimeProfile";
+import SessionProvider from "./session/SessionProvider";
 
 export default function SdsApp() {
   const [result, setResult] = useState<{ profile?: ProfileInfo; error?: string }>({});
@@ -22,5 +23,5 @@ export default function SdsApp() {
   }, []);
   if (result.error) return <main className="sds-startup" role="alert"><h1>Unable to start SDS Skills Manager</h1><p>{result.error}</p></main>;
   if (!result.profile) return <main className="sds-startup" role="status">Checking desktop runtime…</main>;
-  return <SdsThemeProvider><SdsShell profile={result.profile} /></SdsThemeProvider>;
+  return <SdsThemeProvider><SessionProvider><SdsShell profile={result.profile} /></SessionProvider></SdsThemeProvider>;
 }
