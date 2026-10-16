@@ -1,0 +1,2 @@
+# Preserve archived design/evidence bytes so their SHA-256 manifests survive checkout.
+docs/** -text
