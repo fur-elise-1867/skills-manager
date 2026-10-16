@@ -1,0 +1,41 @@
+   Compiling skills-manager v1.42.0 (D:\Documents\Git Project\skills-manager-app\.worktrees\sds-phase0-1\src-tauri)
+warning: unused imports: `collect_scenario_sync_targets`, `sync_desired_targets`, and `unsync_obsolete_scenario_targets`
+   --> src\commands\presets.rs:538:9
+    |
+538 |         collect_scenario_sync_targets, sync_desired_targets, unsync_obsolete_scenario_targets,
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused imports: `ProjectRecord` and `SkillTargetRecord`
+   --> src\core\app_state.rs:390:36
+    |
+390 |     use crate::core::skill_store::{ProjectRecord, SkillRecord, SkillTargetRecord};
+    |                                    ^^^^^^^^^^^^^               ^^^^^^^^^^^^^^^^^
+
+warning: unused import: `super::*`
+   --> src\core\cli_bridge.rs:260:9
+    |
+260 |     use super::*;
+    |         ^^^^^^^^
+
+warning: unused import: `tempfile::tempdir`
+   --> src\core\cli_bridge.rs:261:9
+    |
+261 |     use tempfile::tempdir;
+    |         ^^^^^^^^^^^^^^^^^
+
+warning: `skills-manager` (lib test) generated 4 warnings (run `cargo fix --lib -p skills-manager --tests` to apply 4 suggestions)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 44.46s
+     Running unittests src\lib.rs (src-tauri\target\debug\deps\app_lib-e14ff6a856f0e232.exe)
+
+running 6 tests
+test sds::tests::profile::dispatch_never_initializes_upstream_in_sds_build ... ok
+test sds::tests::profile::mismatched_build_identifier_is_refused_before_upstream_storage ... ok
+test sds::tests::profile::environment_must_be_explicitly_valid ... ok
+test sds::tests::profile::release_build_refuses_fixture_mode ... ok
+test sds::tests::profile::sds_registry_has_no_public_install_or_upstream_commands ... ok
+test sds::tests::profile::sds_data_root_is_separate_and_does_not_initialize_upstream ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 558 filtered out; finished in 0.00s
+

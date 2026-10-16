@@ -12,6 +12,8 @@
 
 Trạng thái: **Người dùng đồng ý các khuyến nghị review và yêu cầu bắt đầu Phase 0–1 ngày 2026-10-17 (Asia/Saigon).** Thực thi Native, tuần tự trong chat hiện tại theo phương án đã khuyến nghị. Checkbox chỉ đánh dấu theo bằng chứng thực tế.
 
+Checkpoint phát triển: [Phase0 runtime/shell và bằng chứng cài debug](../evidence/phase0-runtime.md). A00 có baseline failures được phân tích; A01 đã có source/tests; A02 có shell và debug installer smoke, còn release/native acceptance trước khi đóng phase. A03–A10/S01–S04 chưa thực hiện. SDS dùng binary riêng `sds-skills-manager` và tắt default CLI feature qua Cargo runner args; CLI upstream giữ default feature riêng.
+
 ## Review amendments — 2026-10-17
 
 1. Companion plan S01–S04 nằm tại liên kết phía trên; tích hợp thật vẫn là điều kiện kết thúc pilot. Những quyết định dưới đây triển khai các khuyến nghị người dùng đã đồng ý.

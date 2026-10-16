@@ -1,0 +1,6 @@
+
+> skills-manager@1.42.0 sds:check
+> node scripts/sds.mjs check
+
+   Compiling skills-manager v1.42.0 (D:\Documents\Git Project\skills-manager-app\.worktrees\sds-phase0-1\src-tauri)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 20.44s

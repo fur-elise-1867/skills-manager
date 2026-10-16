@@ -1,0 +1,14 @@
+   Compiling skills-manager v1.42.0 (D:\Documents\Git Project\skills-manager-app\.worktrees\sds-phase0-1\src-tauri)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1m 29s
+     Running unittests src\cli\main.rs (src-tauri\target\debug\deps\skills_manager_cli-2455facaa12452c5.exe)
+
+running 6 tests
+test tests::an_ordinary_failure_keeps_the_command_failed_envelope ... ok
+test tests::a_deployment_refusal_keeps_its_paths_in_the_json_envelope ... ok
+test tests::parses_agent_friendly_commands_and_aliases ... ok
+test tests::agents_add_custom_registers_the_agent_and_rejects_a_duplicate ... ok
+test tests::deployment_dry_runs_refuse_a_foreign_target_without_changes ... ok
+test tests::skill_and_preset_deployment_round_trip ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.18s
+
