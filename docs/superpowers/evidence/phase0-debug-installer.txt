@@ -29,4 +29,3 @@ dist-sds/assets/index-CtchovYH.js      186.33 kB │ gzip: 58.66 kB
      Running makensis to produce D:\Documents\Git Project\skills-manager-app\.worktrees\sds-phase0-1\src-tauri\target\debug\bundle\nsis\SDS Skills Manager_1.42.0_x64-setup.exe
     Finished 1 bundle at:
         D:\Documents\Git Project\skills-manager-app\.worktrees\sds-phase0-1\src-tauri\target\debug\bundle\nsis\SDS Skills Manager_1.42.0_x64-setup.exe
-

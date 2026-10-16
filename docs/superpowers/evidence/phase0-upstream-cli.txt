@@ -11,4 +11,3 @@ test tests::deployment_dry_runs_refuse_a_foreign_target_without_changes ... ok
 test tests::skill_and_preset_deployment_round_trip ... ok
 
 test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.18s
-
