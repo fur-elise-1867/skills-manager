@@ -44,11 +44,11 @@ export function makeLaunch(mode, rawArgs) {
   };
   delete env.TAURI_CONFIG;
   if (mode === 'check') env.TAURI_CONFIG = JSON.stringify(overlay);
-  if (mode === 'check') return { command: 'cargo', args: ['check', '--manifest-path', 'src-tauri/Cargo.toml', '--features', 'sds'], env, config };
+  if (mode === 'check') return { command: 'cargo', args: ['check', '--manifest-path', 'src-tauri/Cargo.toml', '--no-default-features', '--features', 'sds'], env, config };
   // Send the overlay, not the merged config: null removes upstream updater keys.
   return {
     command: process.execPath,
-    args: [path.join(root, 'node_modules/@tauri-apps/cli/tauri.js'), mode, '--config', JSON.stringify(overlay), '--features', 'sds', ...args],
+    args: [path.join(root, 'node_modules/@tauri-apps/cli/tauri.js'), mode, '--config', JSON.stringify(overlay), '--features', 'sds', ...args, '--', '--no-default-features'],
     env, config,
   };
 }

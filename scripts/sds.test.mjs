@@ -9,6 +9,8 @@ test('SDS build couples frontend, cargo feature and isolated capabilities', () =
   assert.ok(launch.args.includes('sds'));
   assert.deepEqual(launch.config.app.security.capabilities, ['sds']);
   assert.equal(launch.config.identifier, 'com.sds.skillsmanager.desktop');
+  assert.equal(launch.config.mainBinaryName, 'sds-skills-manager');
+  assert.ok(launch.args.includes('--no-default-features'));
   assert.equal(launch.config.bundle.createUpdaterArtifacts, false);
   assert.equal(JSON.stringify(launch.config).includes('github.com'), false);
   assert.equal(launch.config.build.frontendDist, '../dist-sds');

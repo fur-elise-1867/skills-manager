@@ -1,6 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "SDS Skills Manager",
+  "mainBinaryName": "sds-skills-manager",
   "identifier": "com.sds.skillsmanager.desktop",
   "build": {
     "frontendDist": "../dist-sds",
