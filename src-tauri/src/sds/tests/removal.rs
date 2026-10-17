@@ -162,8 +162,8 @@ async fn new_files_after_db_removal_are_kept_in_quarantine_and_a_new_target_is_n
     let intent = stage_remove(&repository, &plan).unwrap();
     commit_remove_test_hook(&repository, &plan, &intent, |at| {
         if matches!(at, RemoveBoundary::AfterDatabase) {
-            let in_progress = operations.status(&plan.id).unwrap();
-            assert_eq!(in_progress.state, OperationState::Committing);
+            let in_progress = repository.operation_status(&plan.id).unwrap();
+            assert_eq!(in_progress.state, OperationState::Completed);
             assert_eq!(in_progress.stage, "removal-cleanup");
             std::fs::write(intent.stage_path().join("user-new.txt"), b"keep quarantine").unwrap();
             std::fs::create_dir(&install.target.path).unwrap();
@@ -288,6 +288,29 @@ fn remove_crash_child() {
     })
     .unwrap();
 }
+#[tokio::test]
+async fn final_cleanup_database_failure_reports_recovery_instead_of_waiting_forever() {
+    let root = tempfile::tempdir().unwrap();
+    let (_, repository, operations, _) = installed(root.path()).await;
+    let deployment = repository.deployments().unwrap().remove(0);
+    let plan = operations.prepare_remove(&deployment.id).await.unwrap();
+    let connection = rusqlite::Connection::open(repository.root().join("pilot.sqlite3")).unwrap();
+    connection.execute_batch("CREATE TRIGGER fail_cleanup BEFORE UPDATE OF result_json ON operations WHEN json_extract(NEW.result_json,'$.stage')='removed' BEGIN SELECT RAISE(FAIL,'synthetic cleanup failure'); END;").unwrap();
+    assert!(operations.execute(&plan.id, false).await.is_err());
+    let status = operations.status(&plan.id).unwrap();
+    assert_eq!(status.state, OperationState::RecoveryRequired);
+    assert_eq!(status.error.unwrap().code, "RECOVERY_REQUIRED");
+    assert!(repository.deployments().unwrap().is_empty());
+    assert_eq!(repository.pending_intents().unwrap().len(), 1);
+    connection
+        .execute_batch("DROP TRIGGER fail_cleanup;")
+        .unwrap();
+    let recovered = crate::sds::journal::recover_pending(&repository, &[]).unwrap();
+    assert_eq!(recovered[0].state, OperationState::Completed);
+    assert!(repository.pending_intents().unwrap().is_empty());
+    assert_eq!(repository.list_library().unwrap().len(), 1);
+}
+
 struct OwnedChild(std::process::Child);
 impl Drop for OwnedChild {
     fn drop(&mut self) {

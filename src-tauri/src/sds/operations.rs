@@ -70,11 +70,25 @@ impl OperationService {
         }
     }
     pub fn status(&self, id: &str) -> Result<OperationResult, SdsError> {
+        let jobs = self.jobs.lock().map_err(|_| operation_failed())?;
+        self.status_for(id, jobs.contains_key(id))
+    }
+    fn status_for(&self, id: &str, active: bool) -> Result<OperationResult, SdsError> {
         let mut result = self.repository.operation_status(id)?;
         // The database records the deployment removal before resumable cleanup.
         // Callers must not present final success until cleanup has resolved.
         if result.state == OperationState::Completed && result.stage == "removal-cleanup" {
-            result.state = OperationState::Committing;
+            if active {
+                result.state = OperationState::Committing;
+            } else {
+                // Preserve the committed database marker/intent for restart recovery.
+                // A failed final UPDATE must not leave callers waiting on an exited job.
+                result.state = OperationState::RecoveryRequired;
+                result.stage = "recovery-required".into();
+                let mut error = SdsError::new("RECOVERY_REQUIRED", "Removal cleanup could not finish recording its result. Restart SDS to reconcile the retained journal.", false);
+                error.operation_id = Some(id.into());
+                result.error = Some(error);
+            }
         }
         Ok(result)
     }
@@ -138,7 +152,7 @@ impl OperationService {
     pub fn cancel(&self, id: &str) -> Result<OperationResult, SdsError> {
         self.ensure_ready()?;
         let jobs = self.jobs.lock().map_err(|_| review())?;
-        let status = self.status(id)?;
+        let status = self.status_for(id, jobs.contains_key(id))?;
         if status.state.terminal() {
             return Ok(status);
         }
@@ -169,7 +183,7 @@ impl OperationService {
                     true,
                 ));
             }
-            let status = self.status(id)?;
+            let status = self.status_for(id, jobs.contains_key(id))?;
             if status.state.terminal() {
                 return Ok(status);
             }
