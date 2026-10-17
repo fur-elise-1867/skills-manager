@@ -1,6 +1,12 @@
 # Phase0–1 Windows acceptance checkpoint
 
-2026-10-17. **Acceptance remains open only for actual AIPro recognition.** The user is preparing AIPro on this machine. Installed ZIP/7z, approved scoped removal, failure/recovery states, final builds and full suite outcomes are recorded below. No company-wide deployment or Phase2–5 completion is claimed.
+2026-10-17. **Phase0–1 acceptance is complete under the user's revised machine-local criterion.** At20:14 the user clarified that AIPro is a company-local agent which cannot be installed on this computer and requested inspection of `.aipro/*` only. This explicitly supersedes the earlier requirement to run AIPro here. Installed ZIP/7z, approved scoped removal, failure/recovery states, final builds and full suite outcomes are recorded below. Actual company AIPro execution/recognition remains untested and is not claimed. No company-wide deployment or Phase2–5 completion is claimed.
+
+## Revised AIPro directory acceptance
+
+Read-only inspection at20:14 Asia/Saigon found no `C:/Users/Harry/.aipro` (the real user-profile destination), no `D:/Users/Harry/.aipro` alternative and no `.aipro` at the outer workspace root. The existing `.aipro` is the explicitly isolated SDS development fixture under `C:/Users/Harry/AppData/Local/Packages/OpenAI.Codex_2p2nqsd0c76g0/LocalCache/Local/SDS/SkillsManager/development-fixtures/agent-home/.aipro` (also visible through the logical LocalAppData path in this packaged execution environment).
+
+The fixture contains `skills/` (empty), `.sds-skills-manager-staging/` (empty) and a66-byte `mcp.json`. The file parses as JSON and contains the synthetic `jira-mcp` entry. No configuration values were reported; no file or directory is a reparse point. The inspection created or changed no AIPro files and did not install or launch AIPro. The private task ledger retains `aipro-directory-inspection-final.json`. An absent real user-profile directory is reported as an observation, not fabricated installation or runtime recognition.
 
 ## Installed release and Store integration
 
@@ -58,10 +64,10 @@ These are unsigned release builds with fixtures disabled. The development build 
 | --- | --- |
 | A00 baseline/input preservation | Captured; known upstream environment failures remain explicit in `phase0-baseline.md` |
 | A01–A04 runtime/shell/auth/catalog | Implemented and tested; native internal shell and current real-provider development connection evidenced |
-| A05 target/MCP | Implemented; native missing/unknown/empty handling and earlier fixture recheck verified; actual AIPro still pending |
+| A05 target/MCP | Implemented; native missing/unknown/empty handling, fixture recheck and read-only `.aipro` inspection verified; company runtime explicitly excluded by the user's revised criterion |
 | A06 packages | Verified bounded ZIP/7z, adversarial tests, immutable real-provider bytes and native installs |
 | A07 operations/recovery | Journal/context/root guards and crash tests; native permission failure/restart did not commit a target |
 | A08 Library/removal | Library/restart and both fixture and specifically approved installed-release removal verified; downloaded bytes and other target preserved |
 | A09 UI/IPC | Native Store→review→install→Library, errors, cancellation, minimum sizing/focus and final development installer startup verified |
 | S01–S04 Store | Dedicated runtime, authenticated ACL facade, immutable publication, real consumer/provider contracts, additive audit and development installer connection verified |
-| A10 delivery | Installed Windows flow, final artifacts/results and scoped removal verified; actual AIPro recognition remains open while the user prepares AIPro |
+| A10 delivery | Installed Windows flow, final artifacts/results, scoped removal and requested directory inspection verified; closed under the user's revised criterion, without claiming company AIPro execution |

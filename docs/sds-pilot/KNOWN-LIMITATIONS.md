@@ -1,6 +1,6 @@
 # Pilot limits
 
-- Phase0–1 acceptance is still in progress. Real AIPro recognition is pending preparation of AIPro on the test machine. Fixture and HTTP/Rust integration results do not satisfy that requirement.
+- Phase0–1 acceptance uses the user's revised2026-10-17 criterion: inspect `.aipro/*` on this computer because company-local AIPro cannot be installed here. The real user-profile `.aipro` directory was absent; only the isolated SDS fixture existed. Company AIPro execution/recognition was not tested and is not claimed.
 - The pilot supports AIPro global copy deployment. Project destinations, three other agents, presets, selective update, snapshot/restore and full offline workflows remain in phases2–5 of the approved design.
 - All Time is temporary alphabetical ordering, not a leaderboard. Trending/Hot require a later approved ranking formula.
 - Missing compatibility or MCP metadata means unknown. MCP checks verify bounded local configuration presence only; they do not verify server health, credentials or agent behavior. The app never writes MCP configuration or executes package scripts.
