@@ -124,3 +124,14 @@ button, input { font: inherit; }
 .sds-release-info dt { color: var(--sds-muted); font-size: 12px; margin-top: 12px; }
 .sds-release-info dd { margin: 4px 0; }
 @media (max-width: 1200px) { .sds-skill-grid { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+.sds-modal-backdrop { position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; padding: 24px; background: rgb(0 0 0 / 35%); }
+.sds-install-review { width: min(560px,100%); max-height: calc(100vh - 48px); overflow: auto; background: var(--sds-surface); border: 1px solid var(--sds-border); border-radius: 6px; padding: 24px; color: var(--sds-text); }
+.sds-install-review > h2 { margin-top: 0; }
+.sds-review-subtitle { color: var(--sds-muted); margin-top: 4px; }
+.sds-target-path { overflow-wrap: anywhere; font-family: Consolas, monospace; background: var(--sds-canvas); border: 1px solid var(--sds-border); border-radius: var(--sds-radius); padding: 10px; }
+.sds-mcp-report { border: 1px solid var(--sds-border); border-radius: var(--sds-radius); padding: 14px; margin-top: 18px; }
+.sds-mcp-report h3 { margin-top: 0; }
+.sds-mcp-warning { border-color: var(--sds-warning); }
+.sds-review-actions { display: flex; align-items: center; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+.sds-review-actions .sds-primary-button { margin: 0; }
+.sds-secondary-button { border: 1px solid var(--sds-border); border-radius: var(--sds-radius); padding: 6px 12px; min-height: 32px; background: var(--sds-surface); color: var(--sds-text); cursor: pointer; }

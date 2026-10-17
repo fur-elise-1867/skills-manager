@@ -28,3 +28,9 @@ export interface Release {
   publishedAt: string; changelog: string; compatibleAgents: string[] | null; requiredMcps: string[] | null; package: PackageInfo;
 }
 export interface SkillDetail { summary: SkillSummary; storePageUrl: string | null; latestRelease: Release | null }
+export interface Target { agentKey: string; workspaceId: string; path: string }
+export interface McpReport { state: "notRequired" | "unknown" | "configured" | "missing" | "unverifiable"; missing: string[]; reason: string | null; checkedAt: string }
+export interface PreparedOperation {
+  id: string; kind: "install" | "remove"; release: Release; target: Target; expectedFingerprint: string | null;
+  mcp: McpReport; requiresMcpAck: boolean; canExecute: boolean; conflict: string | null;
+}
