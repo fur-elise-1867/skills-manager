@@ -20,7 +20,7 @@ The first owned candidate build overlay used an absolute Windows `frontendDist`.
 
 ## Open verification
 
-- Fresh full default and full `--features sds` suites are running; known upstream failures must be reported as actual failures, not green results.
-- Native installer/window/lifecycle acceptance and corrected artifact receipts remain open.
-- The snapshot-list gap was fixed after this review: explicit Verify snapshot now displays checking/verified-at/corrupt-or-missing/error states and blocks restore after verification failure. Its UI test was observed red then green; backend restore independently verifies again. Final native observation of this new control remains open.
+- Full default finished548 passed/3 failed/7 ignored; full `--features sds` finished698 passed/3 failed/14 ignored. Both reproduced the same two Windows symlink privilege failures and one upstream partial-clone fixture failure; no SDS test failed. See `phase2-integration.md`.
+- Corrected development/internal artifacts built successfully. Native upgrade, selected update/MCP review, snapshot verification, manual/protected restore and prior-authorized offline deployment were observed. Light/dark Library/Backup were inspected at1440x860 and1100x640 client sizes. Remaining native cases and precise receipts are recorded in `phase2-native-acceptance.md`.
+- The snapshot-list gap was fixed after this review: explicit Verify snapshot now displays checking/verified-at/corrupt-or-missing/error states and blocks restore after verification failure. Its UI test was observed red then green; backend restore independently verifies again. Native Verify reported Verified and the subsequent restore succeeded.
 - Independent Standards/Spec reports and final G2 handoff remain open.

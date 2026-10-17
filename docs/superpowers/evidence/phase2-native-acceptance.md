@@ -14,6 +14,8 @@ Owned machine-readable proofs: `.superpowers/sdd/2026-10-17-sds-phase2/native/{u
 
 ## Built artifacts
 
+Final rebuild after the guidance correction completed for both profiles: development6,371,640bytes/SHA256 `82226e2d886949da0444f8fd8721ae550d0fb8d7e40816bc53e78aca93a6b3b8`, internal6,373,172bytes/SHA256 `688231d49d199a166beba02cc17308d00953c7ea0dfde7650ede56cfe441df69`. Final development installed into the same owned pilot shell with exit0. Earlier hashes below identify the exact native candidates used for prior observations and are superseded as delivery artifacts.
+
 Manual snapshot then protected restore was also exercised through the native UI. After Create snapshot reported Local snapshot saved, a new owned `after-manual.txt` was added. Restore operation `fec3a40c-cf6b-4018-b5aa-fe417ae7a93f` reported success. The new edit is absent from the restored target and retained byte-for-byte in Before restore snapshot `1ff26c0c-883e-4ad7-b779-cf9d1e959f9a` (SHA256 `88c47444f9604f523cc5f47e4d6b530e70f1ef3bf2021510d344b5a1dcdf8420`). Proof: `native/manual-restore-proof.json`. The earlier restored release remained marked Local changes against its original baseline.
 
 The latest installed Library at1440x860 client size wraps its64-character source-profile hash within each card and long project/global paths within the table. Minimum-size/dark/keyboard checks remain pending. Native inspection found a stale pilot-era modified-target reason claiming force removal was unavailable; source wording now directs users to snapshot before replacement/removal. This wording-only change postdates the artifacts below and must be included in the final candidate rebuild.
