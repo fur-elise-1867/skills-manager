@@ -33,8 +33,27 @@ pub struct HttpResponse {
     pub body: Vec<u8>,
 }
 pub type HttpFuture<'a> = Pin<Box<dyn Future<Output = Result<HttpResponse, SdsError>> + Send + 'a>>;
+pub struct DownloadSink<'a> {
+    pub file: &'a mut tokio::fs::File,
+    pub expected: &'a super::contracts::PackageInfo,
+    pub limit: u64,
+    pub cancel: &'a std::sync::atomic::AtomicBool,
+}
 pub trait HttpTransport: Send + Sync {
     fn send(&self, request: HttpRequest) -> HttpFuture<'_>;
+    fn download<'a>(
+        &'a self,
+        _request: HttpRequest,
+        _sink: &'a mut DownloadSink<'_>,
+    ) -> HttpFuture<'a> {
+        Box::pin(async {
+            Err(SdsError::new(
+                "INVALID_RESPONSE",
+                "Package streaming is unavailable",
+                false,
+            ))
+        })
+    }
 }
 pub struct ReqwestTransport {
     client: reqwest::Client,
@@ -75,6 +94,89 @@ impl ReqwestTransport {
     }
 }
 impl HttpTransport for ReqwestTransport {
+    fn download<'a>(
+        &'a self,
+        request: HttpRequest,
+        sink: &'a mut DownloadSink<'_>,
+    ) -> HttpFuture<'a> {
+        Box::pin(async move {
+            use sha2::{Digest, Sha256};
+            use tokio::io::{AsyncSeekExt, AsyncWriteExt};
+            let failure =
+                || SdsError::new("STORE_UNAVAILABLE", "Skills Store is unavailable", true);
+            let mut builder = self.client.request(request.method, request.url);
+            if let Some(token) = request.bearer {
+                builder = builder.bearer_auth(token);
+            }
+            let mut response = tokio::select! {
+                result = builder.send() => result.map_err(|_| failure())?,
+                _ = wait_download_cancel(sink.cancel) => return Err(download_cancelled()),
+            };
+            let status = response.status().as_u16();
+            if status != 200 {
+                if (200..300).contains(&status) {
+                    return Err(catalog_response_error());
+                }
+                return Ok(HttpResponse {
+                    status,
+                    body: vec![],
+                });
+            }
+            if response
+                .content_length()
+                .is_some_and(|length| length > sink.limit)
+            {
+                return Err(download_limit());
+            }
+            if response
+                .content_length()
+                .is_some_and(|length| length != sink.expected.size_bytes)
+            {
+                return Err(download_integrity());
+            }
+            sink.file.set_len(0).await.map_err(|_| download_io())?;
+            sink.file
+                .seek(std::io::SeekFrom::Start(0))
+                .await
+                .map_err(|_| download_io())?;
+            let mut count = 0u64;
+            let mut hash = Sha256::new();
+            loop {
+                let chunk = tokio::select! {
+                    result = response.chunk() => result.map_err(|_| failure())?,
+                    _ = wait_download_cancel(sink.cancel) => return Err(download_cancelled()),
+                };
+                let Some(chunk) = chunk else {
+                    break;
+                };
+                count = count
+                    .checked_add(chunk.len() as u64)
+                    .ok_or_else(download_limit)?;
+                if count > sink.limit {
+                    return Err(download_limit());
+                }
+                if count > sink.expected.size_bytes {
+                    return Err(download_integrity());
+                }
+                hash.update(&chunk);
+                sink.file
+                    .write_all(&chunk)
+                    .await
+                    .map_err(|_| download_io())?;
+            }
+            if count != sink.expected.size_bytes
+                || hex::encode(hash.finalize()) != sink.expected.sha256.to_ascii_lowercase()
+            {
+                return Err(download_integrity());
+            }
+            sink.file.flush().await.map_err(|_| download_io())?;
+            sink.file.sync_all().await.map_err(|_| download_io())?;
+            Ok(HttpResponse {
+                status,
+                body: vec![],
+            })
+        })
+    }
     fn send(&self, request: HttpRequest) -> HttpFuture<'_> {
         Box::pin(async move {
             let failure =
@@ -183,6 +285,75 @@ pub struct StoreClient {
 impl StoreClient {
     pub fn new(session: Arc<SessionService>) -> Self {
         Self { session }
+    }
+    pub async fn download(
+        &self,
+        release: &Release,
+        dest: &std::path::Path,
+        cancel: &std::sync::atomic::AtomicBool,
+    ) -> Result<(), SdsError> {
+        let (_, context) = self.session.scope().await?;
+        self.download_for(&context, release, dest, cancel).await
+    }
+    pub async fn download_for(
+        &self,
+        context: &super::contracts::SessionContext,
+        release: &Release,
+        dest: &std::path::Path,
+        cancel: &std::sync::atomic::AtomicBool,
+    ) -> Result<(), SdsError> {
+        if cancel.load(std::sync::atomic::Ordering::Acquire) {
+            return Err(download_cancelled());
+        }
+        const LIMIT: u64 = 104_857_600;
+        if release.package.size_bytes > LIMIT {
+            return Err(download_limit());
+        }
+        if release.package.sha256.len() != 64
+            || !release
+                .package
+                .sha256
+                .bytes()
+                .all(|byte| byte.is_ascii_hexdigit())
+        {
+            return Err(download_integrity());
+        }
+        let (profile, _) = self.session.scope().await?;
+        let url = join_api(&profile.base_url, &release.package.download_path)?;
+        validate_protected_url(&profile.base_url, &url)?;
+        let parent = dest.parent().ok_or_else(download_io)?;
+        super::targets::validate_directory_path(parent)?;
+        if std::fs::symlink_metadata(dest).is_ok() {
+            return Err(download_io());
+        }
+        let temporary = tempfile::Builder::new()
+            .prefix(".sds-download-")
+            .tempfile_in(parent)
+            .map_err(|_| download_io())?;
+        let (file, path) = temporary.into_parts();
+        let mut file = tokio::fs::File::from_std(file);
+        let mut sink = DownloadSink {
+            file: &mut file,
+            expected: &release.package,
+            limit: LIMIT,
+            cancel,
+        };
+        self.session
+            .download_for(context, HttpRequest::get(url), &mut sink)
+            .await?;
+        if cancel.load(std::sync::atomic::Ordering::Acquire) {
+            return Err(download_cancelled());
+        }
+        drop(file);
+        self.session
+            .with_current_context(context, || {
+                if cancel.load(std::sync::atomic::Ordering::Acquire) {
+                    return Err(download_cancelled());
+                }
+                path.persist_noclobber(dest).map_err(|_| download_io())?;
+                Ok(())
+            })
+            .await
     }
     pub async fn taxonomy(&self) -> Result<Taxonomy, SdsError> {
         self.get(&["taxonomy"], None).await
@@ -320,6 +491,36 @@ fn catalog_response_error() -> SdsError {
     SdsError::new(
         "INVALID_RESPONSE",
         "Skills Store returned an unsupported response",
+        false,
+    )
+}
+
+async fn wait_download_cancel(cancel: &std::sync::atomic::AtomicBool) {
+    while !cancel.load(std::sync::atomic::Ordering::Acquire) {
+        tokio::time::sleep(Duration::from_millis(25)).await;
+    }
+}
+fn download_cancelled() -> SdsError {
+    SdsError::new("CANCELLED", "Package download was cancelled", false)
+}
+fn download_integrity() -> SdsError {
+    SdsError::new(
+        "PACKAGE_INTEGRITY",
+        "The package size or SHA-256 does not match its release. Download it again.",
+        false,
+    )
+}
+fn download_limit() -> SdsError {
+    SdsError::new(
+        "PACKAGE_LIMIT",
+        "The package exceeds the 100 MiB download limit",
+        false,
+    )
+}
+fn download_io() -> SdsError {
+    SdsError::new(
+        "PACKAGE_IO",
+        "The package staging file could not be read or saved",
         false,
     )
 }

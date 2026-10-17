@@ -5,6 +5,8 @@ pub mod error;
 #[cfg(debug_assertions)]
 pub mod fixtures;
 pub mod mcp;
+#[cfg(feature = "sds")]
+pub mod packages;
 pub mod profile;
 pub mod runtime;
 pub mod session;

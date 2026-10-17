@@ -287,7 +287,7 @@ impl SessionService {
         Ok(())
     }
     pub async fn request(&self, request: HttpRequest) -> Result<HttpResponse, SdsError> {
-        self.request_inner(None, request).await
+        self.request_inner(None, request, None).await
     }
 
     pub async fn scope(&self) -> Result<(StoreProfile, SessionContext), SdsError> {
@@ -316,12 +316,43 @@ impl SessionService {
         context: &SessionContext,
         request: HttpRequest,
     ) -> Result<HttpResponse, SdsError> {
-        self.request_inner(Some(context), request).await
+        self.request_inner(Some(context), request, None).await
+    }
+    /// Linearize a short filesystem/DB publication against logout and profile replacement.
+    /// The action must not await, copy content, or call back into this service.
+    pub async fn with_current_context<T>(
+        &self,
+        context: &SessionContext,
+        publish: impl FnOnce() -> Result<T, SdsError>,
+    ) -> Result<T, SdsError> {
+        let state = self.state.lock().await;
+        if state.generation != context.generation
+            || state.profile.as_ref().map(|profile| &profile.id) != Some(&context.profile_id)
+            || state.user.as_ref().map(|user| &user.id) != Some(&context.account_id)
+            || matches!(
+                state.status,
+                SessionStatus::SignedOut | SessionStatus::Expired
+            )
+        {
+            return Err(stale_context());
+        }
+        publish()
+    }
+    pub async fn download_for(
+        &self,
+        context: &SessionContext,
+        request: HttpRequest,
+        sink: &mut super::store_client::DownloadSink<'_>,
+    ) -> Result<(), SdsError> {
+        self.request_inner(Some(context), request, Some(sink))
+            .await
+            .map(|_| ())
     }
     async fn request_inner(
         &self,
         context: Option<&SessionContext>,
         mut request: HttpRequest,
+        mut sink: Option<&mut super::store_client::DownloadSink<'_>>,
     ) -> Result<HttpResponse, SdsError> {
         let (profile, generation, revision, access) = {
             let state = self.state.lock().await;
@@ -354,12 +385,14 @@ impl SessionService {
         }
         request.bearer = self.state.lock().await.access.clone();
         self.check_generation(generation).await?;
-        let mut response = self.send_scoped(request.clone(), generation).await?;
+        let mut response = self
+            .send_scoped(request.clone(), generation, sink.as_deref_mut())
+            .await?;
         if response.status == 401 {
             self.refresh_once(generation, revision).await?;
             request.bearer = self.state.lock().await.access.clone();
             self.check_generation(generation).await?;
-            response = self.send_scoped(request, generation).await?;
+            response = self.send_scoped(request, generation, sink).await?;
             if response.status == 401 {
                 self.expire(generation).await?;
                 return Err(http_error(401, false));
@@ -383,8 +416,12 @@ impl SessionService {
         &self,
         request: HttpRequest,
         generation: u64,
+        sink: Option<&mut super::store_client::DownloadSink<'_>>,
     ) -> Result<HttpResponse, SdsError> {
-        let response = self.transport.send(request).await;
+        let response = match sink {
+            Some(sink) => self.transport.download(request, sink).await,
+            None => self.transport.send(request).await,
+        };
         self.check_generation(generation).await?;
         if response
             .as_ref()
@@ -451,6 +488,7 @@ impl SessionService {
                     serde_json::json!({"refreshToken":refresh}),
                 ),
                 generation,
+                None,
             )
             .await?;
         if response.status == 429 || response.status >= 500 {

@@ -1,0 +1,14 @@
+[
+  {
+    "fileName": "sds-synthetic.zip",
+    "format": "zip",
+    "sha256": "77ba4db5f932142a372cdb04204ee730479e9cf835663665c999bf6cc8c65a40",
+    "sizeBytes": 502
+  },
+  {
+    "fileName": "sds-synthetic.7z",
+    "format": "7z",
+    "sha256": "d7a52ca765e24c3f233c1f901786958e5ad50b9c0ea0c2cebebffc0598efe27a",
+    "sizeBytes": 369
+  }
+]

@@ -17,6 +17,12 @@ const messages: Record<string, string> = {
   SETTINGS_SAVE_FAILED: "Your settings could not be read or saved. Try saving them again.",
   TARGET_NOT_READY: "AIPro is not ready. Open AIPro first or select an existing skills folder in Settings.",
   UNSAFE_TARGET: "This destination cannot be used. Select a local folder without directory links or path aliases.",
+  PACKAGE_LIMIT: "The package exceeds a pilot limit: 100 MiB archive, 500 MiB expanded content, 10,000 entries, 32 path levels, 256 MiB decoder memory or 8 MiB headers. Ask the publisher to repack it.",
+  PACKAGE_INTEGRITY: "The package size or SHA-256 does not match its release. Download it again.",
+  PACKAGE_INVALID: "The archive is invalid or contains unsafe entries. Use a standard ZIP or 7z without encryption or split volumes.",
+  PACKAGE_ROOT: "The package must contain exactly one SKILL.md at its root or inside one enclosing folder, with no unrelated files.",
+  PACKAGE_IO: "The package staging file could not be read or saved. Check available disk space and permissions.",
+  CANCELLED: "The operation was cancelled.",
 };
 
 export function storeErrorMessage(error: unknown): string {

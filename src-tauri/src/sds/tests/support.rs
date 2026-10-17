@@ -15,6 +15,9 @@ pub struct Response {
     pub status: u16,
     pub body: Value,
     pub location: Option<String>,
+    pub raw_body: Option<Vec<u8>>,
+    pub chunk_delay_ms: u64,
+    pub chunked: bool,
 }
 impl Response {
     pub fn json(status: u16, body: Value) -> Self {
@@ -22,6 +25,9 @@ impl Response {
             status,
             body,
             location: None,
+            raw_body: None,
+            chunk_delay_ms: 0,
+            chunked: false,
         }
     }
     pub fn redirect(location: String) -> Self {
@@ -29,6 +35,19 @@ impl Response {
             status: 302,
             body: Value::Null,
             location: Some(location),
+            raw_body: None,
+            chunk_delay_ms: 0,
+            chunked: false,
+        }
+    }
+    pub fn binary(body: Vec<u8>) -> Self {
+        Self {
+            status: 200,
+            body: Value::Null,
+            location: None,
+            raw_body: Some(body),
+            chunk_delay_ms: 0,
+            chunked: false,
         }
     }
 }
@@ -113,14 +132,45 @@ impl TestServer {
                     if response.status == 0 {
                         return;
                     }
-                    let body = serde_json::to_vec(&response.body).unwrap();
+                    let body = response
+                        .raw_body
+                        .unwrap_or_else(|| serde_json::to_vec(&response.body).unwrap());
                     let location = response
                         .location
                         .map(|url| format!("Location: {url}\r\n"))
                         .unwrap_or_default();
-                    let header = format!("HTTP/1.1 {} Synthetic\r\n{location}Content-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n", response.status, body.len());
+                    let length = if response.chunked {
+                        "Transfer-Encoding: chunked".into()
+                    } else {
+                        format!("Content-Length: {}", body.len())
+                    };
+                    let header = format!("HTTP/1.1 {} Synthetic\r\n{location}Content-Type: application/octet-stream\r\n{length}\r\nConnection: close\r\n\r\n", response.status);
                     let _ = stream.write_all(header.as_bytes()).await;
-                    let _ = stream.write_all(&body).await;
+                    for chunk in body.chunks(65_536) {
+                        if response.chunked
+                            && stream
+                                .write_all(format!("{:x}\r\n", chunk.len()).as_bytes())
+                                .await
+                                .is_err()
+                        {
+                            break;
+                        }
+                        if stream.write_all(chunk).await.is_err() {
+                            break;
+                        }
+                        if response.chunked && stream.write_all(b"\r\n").await.is_err() {
+                            break;
+                        }
+                        if response.chunk_delay_ms > 0 {
+                            tokio::time::sleep(std::time::Duration::from_millis(
+                                response.chunk_delay_ms,
+                            ))
+                            .await;
+                        }
+                    }
+                    if response.chunked {
+                        let _ = stream.write_all(b"0\r\n\r\n").await;
+                    }
                 });
             }
         });
