@@ -11,6 +11,7 @@ beforeEach(() => {
   vi.mocked(invoke).mockImplementation(async (command) => {
     if (command === "runtime_profile") return { kind: "sds", environment: "internal", fixtureMode: false } as never;
     if (command === "sds_get_connection") return null as never;
+    if (command === "sds_library") return [] as never;
     if (command === "sds_session_status") return { status: "signedOut", user: null } as never;
     if (command === "sds_get_target_settings") return { overrideRoot: null, target: null, error: { code: "TARGET_NOT_READY" }, locked: false } as never;
     throw new Error(`Unexpected upstream command: ${command}`);
@@ -67,10 +68,20 @@ test("renders_keyboard_accessible_shell", async () => {
   skip.focus();
   expect(skip).toHaveFocus();
   expect(screen.getByRole("button", { name: "Skills Store" })).toBeDisabled();
-  expect(screen.getByRole("button", { name: "Library" })).toBeDisabled();
+  expect(screen.getByRole("button", { name: "Library" })).toBeEnabled();
   fireEvent.click(screen.getByRole("button", { name: "Switch to dark theme" }));
   await waitFor(() => expect(localStorage.getItem("sds.theme")).toBe("dark"));
   expect(localStorage.getItem("theme")).toBeNull();
+});
+
+test("opens local Library without a Store connection or signed-in session",async()=>{
+  render(<SdsApp/>);
+  await screen.findByRole("heading",{name:"AIPro destination"});
+  fireEvent.click(screen.getByRole("button",{name:"Library"}));
+  expect(await screen.findByText("No downloaded releases yet.")).toBeInTheDocument();
+  expect(screen.getByRole("heading",{name:"Library",level:1})).toBeInTheDocument();
+  expect(vi.mocked(invoke).mock.calls.map(([command])=>command)).toContain("sds_library");
+  expect(vi.mocked(invoke).mock.calls.map(([command])=>command)).not.toContain("sds_catalog_search");
 });
 
 test("rejects_backend_environment_and_fixture_mismatch", async () => {

@@ -1,0 +1,48 @@
+import {fireEvent,render,screen} from "@testing-library/react";
+import {beforeEach,expect,test,vi} from "vitest";
+import {invoke} from "@tauri-apps/api/core";
+import LibraryPage from "./LibraryPage";
+import release from "../../../../contracts/sds-desktop/v1/fixtures/release.json";
+
+vi.mock("@tauri-apps/api/core",()=>({invoke:vi.fn()}));
+const item={id:"a".repeat(64),profileId:"profile-one",release:release.data,cachedAt:"2026-10-17T00:00:00Z",cacheStatus:"verified",deployments:[{id:"deployment-one",target:{agentKey:"aipro",workspaceId:"global",path:"C:\\Synthetic\\.aipro\\skills\\jira-weekly-report"},status:"installed",mcp:{state:"missing",missing:["jira-mcp"],reason:null,checkedAt:"2026-10-17T00:00:00Z"},installedAt:"2026-10-17T00:00:00Z",reason:null}]};
+beforeEach(()=>{vi.mocked(invoke).mockImplementation(async command=>{
+    if(command==="sds_library")return [item] as never;
+    if(command==="sds_library_preview")return "# Local skill\n![remote](https://example.invalid/tracker.png)\n[External](https://example.invalid/)" as never;
+    throw new Error(`Unexpected command ${command}`);
+});});
+
+test("shows independent cache and target status locally, searches paths and previews verified text",async()=>{
+    render(<LibraryPage/>);
+    await screen.findByRole("heading",{name:"jira-weekly-report"});
+    expect(screen.getByText(item.deployments[0].target.path)).toBeInTheDocument();
+    expect(screen.getByText("Installed")).toBeInTheDocument();
+    expect(screen.getByText(/MCP at installation: Missing/)).toBeInTheDocument();
+    fireEvent.change(screen.getByRole("searchbox",{name:"Search Library"}),{target:{value:"not-in-library"}});
+    expect(screen.getByText("No matching releases.")).toBeInTheDocument();
+    fireEvent.change(screen.getByRole("searchbox",{name:"Search Library"}),{target:{value:"Synthetic"}});
+    fireEvent.click(screen.getByRole("button",{name:"Preview jira-weekly-report 1.2.0"}));
+    expect(await screen.findByText("Local skill")).toBeInTheDocument();
+    expect(document.querySelector("img")).toBeNull();
+    expect(screen.queryByRole("link",{name:"External"})).not.toBeInTheDocument();
+    expect(vi.mocked(invoke).mock.calls.map(([command])=>command)).toEqual(["sds_library","sds_library_preview"]);
+});
+
+test("an unreadable Library is an error rather than an empty result and supports retry",async()=>{
+    vi.mocked(invoke).mockRejectedValueOnce({code:"REPOSITORY_UNAVAILABLE",message:"synthetic-secret"});
+    render(<LibraryPage/>);
+    expect(await screen.findByRole("alert")).toHaveTextContent("Library could not be read");
+    expect(screen.queryByText("No downloaded releases yet.")).not.toBeInTheDocument();
+    expect(screen.queryByText("synthetic-secret")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button",{name:"Try again"}));
+    expect(await screen.findByRole("heading",{name:"jira-weekly-report"})).toBeInTheDocument();
+});
+
+test("cache problems do not erase modified or missing target records",async()=>{
+    vi.mocked(invoke).mockResolvedValue([{...item,cacheStatus:"corrupt",deployments:[{...item.deployments[0],status:"modified",reason:"Local contents have changed."},{...item.deployments[0],id:"missing",status:"missing",target:{...item.deployments[0].target,path:"C:\\Synthetic\\another-target"},reason:"The installed folder is missing."}]}] as never);
+    render(<LibraryPage/>);
+    expect(await screen.findByText("Cache needs attention")).toBeInTheDocument();
+    expect(screen.getByText("Local changes")).toBeInTheDocument();
+    expect(screen.getByText("Missing folder")).toBeInTheDocument();
+    expect(screen.getByRole("button",{name:"Preview jira-weekly-report 1.2.0"})).toBeDisabled();
+});

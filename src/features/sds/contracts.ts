@@ -35,3 +35,7 @@ export interface PreparedOperation {
   id: string; kind: "install" | "remove"; release: Release; target: Target; expectedFingerprint: string | null;
   mcp: McpReport; requiresMcpAck: boolean; canExecute: boolean; conflict: string | null;
 }
+export type CacheStatus = "verified" | "corrupt" | "missing" | "unverifiable";
+export type DeploymentStatus = "installed" | "modified" | "missing" | "unverifiable";
+export interface LibraryDeployment { id: string; target: Target; status: DeploymentStatus; mcp: McpReport; installedAt: string; reason: string | null }
+export interface LibraryItem { id: string; profileId: string; release: Release; cachedAt: string; cacheStatus: CacheStatus; deployments: LibraryDeployment[] }

@@ -8,6 +8,8 @@ pub mod error;
 pub mod fixtures;
 #[cfg(feature = "sds")]
 pub mod journal;
+#[cfg(feature = "sds")]
+pub mod library;
 pub mod mcp;
 #[cfg(feature = "sds")]
 pub mod operations;

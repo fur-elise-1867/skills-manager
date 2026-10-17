@@ -260,3 +260,41 @@ pub async fn sds_set_target_override(
         .await
         .map_err(|_| save_error())?
 }
+
+#[tauri::command]
+pub async fn sds_library(
+    state: tauri::State<'_, SdsServices>,
+) -> Result<Vec<super::contracts::LibraryItem>, SdsError> {
+    #[cfg(feature = "sds")]
+    {
+        state.operations.library().await
+    }
+    #[cfg(not(feature = "sds"))]
+    {
+        let _ = state;
+        Err(SdsError::new(
+            "PROFILE_MISMATCH",
+            "Open the SDS desktop runtime to view its Library.",
+            false,
+        ))
+    }
+}
+#[tauri::command]
+pub async fn sds_library_preview(
+    state: tauri::State<'_, SdsServices>,
+    release_key: String,
+) -> Result<String, SdsError> {
+    #[cfg(feature = "sds")]
+    {
+        state.operations.preview(&release_key).await
+    }
+    #[cfg(not(feature = "sds"))]
+    {
+        let _ = (state, release_key);
+        Err(SdsError::new(
+            "PROFILE_MISMATCH",
+            "Open the SDS desktop runtime to preview its Library.",
+            false,
+        ))
+    }
+}

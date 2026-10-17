@@ -18,14 +18,14 @@ fn fixture(name: &str) -> serde_json::Value {
     })
     .unwrap()
 }
-fn request() -> InstallRequest {
+pub(super) fn request() -> InstallRequest {
     InstallRequest {
         skill_id: "skill-123".into(),
         release_id: "rel-003".into(),
     }
 }
 
-async fn setup(
+pub(super) async fn setup(
     server: &TestServer,
     root: &std::path::Path,
 ) -> (SdsServices, Arc<Repository>, OperationService) {
@@ -190,7 +190,7 @@ async fn execution_review_rechecks_current_acl_and_immutable_release_even_when_p
     assert!(!plan.target.path.parent().unwrap().exists());
 }
 
-async fn package_server(format: &'static str, corrupt: bool) -> TestServer {
+pub(super) async fn package_server(format: &'static str, corrupt: bool) -> TestServer {
     use sha2::{Digest, Sha256};
     let bytes = if format == "zip" {
         include_bytes!("../../../../contracts/sds-desktop/v1/fixtures/packages/sds-synthetic.zip")

@@ -13,6 +13,8 @@ pub const COMMANDS: &[&str] = &[
     "sds_skill_detail",
     "sds_get_target_settings",
     "sds_set_target_override",
+    "sds_library",
+    "sds_library_preview",
 ];
 
 /// A mismatched binary/config pair exposes only its identity, never storage.
@@ -70,7 +72,9 @@ pub fn run() {
             super::commands::sds_catalog_search,
             super::commands::sds_skill_detail,
             super::commands::sds_get_target_settings,
-            super::commands::sds_set_target_override
+            super::commands::sds_set_target_override,
+            super::commands::sds_library,
+            super::commands::sds_library_preview
         ])
         .run(tauri::generate_context!())
         .expect("Error running SDS desktop");

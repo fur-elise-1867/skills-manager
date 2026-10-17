@@ -72,6 +72,14 @@ impl OperationService {
     pub fn status(&self, id: &str) -> Result<OperationResult, SdsError> {
         self.repository.operation_status(id)
     }
+    pub async fn library(&self) -> Result<Vec<super::contracts::LibraryItem>, SdsError> {
+        let repository = self.repository.clone();
+        blocking(move || super::library::load(&repository)).await
+    }
+    pub async fn preview(&self, id: &str) -> Result<String, SdsError> {
+        let (repository, id) = (self.repository.clone(), id.to_string());
+        blocking(move || super::library::preview(&repository, &id)).await
+    }
     pub fn cancel(&self, id: &str) -> Result<OperationResult, SdsError> {
         self.ensure_ready()?;
         let jobs = self.jobs.lock().map_err(|_| review())?;

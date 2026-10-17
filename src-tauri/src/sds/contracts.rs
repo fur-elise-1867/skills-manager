@@ -290,3 +290,40 @@ pub struct OperationResult {
     pub stage: String,
     pub error: Option<super::error::SdsError>,
 }
+
+#[derive(Debug, Copy, Clone, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub enum CacheStatus {
+    Verified,
+    Corrupt,
+    Missing,
+    Unverifiable,
+}
+#[derive(Debug, Copy, Clone, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub enum DeploymentStatus {
+    Installed,
+    Modified,
+    Missing,
+    Unverifiable,
+}
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LibraryDeployment {
+    pub id: String,
+    pub target: Target,
+    pub status: DeploymentStatus,
+    pub mcp: McpReport,
+    pub installed_at: String,
+    pub reason: Option<String>,
+}
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LibraryItem {
+    pub id: String,
+    pub profile_id: String,
+    pub release: Release,
+    pub cached_at: String,
+    pub cache_status: CacheStatus,
+    pub deployments: Vec<LibraryDeployment>,
+}

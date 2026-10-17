@@ -1,0 +1,66 @@
+import {useEffect,useRef,useState} from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import {getLibrary,getLibraryPreview} from "../api";
+import type {CacheStatus,DeploymentStatus,LibraryItem,Release} from "../contracts";
+
+const cacheLabels:Record<CacheStatus,string>={verified:"Downloaded",corrupt:"Cache needs attention",missing:"Cache missing",unverifiable:"Cache unavailable"};
+const deploymentLabels:Record<DeploymentStatus,string>={installed:"Installed",modified:"Local changes",missing:"Missing folder",unverifiable:"Needs review"};
+const mcpLabels={notRequired:"Not required",configured:"Configured",missing:"Missing",unknown:"Not declared",unverifiable:"Unverifiable"};
+function localError(error:unknown,preview=false){
+  const code=typeof error==="object" && error!==null && "code" in error ? error.code : "";
+  if(code==="CACHE_CORRUPT")return "The cached files have changed. Keep existing installations and download a verified copy before previewing.";
+  if(code==="PREVIEW_LIMIT")return "The skill document is too large to preview (maximum 1 MiB).";
+  return preview ? "The skill document could not be read safely. Keep the cached files and check the release." : "Library could not be read. Check disk space and permissions, then try again.";
+}
+
+export default function LibraryPage({onInstall,onRemove}:{onInstall?:(release:Release)=>void;onRemove?:(deploymentId:string)=>void}){
+  const [revision,setRevision]=useState(0);
+  const [result,setResult]=useState<{revision:number;items?:LibraryItem[];error?:string}>({revision:-1});
+  const [query,setQuery]=useState("");
+  const [selected,setSelected]=useState<LibraryItem|null>(null);
+  const [preview,setPreview]=useState<{id:string;text?:string;error?:string}>({id:""});
+  const previewTrigger=useRef<HTMLButtonElement|null>(null);
+  useEffect(()=>{
+    let active=true;
+    getLibrary().then(items=>{if(active)setResult({revision,items});}).catch(error=>{if(active)setResult({revision,error:localError(error)});});
+    return()=>{active=false;};
+  },[revision]);
+  const selectedId=selected?.id;
+  useEffect(()=>{
+    if(!selectedId)return;
+    let active=true;
+    getLibraryPreview(selectedId).then(text=>{if(active)setPreview({id:selectedId,text});}).catch(error=>{if(active)setPreview({id:selectedId,error:localError(error,true)});});
+    return()=>{active=false;};
+  },[selectedId]);
+  const current=result.revision===revision ? result : null;
+  const keyword=query.trim().toLocaleLowerCase();
+  const items=current?.items?.filter(item=>[item.release.installName,item.release.version,item.release.skillId,...item.deployments.map(deployment=>deployment.target.path)].some(value=>value.toLocaleLowerCase().includes(keyword)));
+  function refresh(){setSelected(null);setRevision(value=>value+1);}
+  return <section className="sds-library" aria-label="Downloaded releases">
+    <div className="sds-library-toolbar"><div><h2>Downloaded releases</h2><p>Local copies and the destinations where they were installed.</p></div><button className="sds-secondary-button" onClick={refresh} disabled={!current}>Refresh Library</button></div>
+    <label className="sds-library-search">Search Library<input type="search" value={query} onChange={event=>setQuery(event.target.value)} placeholder="Folder, version or destination path"/></label>
+    {!current ? <p role="status">Checking local releases and destinations…</p>
+      : current.error ? <div className="sds-error" role="alert"><p>{current.error}</p><button className="sds-secondary-button" onClick={refresh}>Try again</button></div>
+      : !current.items?.length ? <p className="sds-empty">No downloaded releases yet.</p>
+      : !items?.length ? <p className="sds-empty">No matching releases.</p>
+      : <div className="sds-skill-grid">{items.map(item=><article className="sds-skill-card" key={item.id}>
+        <div className="sds-card-heading"><h3>{item.release.installName}</h3><span>{item.release.version}</span></div>
+        <span className="sds-badge" data-local-status={item.cacheStatus}>{cacheLabels[item.cacheStatus]}</span>
+        <p className="sds-library-release">Release {item.release.id} · {item.release.package.format.toUpperCase()}</p>
+        {item.deployments.length ? <ul className="sds-library-targets">{item.deployments.map(deployment=><li key={deployment.id}>
+          <div><strong>AIPro · Global</strong><span className="sds-badge" data-local-status={deployment.status}>{deploymentLabels[deployment.status]}</span></div>
+          <p className="sds-target-path">{deployment.target.path}</p>
+          <p>MCP at installation: {mcpLabels[deployment.mcp.state]}{deployment.mcp.missing.length ? ` · ${deployment.mcp.missing.join(", ")}` : ""}</p>
+          {deployment.reason && <p className="sds-library-reason">{deployment.reason}</p>}
+          {onRemove && <button className="sds-text-button" onClick={()=>onRemove(deployment.id)}>Remove from target</button>}
+        </li>)}</ul> : <p className="sds-library-release">No installed destinations</p>}
+        <div className="sds-library-actions"><button className="sds-secondary-button" aria-label={`Preview ${item.release.installName} ${item.release.version}`} disabled={item.cacheStatus!=="verified"} onClick={event=>{previewTrigger.current=event.currentTarget;setSelected(item);}}>Preview</button>
+          {onInstall && <button className="sds-primary-button" disabled={item.cacheStatus!=="verified"} onClick={()=>onInstall(item.release)}>Install skill</button>}
+        </div>
+      </article>)}</div>}
+    {selected && <section className="sds-library-preview" aria-label="Local skill preview"><div className="sds-library-toolbar"><h2>Skill document · {selected.release.installName}</h2><button className="sds-secondary-button" onClick={()=>{setSelected(null);previewTrigger.current?.focus();}}>Close preview</button></div>
+      {preview.id!==selected.id ? <p role="status">Reading verified skill document…</p> : preview.error ? <p role="alert" className="sds-error">{preview.error}</p> : <article className="sds-markdown"><ReactMarkdown skipHtml remarkPlugins={[remarkGfm]} components={{img:()=>null,a:({children})=><span>{children}</span>}}>{preview.text}</ReactMarkdown></article>}
+    </section>}
+  </section>;
+}

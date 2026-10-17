@@ -1,5 +1,6 @@
 mod catalog;
 mod deployment;
+mod library;
 mod mcp;
 mod operations;
 mod packages;

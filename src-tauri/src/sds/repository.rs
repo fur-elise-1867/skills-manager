@@ -340,7 +340,7 @@ impl Repository {
             {
                 return Err(operation_error());
             }
-            validate_directory_path(&deployment.target.path)?;
+            super::targets::validate_directory_shape(&deployment.target.path)?;
             output.push(deployment);
         }
         Ok(output)

@@ -162,6 +162,22 @@ pub fn resolve_aipro_global(home: &Path, override_root: Option<&Path>) -> Result
 /// Reject aliases and reparse ancestors before following a path or creating files.
 /// Missing leaves are allowed; deployment must revalidate under its target lock.
 pub(crate) fn validate_directory_path(path: &Path) -> Result<(), SdsError> {
+    validate_directory_shape(path)?;
+    for ancestor in path.ancestors() {
+        match std::fs::symlink_metadata(ancestor) {
+            Ok(metadata) if is_reparse(&metadata) || !metadata.is_dir() => {
+                return Err(unsafe_target())
+            }
+            Ok(_) => (),
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => (),
+            Err(_) => return Err(unsafe_target()),
+        }
+    }
+    Ok(())
+}
+/// Historical paths can be displayed even when their live directories have changed.
+/// Every filesystem action must additionally call validate_directory_path and pin ancestors.
+pub(crate) fn validate_directory_shape(path: &Path) -> Result<(), SdsError> {
     let text = path.to_str().ok_or_else(unsafe_target)?;
     if !path.is_absolute()
         || text
@@ -191,16 +207,6 @@ pub(crate) fn validate_directory_path(path: &Path) -> Result<(), SdsError> {
             {
                 return Err(unsafe_target());
             }
-        }
-    }
-    for ancestor in path.ancestors() {
-        match std::fs::symlink_metadata(ancestor) {
-            Ok(metadata) if is_reparse(&metadata) || !metadata.is_dir() => {
-                return Err(unsafe_target())
-            }
-            Ok(_) => (),
-            Err(error) if error.kind() == std::io::ErrorKind::NotFound => (),
-            Err(_) => return Err(unsafe_target()),
         }
     }
     Ok(())
