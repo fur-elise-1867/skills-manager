@@ -1,8 +1,10 @@
 mod catalog;
 mod deployment;
 mod mcp;
+mod operations;
 mod packages;
 mod profile;
+mod recovery;
 mod session;
 mod support;
 mod targets;

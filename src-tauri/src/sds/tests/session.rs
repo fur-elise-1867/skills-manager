@@ -34,6 +34,71 @@ impl CredentialVault for MemoryVault {
 }
 
 #[tokio::test]
+async fn a_blocking_commit_keeps_its_context_until_completion_and_rejects_later_reuse() {
+    let server = TestServer::start(|_| async move {
+        Response::json(
+            200,
+            serde_json::from_str(include_str!(
+                "../../../../contracts/sds-desktop/v1/fixtures/auth-login.json"
+            ))
+            .unwrap(),
+        )
+    })
+    .await;
+    let service = Arc::new(SessionService::new(
+        Environment::Development,
+        Some(StoreProfile::new(&server.base_url, Environment::Development).unwrap()),
+        Arc::new(ReqwestTransport::new().unwrap()),
+        Arc::new(MemoryVault::default()),
+    ));
+    service
+        .login("employee@example.invalid", "synthetic-password")
+        .await
+        .unwrap();
+    let context = service.scope().await.unwrap().1;
+    let entered = Arc::new(tokio::sync::Notify::new());
+    let (release, wait) = std::sync::mpsc::channel();
+    let (commit, frozen, started) = (service.clone(), context.clone(), entered.clone());
+    let committing = tokio::spawn(async move {
+        commit
+            .commit_for(&frozen, move || {
+                started.notify_one();
+                wait.recv_timeout(std::time::Duration::from_secs(5))
+                    .unwrap();
+                Ok(())
+            })
+            .await
+    });
+    tokio::time::timeout(std::time::Duration::from_secs(5), entered.notified())
+        .await
+        .unwrap();
+    let signing_out = service.clone();
+    let mut logout = tokio::spawn(async move { signing_out.logout().await });
+    assert!(
+        tokio::time::timeout(std::time::Duration::from_millis(50), &mut logout)
+            .await
+            .is_err()
+    );
+    release.send(()).unwrap();
+    committing.await.unwrap().unwrap();
+    logout.await.unwrap().unwrap();
+    let called = Arc::new(AtomicUsize::new(0));
+    let observed = called.clone();
+    assert_eq!(
+        service
+            .commit_for(&context, move || {
+                observed.fetch_add(1, Ordering::SeqCst);
+                Ok(())
+            })
+            .await
+            .unwrap_err()
+            .code,
+        "REVIEW_REQUIRED"
+    );
+    assert_eq!(called.load(Ordering::SeqCst), 0);
+}
+
+#[tokio::test]
 async fn real_login_payload_maps_identity_without_expires_in_and_never_exports_tokens() {
     let server = TestServer::start(|request| async move {
         assert_eq!(request.path, "/skm/api/v1/auth/login");

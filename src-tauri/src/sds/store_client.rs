@@ -393,6 +393,14 @@ impl StoreClient {
         Ok(page)
     }
     pub async fn detail(&self, skill_id: &str) -> Result<SkillDetail, SdsError> {
+        let (_, context) = self.session.scope().await?;
+        self.detail_for(&context, skill_id).await
+    }
+    pub async fn detail_for(
+        &self,
+        context: &super::contracts::SessionContext,
+        skill_id: &str,
+    ) -> Result<SkillDetail, SdsError> {
         #[derive(Deserialize)]
         #[serde(rename_all = "camelCase")]
         struct WireDetail {
@@ -401,7 +409,7 @@ impl StoreClient {
             store_page_url: Option<String>,
             latest_release: Option<Release>,
         }
-        let detail: WireDetail = self.get(&["skills", skill_id], None).await?;
+        let detail: WireDetail = self.get_for(context, &["skills", skill_id], None).await?;
         if detail.metadata.id != skill_id
             || detail.metadata.name.trim().is_empty()
             || detail
@@ -421,8 +429,17 @@ impl StoreClient {
         })
     }
     pub async fn release(&self, skill_id: &str, release_id: &str) -> Result<Release, SdsError> {
+        let (_, context) = self.session.scope().await?;
+        self.release_for(&context, skill_id, release_id).await
+    }
+    pub async fn release_for(
+        &self,
+        context: &super::contracts::SessionContext,
+        skill_id: &str,
+        release_id: &str,
+    ) -> Result<Release, SdsError> {
         let release: Release = self
-            .get(&["skills", skill_id, "releases", release_id], None)
+            .get_for(context, &["skills", skill_id, "releases", release_id], None)
             .await?;
         if release.skill_id != skill_id || release.id != release_id {
             return Err(catalog_response_error());
@@ -434,7 +451,19 @@ impl StoreClient {
         segments: &[&str],
         query: Option<&CatalogQuery>,
     ) -> Result<T, SdsError> {
-        let (profile, context) = self.session.scope().await?;
+        let (_, context) = self.session.scope().await?;
+        self.get_for(&context, segments, query).await
+    }
+    async fn get_for<T: serde::de::DeserializeOwned>(
+        &self,
+        context: &super::contracts::SessionContext,
+        segments: &[&str],
+        query: Option<&CatalogQuery>,
+    ) -> Result<T, SdsError> {
+        let (profile, _) = self.session.scope().await?;
+        self.session
+            .with_current_context(context, || Ok(()))
+            .await?;
         let mut url = join_api(&profile.base_url, "api/v1/desktop/")?;
         {
             let mut path = url
@@ -472,7 +501,7 @@ impl StoreClient {
         }
         let response = self
             .session
-            .request_for(&context, HttpRequest::get(url))
+            .request_for(context, HttpRequest::get(url))
             .await?;
         #[derive(Deserialize)]
         struct Envelope<T> {

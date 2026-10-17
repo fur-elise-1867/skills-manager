@@ -8,6 +8,37 @@ fn tree(root: &Path) {
     std::fs::write(root.join("resources/data.bin"), [0, 255, 17, 0]).unwrap();
 }
 
+#[cfg(windows)]
+#[test]
+fn the_repository_refuses_hardlinked_database_and_sidecar_files_before_sqlite_writes() {
+    use crate::sds::repository::Repository;
+    for sidecar in [false, true] {
+        let root = tempfile::tempdir().unwrap();
+        let data = root.path().join("sds");
+        std::fs::create_dir(&data).unwrap();
+        let outside = root.path().join("other-user-data.sqlite3");
+        let connection = rusqlite::Connection::open(&outside).unwrap();
+        connection
+            .execute_batch(
+                "CREATE TABLE sentinel(value TEXT); INSERT INTO sentinel VALUES('keep');",
+            )
+            .unwrap();
+        drop(connection);
+        let before = std::fs::read(&outside).unwrap();
+        std::fs::hard_link(
+            &outside,
+            data.join(if sidecar {
+                "pilot.sqlite3-journal"
+            } else {
+                "pilot.sqlite3"
+            }),
+        )
+        .unwrap();
+        assert!(Repository::open(&data).is_err());
+        assert_eq!(std::fs::read(&outside).unwrap(), before);
+    }
+}
+
 #[test]
 fn a_target_fingerprint_detects_added_changed_and_deleted_files_and_empty_directories() {
     let parent = tempfile::tempdir().unwrap();
@@ -239,6 +270,7 @@ fn frozen_operations_survive_restart_without_storing_credentials_and_terminal_re
         skill_id: release.skill_id.clone(),
         release_id: release.id.clone(),
     };
+    std::fs::create_dir(root.path().join("agent")).unwrap();
     let operation = PreparedOperation {
         id: uuid::Uuid::new_v4().to_string(),
         kind: "install".into(),
@@ -248,6 +280,10 @@ fn frozen_operations_survive_restart_without_storing_credentials_and_terminal_re
             workspace_id: "global".into(),
             path: root.path().join("agent/skills/jira-weekly-report"),
         },
+        reviewed_root: crate::sds::contracts::ReviewedRoot::capture(
+            &root.path().join("agent/skills"),
+        )
+        .unwrap(),
         expected_fingerprint: None,
         mcp: McpReport {
             state: McpState::Unknown,

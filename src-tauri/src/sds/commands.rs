@@ -19,6 +19,8 @@ pub struct SdsServices {
     pub session: Arc<SessionService>,
     pub store: StoreClient,
     pub targets: Arc<TargetService>,
+    #[cfg(feature = "sds")]
+    pub operations: Arc<super::operations::OperationService>,
     data_root: PathBuf,
     settings_gate: Mutex<()>,
     connection_error: Mutex<Option<SdsError>>,
@@ -36,13 +38,18 @@ impl SdsServices {
             Arc::new(ReqwestTransport::new()?),
             Arc::new(WindowsCredentialVault::new(data_root)),
         ));
+        let targets = Arc::new(TargetService::new(
+            &dirs::home_dir()
+                .ok_or_else(|| SdsError::invalid("User home directory is unavailable"))?,
+            data_root,
+        ));
+        #[cfg(feature = "sds")]
+        let operations = pilot_operations(data_root, &session, &targets)?;
         Ok(Self {
             store: StoreClient::new(session.clone()),
-            targets: Arc::new(TargetService::new(
-                &dirs::home_dir()
-                    .ok_or_else(|| SdsError::invalid("User home directory is unavailable"))?,
-                data_root,
-            )),
+            targets,
+            #[cfg(feature = "sds")]
+            operations,
             session,
             data_root: data_root.into(),
             settings_gate: Mutex::new(()),
@@ -77,9 +84,14 @@ impl SdsServices {
             Arc::new(ReqwestTransport::fixture()?),
             Arc::new(super::fixtures::FixtureVault::default()),
         ));
+        let targets = Arc::new(TargetService::fixture(data_root)?);
+        #[cfg(feature = "sds")]
+        let operations = pilot_operations(data_root, &session, &targets)?;
         Ok(Self {
             store: StoreClient::new(session.clone()),
-            targets: Arc::new(TargetService::fixture(data_root)?),
+            targets,
+            #[cfg(feature = "sds")]
+            operations,
             session,
             data_root: data_root.into(),
             settings_gate: Mutex::new(()),
@@ -116,6 +128,20 @@ impl SdsServices {
         }
         Ok(self.session.connection().await)
     }
+}
+
+#[cfg(feature = "sds")]
+fn pilot_operations(
+    root: &Path,
+    session: &Arc<SessionService>,
+    targets: &Arc<TargetService>,
+) -> Result<Arc<super::operations::OperationService>, SdsError> {
+    let repository = Arc::new(super::repository::Repository::open(&root.join("pilot"))?);
+    Ok(Arc::new(super::operations::OperationService::new(
+        session.clone(),
+        targets.clone(),
+        repository,
+    )))
 }
 
 fn read_connection(

@@ -19,6 +19,8 @@ use std::{
 pub struct Repository {
     root: PathBuf,
     connection: Mutex<Connection>,
+    _db_pin: File,
+    _pins: DirectoryPins,
 }
 #[derive(Debug)]
 pub struct CachedRelease {
@@ -26,6 +28,40 @@ pub struct CachedRelease {
     pub profile_id: String,
     pub release: Release,
     pub artifact: VerifiedArtifact,
+}
+pub(crate) struct PreparedCache {
+    repository_root: PathBuf,
+    cached: CachedRelease,
+    insert: bool,
+    copied: Option<PathBuf>,
+    _temporary: Option<tempfile::TempDir>,
+    _lock: File,
+    _pins: DirectoryPins,
+}
+impl PreparedCache {
+    /// Only rename and SQLite publication happen here. Caller owns session/cancel guards.
+    pub(crate) fn publish(self, repository: &Repository) -> Result<CachedRelease, SdsError> {
+        if repository.root() != self.repository_root {
+            return Err(repository_error());
+        }
+        if self.insert {
+            let mut connection = repository
+                .connection
+                .lock()
+                .map_err(|_| repository_error())?;
+            let tx = connection
+                .transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)
+                .map_err(|_| repository_error())?;
+            if let Some(copied) = &self.copied {
+                std::fs::rename(copied, &self.cached.artifact.root)
+                    .map_err(|_| repository_error())?;
+            }
+            let release = &self.cached.release;
+            tx.execute("INSERT INTO releases(cache_key,profile_id,skill_id,release_id,release_json,manifest_json,fingerprint,created_at) VALUES(?1,?2,?3,?4,?5,?6,?7,?8)",params![self.cached.key,self.cached.profile_id,release.skill_id,release.id,serde_json::to_string(release).map_err(|_|repository_error())?,serde_json::to_string(&self.cached.artifact.manifest).map_err(|_|repository_error())?,self.cached.artifact.fingerprint,chrono::Utc::now().to_rfc3339()]).map_err(|_|repository_error())?;
+            tx.commit().map_err(|_| repository_error())?;
+        }
+        Ok(self.cached)
+    }
 }
 #[derive(Debug, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -44,6 +80,331 @@ struct Stored {
 }
 
 impl Repository {
+    pub fn root(&self) -> &Path {
+        &self.root
+    }
+    pub(crate) fn coordinator_lock(&self) -> Result<File, SdsError> {
+        self.exclusive_lock("operations.lock")
+    }
+    pub(crate) fn expire_precommit(&self, epoch: &str) -> Result<(), SdsError> {
+        let mut connection = self.connection.lock().map_err(|_| repository_error())?;
+        let tx = connection
+            .transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)
+            .map_err(|_| repository_error())?;
+        let stale = {
+            let mut query=tx.prepare("SELECT operation_id,CASE WHEN length(CAST(result_json AS BLOB))<=65536 THEN result_json ELSE NULL END FROM operations WHERE runtime_epoch<>?1 AND intent_json IS NULL").map_err(|_|repository_error())?;
+            let rows = query
+                .query_map([epoch], |row| {
+                    Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+                })
+                .map_err(|_| repository_error())?;
+            rows.collect::<Result<Vec<_>, _>>()
+                .map_err(|_| repository_error())?
+        };
+        for (id, body) in stale {
+            let previous = parse_result(&body, &id)?;
+            if previous.state.terminal() || previous.state == OperationState::RecoveryRequired {
+                continue;
+            }
+            let result = OperationResult {
+                operation_id: id.clone(),
+                state: OperationState::Failed,
+                stage: "review-required".into(),
+                error: Some(super::journal::review()),
+            };
+            tx.execute(
+                "UPDATE operations SET result_json=?1,updated_at=?2 WHERE operation_id=?3",
+                params![
+                    serde_json::to_string(&result).map_err(|_| operation_error())?,
+                    chrono::Utc::now().to_rfc3339(),
+                    id
+                ],
+            )
+            .map_err(|_| repository_error())?;
+        }
+        tx.commit().map_err(|_| repository_error())
+    }
+    pub fn save_intent(
+        &self,
+        plan: &PreparedOperation,
+        intent: &super::journal::CommitIntent,
+    ) -> Result<(), SdsError> {
+        intent.validate(plan)?;
+        let current = self.load_operation(&plan.id)?;
+        if serde_json::to_vec(&current).map_err(|_| operation_error())?
+            != serde_json::to_vec(plan).map_err(|_| operation_error())?
+        {
+            return Err(operation_error());
+        }
+        let result = OperationResult {
+            operation_id: plan.id.clone(),
+            state: OperationState::Committing,
+            stage: "committing".into(),
+            error: None,
+        };
+        let mut connection = self.connection.lock().map_err(|_| repository_error())?;
+        let transaction = connection
+            .transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)
+            .map_err(|_| repository_error())?;
+        let previous: String = transaction
+            .query_row(
+                "SELECT CASE WHEN length(CAST(result_json AS BLOB))<=65536 THEN result_json ELSE NULL END FROM operations WHERE operation_id=?1",
+                [&plan.id],
+                |row| row.get(0),
+            )
+            .map_err(|_| operation_error())?;
+        if parse_result(&previous, &plan.id)?.state.terminal() {
+            return Err(operation_error());
+        }
+        let written=transaction.execute("UPDATE operations SET intent_json=?1,result_json=?2,updated_at=?3 WHERE operation_id=?4 AND intent_json IS NULL",params![serde_json::to_string(intent).map_err(|_|operation_error())?,serde_json::to_string(&result).map_err(|_|operation_error())?,chrono::Utc::now().to_rfc3339(),plan.id]).map_err(|_|repository_error())?;
+        if written != 1 {
+            return Err(operation_error());
+        }
+        transaction.commit().map_err(|_| repository_error())
+    }
+    pub fn pending_intents(
+        &self,
+    ) -> Result<Vec<(PreparedOperation, super::journal::CommitIntent)>, SdsError> {
+        let ids = {
+            let connection = self.connection.lock().map_err(|_| repository_error())?;
+            let mut query=connection.prepare("SELECT operation_id,CASE WHEN length(CAST(intent_json AS BLOB))<=65536 THEN intent_json ELSE NULL END FROM operations WHERE intent_json IS NOT NULL ORDER BY updated_at").map_err(|_|repository_error())?;
+            let rows = query
+                .query_map([], |row| {
+                    Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+                })
+                .map_err(|_| repository_error())?;
+            rows.collect::<Result<Vec<_>, _>>()
+                .map_err(|_| repository_error())?
+        };
+        ids.into_iter()
+            .map(|(id, body)| {
+                Ok((
+                    self.load_operation(&id)?,
+                    serde_json::from_str(&body).map_err(|_| operation_error())?,
+                ))
+            })
+            .collect()
+    }
+    pub fn fail_intent(&self, result: &OperationResult) -> Result<(), SdsError> {
+        if !matches!(
+            result.state,
+            OperationState::Failed | OperationState::Cancelled
+        ) {
+            return Err(operation_error());
+        }
+        let body = serde_json::to_string(result).map_err(|_| operation_error())?;
+        parse_result(&body, &result.operation_id)?;
+        let mut connection = self.connection.lock().map_err(|_| repository_error())?;
+        let tx = connection
+            .transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)
+            .map_err(|_| repository_error())?;
+        let (previous, has_intent): (String, bool) = tx
+            .query_row(
+                "SELECT result_json,intent_json IS NOT NULL FROM operations WHERE operation_id=?1",
+                [&result.operation_id],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )
+            .map_err(|_| operation_error())?;
+        if !has_intent
+            || parse_result(&previous, &result.operation_id)?
+                .state
+                .terminal()
+        {
+            return Err(operation_error());
+        }
+        tx.execute("UPDATE operations SET result_json=?1,intent_json=NULL,updated_at=?2 WHERE operation_id=?3",params![body,chrono::Utc::now().to_rfc3339(),result.operation_id]).map_err(|_|repository_error())?;
+        tx.commit().map_err(|_| repository_error())
+    }
+    pub(crate) fn has_intent(&self, id: &str) -> Result<bool, SdsError> {
+        self.connection
+            .lock()
+            .map_err(|_| repository_error())?
+            .query_row(
+                "SELECT intent_json IS NOT NULL FROM operations WHERE operation_id=?1",
+                [id],
+                |row| row.get(0),
+            )
+            .map_err(|_| repository_error())
+    }
+    pub fn finish_deployment(
+        &self,
+        plan: &PreparedOperation,
+        intent: &super::journal::CommitIntent,
+    ) -> Result<(), SdsError> {
+        intent.validate(plan)?;
+        let cached = self
+            .cached_release(
+                &plan.context.profile_id,
+                &plan.release.skill_id,
+                &plan.release.id,
+            )?
+            .ok_or_else(operation_error)?;
+        self.finish_deployment_verified(plan, intent, &cached)
+    }
+    pub(crate) fn finish_deployment_verified(
+        &self,
+        plan: &PreparedOperation,
+        intent: &super::journal::CommitIntent,
+        cached: &CachedRelease,
+    ) -> Result<(), SdsError> {
+        use super::journal::{target_key, Deployment};
+        intent.validate(plan)?;
+        if cached.key != intent.release_key
+            || cached.artifact.fingerprint != intent.fingerprint
+            || serde_json::to_value(&cached.release).map_err(|_| operation_error())?
+                != serde_json::to_value(&plan.release).map_err(|_| operation_error())?
+        {
+            return Err(operation_error());
+        }
+        let deployment = Deployment {
+            id: plan.id.clone(),
+            release_key: cached.key.clone(),
+            target: plan.target.clone(),
+            identity: intent.stage_identity.clone(),
+            root_identity: intent.root_identity.clone(),
+            manifest: cached.artifact.manifest.clone(),
+            fingerprint: intent.fingerprint.clone(),
+            mcp: plan.mcp.clone(),
+            installed_at: chrono::Utc::now().to_rfc3339(),
+        };
+        let result = OperationResult {
+            operation_id: plan.id.clone(),
+            state: OperationState::Completed,
+            stage: "completed".into(),
+            error: None,
+        };
+        let mut connection = self.connection.lock().map_err(|_| repository_error())?;
+        let transaction = connection
+            .transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)
+            .map_err(|_| repository_error())?;
+        let (release_json,manifest_json):(String,String)=transaction.query_row("SELECT CASE WHEN length(CAST(release_json AS BLOB))<=2097152 THEN release_json ELSE NULL END,CASE WHEN length(CAST(manifest_json AS BLOB))<=268435456 THEN manifest_json ELSE NULL END FROM releases WHERE cache_key=?1",[&cached.key],|row|Ok((row.get(0)?,row.get(1)?))).map_err(|_|repository_error())?;
+        if serde_json::from_str::<serde_json::Value>(&release_json)
+            .map_err(|_| operation_error())?
+            != serde_json::to_value(&plan.release).map_err(|_| operation_error())?
+            || serde_json::from_str::<Manifest>(&manifest_json).map_err(|_| operation_error())?
+                != cached.artifact.manifest
+        {
+            return Err(operation_error());
+        }
+        let (body,frozen,previous): (String,String,String) = transaction
+            .query_row(
+                "SELECT CASE WHEN length(CAST(intent_json AS BLOB))<=65536 THEN intent_json ELSE NULL END, CASE WHEN length(CAST(frozen_json AS BLOB))<=2097152 THEN frozen_json ELSE NULL END, CASE WHEN length(CAST(result_json AS BLOB))<=65536 THEN result_json ELSE NULL END FROM operations WHERE operation_id=?1",
+                [&plan.id],
+                |row| Ok((row.get(0)?,row.get(1)?,row.get(2)?)),
+            )
+            .map_err(|_| operation_error())?;
+        if serde_json::from_str::<serde_json::Value>(&body).map_err(|_| operation_error())?
+            != serde_json::to_value(intent).map_err(|_| operation_error())?
+        {
+            return Err(operation_error());
+        }
+        if serde_json::from_str::<serde_json::Value>(&frozen).map_err(|_| operation_error())?
+            != serde_json::to_value(plan).map_err(|_| operation_error())?
+            || !matches!(
+                parse_result(&previous, &plan.id)?.state,
+                OperationState::Committing | OperationState::RecoveryRequired
+            )
+        {
+            return Err(operation_error());
+        }
+        transaction.execute("INSERT INTO deployments(deployment_id,release_key,target_key,target_json,manifest_json,fingerprint,mcp_json,installed_at) VALUES(?1,?2,?3,?4,?5,?6,?7,?8)",params![deployment.id,deployment.release_key,target_key(&intent.root_identity,&plan.release.install_name)?,serde_json::to_string(&deployment).map_err(|_|operation_error())?,serde_json::to_string(&deployment.manifest).map_err(|_|operation_error())?,deployment.fingerprint,serde_json::to_string(&deployment.mcp).map_err(|_|operation_error())?,deployment.installed_at]).map_err(|_|repository_error())?;
+        transaction.execute("UPDATE operations SET intent_json=NULL,result_json=?1,updated_at=?2 WHERE operation_id=?3",params![serde_json::to_string(&result).map_err(|_|operation_error())?,chrono::Utc::now().to_rfc3339(),plan.id]).map_err(|_|repository_error())?;
+        transaction.commit().map_err(|_| repository_error())
+    }
+    pub fn deployments(&self) -> Result<Vec<super::journal::Deployment>, SdsError> {
+        let connection = self.connection.lock().map_err(|_| repository_error())?;
+        let mut statement=connection.prepare("SELECT deployment_id,CASE WHEN length(CAST(target_json AS BLOB))<=268435456 THEN target_json ELSE NULL END,target_key FROM deployments ORDER BY installed_at").map_err(|_|repository_error())?;
+        let rows = statement
+            .query_map([], |row| {
+                Ok((
+                    row.get::<_, String>(0)?,
+                    row.get::<_, String>(1)?,
+                    row.get::<_, String>(2)?,
+                ))
+            })
+            .map_err(|_| repository_error())?;
+        let mut output = Vec::new();
+        for row in rows {
+            let (id, body, key) = row.map_err(|_| repository_error())?;
+            let deployment: super::journal::Deployment =
+                serde_json::from_str(&body).map_err(|_| operation_error())?;
+            let name = deployment
+                .target
+                .path
+                .file_name()
+                .and_then(|s| s.to_str())
+                .ok_or_else(operation_error)?;
+            if id != deployment.id
+                || super::journal::target_key(&deployment.root_identity, name)? != key
+                || manifest_fingerprint(&deployment.manifest)? != deployment.fingerprint
+            {
+                return Err(operation_error());
+            }
+            validate_directory_path(&deployment.target.path)?;
+            output.push(deployment);
+        }
+        Ok(output)
+    }
+    pub(crate) fn complete_existing(
+        &self,
+        plan: &PreparedOperation,
+        deployment: &super::journal::Deployment,
+    ) -> Result<(), SdsError> {
+        validate_operation(plan)?;
+        let result = OperationResult {
+            operation_id: plan.id.clone(),
+            state: OperationState::Completed,
+            stage: "already-installed".into(),
+            error: None,
+        };
+        let mut connection = self.connection.lock().map_err(|_| repository_error())?;
+        let tx = connection
+            .transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)
+            .map_err(|_| repository_error())?;
+        let body: String = tx
+            .query_row(
+                "SELECT target_json FROM deployments WHERE deployment_id=?1",
+                [&deployment.id],
+                |row| row.get(0),
+            )
+            .map_err(|_| operation_error())?;
+        if serde_json::from_str::<serde_json::Value>(&body).map_err(|_| operation_error())?
+            != serde_json::to_value(deployment).map_err(|_| operation_error())?
+            || plan.expected_fingerprint.as_ref() != Some(&deployment.fingerprint)
+            || deployment.release_key
+                != cache_key(
+                    &plan.context.profile_id,
+                    &plan.release.skill_id,
+                    &plan.release.id,
+                )?
+        {
+            return Err(operation_error());
+        }
+        let (frozen, previous, intent): (String, String, Option<String>) = tx
+            .query_row(
+                "SELECT frozen_json,result_json,intent_json FROM operations WHERE operation_id=?1",
+                [&plan.id],
+                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+            )
+            .map_err(|_| operation_error())?;
+        if serde_json::from_str::<serde_json::Value>(&frozen).map_err(|_| operation_error())?
+            != serde_json::to_value(plan).map_err(|_| operation_error())?
+            || parse_result(&previous, &plan.id)?.state.terminal()
+            || intent.is_some()
+        {
+            return Err(operation_error());
+        }
+        tx.execute(
+            "UPDATE operations SET result_json=?1,updated_at=?2 WHERE operation_id=?3",
+            params![
+                serde_json::to_string(&result).map_err(|_| operation_error())?,
+                chrono::Utc::now().to_rfc3339(),
+                plan.id
+            ],
+        )
+        .map_err(|_| repository_error())?;
+        tx.commit().map_err(|_| repository_error())
+    }
     pub fn create_operation(
         &self,
         plan: &PreparedOperation,
@@ -106,13 +467,22 @@ impl Repository {
     }
     /// A dedicated SDS root, never the upstream settings/database location.
     pub fn open(root: &Path) -> Result<Self, SdsError> {
-        validate_directory_path(root)?;
-        std::fs::create_dir_all(root).map_err(|_| repository_error())?;
-        let _pins = DirectoryPins::acquire(root)?;
+        let pins = DirectoryPins::create(root)?;
         let db = root.join("pilot.sqlite3");
         if let Ok(metadata) = std::fs::symlink_metadata(&db) {
             if is_reparse(&metadata) || !metadata.is_file() {
                 return Err(repository_error());
+            }
+        }
+        let db_pin = pin_database_file(&db, true)?;
+        for suffix in ["-journal", "-wal", "-shm"] {
+            let sidecar = root.join(format!("pilot.sqlite3{suffix}"));
+            match std::fs::symlink_metadata(&sidecar) {
+                Ok(_) => {
+                    pin_database_file(&sidecar, false)?;
+                }
+                Err(error) if error.kind() == std::io::ErrorKind::NotFound => (),
+                Err(_) => return Err(repository_error()),
             }
         }
         let connection = Connection::open_with_flags(
@@ -146,11 +516,12 @@ impl Repository {
                 .map_err(|_| repository_error())?;
         }
         let cache = root.join("releases");
-        validate_directory_path(&cache)?;
-        std::fs::create_dir_all(cache).map_err(|_| repository_error())?;
+        let _cache_pins = DirectoryPins::create(&cache)?;
         Ok(Self {
             root: root.into(),
             connection: Mutex::new(connection),
+            _db_pin: db_pin,
+            _pins: pins,
         })
     }
     pub fn cache_release(
@@ -159,8 +530,17 @@ impl Repository {
         release: &Release,
         artifact: &VerifiedArtifact,
     ) -> Result<CachedRelease, SdsError> {
-        let _pins = DirectoryPins::acquire(&self.root)?;
-        let _lock = self.cache_lock()?;
+        self.prepare_cache(profile_id, release, artifact)?
+            .publish(self)
+    }
+    pub(crate) fn prepare_cache(
+        &self,
+        profile_id: &str,
+        release: &Release,
+        artifact: &VerifiedArtifact,
+    ) -> Result<PreparedCache, SdsError> {
+        let pins = DirectoryPins::acquire(&self.root.join("releases"))?;
+        let lock = self.cache_lock()?;
         let key = cache_key(profile_id, &release.skill_id, &release.id)?;
         let body = serde_json::to_string(release).map_err(|_| repository_error())?;
         if let Some(stored) = self.stored(profile_id, &release.skill_id, &release.id)? {
@@ -169,7 +549,15 @@ impl Repository {
             {
                 return Err(release_changed());
             }
-            return self.materialize(stored);
+            return Ok(PreparedCache {
+                repository_root: self.root.clone(),
+                cached: self.materialize(stored)?,
+                insert: false,
+                copied: None,
+                _temporary: None,
+                _lock: lock,
+                _pins: pins,
+            });
         }
         let (manifest, fingerprint) = fingerprint_tree(&artifact.root)?;
         if manifest != artifact.manifest
@@ -179,12 +567,12 @@ impl Repository {
             return Err(cache_corrupt());
         }
         let cache_root = self.root.join("releases");
-        let _cache_pins = DirectoryPins::acquire(&cache_root)?;
         let target = cache_root.join(&key);
-        if std::fs::symlink_metadata(&target).is_ok() {
+        let (temporary, copied) = if std::fs::symlink_metadata(&target).is_ok() {
             if fingerprint_tree(&target)?.1 != fingerprint {
                 return Err(cache_corrupt());
             }
+            (None, None)
         } else {
             let temp = tempfile::Builder::new()
                 .prefix(".cache-")
@@ -196,19 +584,25 @@ impl Repository {
             if fingerprint_tree(&copied)?.1 != fingerprint {
                 return Err(cache_corrupt());
             }
-            std::fs::rename(&copied, &target).map_err(|_| repository_error())?;
-        }
-        let manifest_json = serde_json::to_string(&manifest).map_err(|_| repository_error())?;
-        let created = chrono::Utc::now().to_rfc3339();
-        let connection = self.connection.lock().map_err(|_| repository_error())?;
-        connection.execute("INSERT INTO releases(cache_key,profile_id,skill_id,release_id,release_json,manifest_json,fingerprint,created_at) VALUES(?1,?2,?3,?4,?5,?6,?7,?8)",params![key,profile_id,release.skill_id,release.id,body,manifest_json,fingerprint,created]).map_err(|_| repository_error())?;
-        drop(connection);
-        self.materialize(Stored {
-            key,
-            profile_id: profile_id.into(),
-            release: release.clone(),
-            manifest,
-            fingerprint,
+            (Some(temp), Some(copied))
+        };
+        Ok(PreparedCache {
+            repository_root: self.root.clone(),
+            cached: CachedRelease {
+                key,
+                profile_id: profile_id.into(),
+                release: release.clone(),
+                artifact: VerifiedArtifact {
+                    root: target,
+                    manifest,
+                    fingerprint,
+                },
+            },
+            insert: true,
+            copied,
+            _temporary: temporary,
+            _lock: lock,
+            _pins: pins,
         })
     }
     pub fn cached_release(
@@ -224,7 +618,7 @@ impl Repository {
     }
     pub fn list_library(&self) -> Result<Vec<LibraryEntry>, SdsError> {
         let connection = self.connection.lock().map_err(|_| repository_error())?;
-        let mut statement = connection.prepare("SELECT cache_key,profile_id,release_json,created_at FROM releases ORDER BY created_at,cache_key").map_err(|_| repository_error())?;
+        let mut statement = connection.prepare("SELECT CASE WHEN length(CAST(cache_key AS BLOB))=64 THEN cache_key ELSE NULL END,CASE WHEN length(CAST(profile_id AS BLOB))<=1024 THEN profile_id ELSE NULL END,CASE WHEN length(CAST(release_json AS BLOB))<=2097152 THEN release_json ELSE NULL END,CASE WHEN length(CAST(created_at AS BLOB))<=256 THEN created_at ELSE NULL END FROM releases ORDER BY created_at,cache_key").map_err(|_| repository_error())?;
         let rows = statement
             .query_map([], |row| {
                 Ok((
@@ -258,7 +652,7 @@ impl Repository {
         release_id: &str,
     ) -> Result<Option<Stored>, SdsError> {
         let connection = self.connection.lock().map_err(|_| repository_error())?;
-        let row: Option<(String,String,String,String)> = connection.query_row("SELECT cache_key,release_json,manifest_json,fingerprint FROM releases WHERE profile_id=?1 AND skill_id=?2 AND release_id=?3",params![profile_id,skill_id,release_id],|row|Ok((row.get(0)?,row.get(1)?,row.get(2)?,row.get(3)?))).optional().map_err(|_| repository_error())?;
+        let row: Option<(String,String,String,String)> = connection.query_row("SELECT CASE WHEN length(CAST(cache_key AS BLOB))=64 THEN cache_key ELSE '' END,CASE WHEN length(CAST(release_json AS BLOB))<=2097152 THEN release_json ELSE '' END,CASE WHEN length(CAST(manifest_json AS BLOB))<=268435456 THEN manifest_json ELSE '' END,CASE WHEN length(CAST(fingerprint AS BLOB))=64 THEN fingerprint ELSE '' END FROM releases WHERE profile_id=?1 AND skill_id=?2 AND release_id=?3",params![profile_id,skill_id,release_id],|row|Ok((row.get(0)?,row.get(1)?,row.get(2)?,row.get(3)?))).optional().map_err(|_| repository_error())?;
         row.map(|(key, body, manifest, fingerprint)| {
             let release: Release = serde_json::from_str(&body).map_err(|_| cache_corrupt())?;
             let manifest: Manifest =
@@ -298,28 +692,89 @@ impl Repository {
         })
     }
     fn cache_lock(&self) -> Result<File, SdsError> {
+        self.exclusive_lock("cache.lock")
+    }
+    fn exclusive_lock(&self, name: &str) -> Result<File, SdsError> {
         let mut options = OpenOptions::new();
         options.create(true).read(true).write(true).truncate(false);
         #[cfg(windows)]
         {
             use std::os::windows::fs::OpenOptionsExt;
-            options.custom_flags(0x00200000);
+            options.custom_flags(0x00200000).share_mode(3);
         }
         let lock = options
-            .open(self.root.join("cache.lock"))
+            .open(self.root.join(name))
             .map_err(|_| repository_error())?;
-        if is_reparse(&lock.metadata().map_err(|_| repository_error())?) {
+        let metadata = lock.metadata().map_err(|_| repository_error())?;
+        if is_reparse(&metadata) || !metadata.is_file() {
             return Err(repository_error());
         }
         fs2::FileExt::try_lock_exclusive(&lock).map_err(|_| {
             SdsError::new(
                 "OPERATION_BUSY",
-                "Another process is updating the SDS cache. Try again.",
+                "Another process is using this SDS repository. Close it before retrying.",
                 true,
             )
         })?;
         Ok(lock)
     }
+}
+fn pin_database_file(path: &Path, create: bool) -> Result<File, SdsError> {
+    let mut options = OpenOptions::new();
+    options.read(true);
+    #[cfg(windows)]
+    {
+        use std::os::windows::fs::OpenOptionsExt;
+        options
+            .custom_flags(0x00200000)
+            .share_mode(if create { 3 } else { 7 });
+    }
+    let file = if create {
+        options.write(true).create_new(true);
+        match options.open(path) {
+            Ok(file) => file,
+            Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => {
+                options.create_new(false).write(false);
+                options.open(path).map_err(|_| repository_error())?
+            }
+            Err(_) => return Err(repository_error()),
+        }
+    } else {
+        options.open(path).map_err(|_| repository_error())?
+    };
+    let metadata = file.metadata().map_err(|_| repository_error())?;
+    if is_reparse(&metadata) || !metadata.is_file() {
+        return Err(repository_error());
+    }
+    #[cfg(windows)]
+    {
+        use std::os::windows::io::AsRawHandle;
+        use windows_sys::Win32::Storage::FileSystem::{
+            FileStandardInfo, GetFileInformationByHandleEx, FILE_STANDARD_INFO,
+        };
+        let mut info = FILE_STANDARD_INFO::default();
+        // SAFETY: SDK writes the fixed standard-info structure into this live buffer.
+        if unsafe {
+            GetFileInformationByHandleEx(
+                file.as_raw_handle(),
+                FileStandardInfo,
+                (&mut info as *mut FILE_STANDARD_INFO).cast(),
+                std::mem::size_of::<FILE_STANDARD_INFO>() as u32,
+            )
+        } == 0
+            || info.NumberOfLinks != 1
+        {
+            return Err(repository_error());
+        }
+    }
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::MetadataExt;
+        if metadata.nlink() != 1 {
+            return Err(repository_error());
+        }
+    }
+    Ok(file)
 }
 pub(crate) fn cache_key(profile: &str, skill: &str, release: &str) -> Result<String, SdsError> {
     if [profile, skill, release]
@@ -343,14 +798,12 @@ pub(crate) fn copy_manifest(
         validate_relative(&entry.path)?;
         let path = target.join(&entry.path);
         if entry.sha256.is_none() {
-            std::fs::create_dir_all(&path).map_err(|_| repository_error())?;
+            let _directory = DirectoryPins::create(&path)?;
             continue;
         }
         let source_path = source.join(&entry.path);
         let _read_pins = DirectoryPins::acquire(source_path.parent().ok_or_else(cache_corrupt)?)?;
-        std::fs::create_dir_all(path.parent().ok_or_else(cache_corrupt)?)
-            .map_err(|_| repository_error())?;
-        let _write_pins = DirectoryPins::acquire(path.parent().ok_or_else(cache_corrupt)?)?;
+        let _write_pins = DirectoryPins::create(path.parent().ok_or_else(cache_corrupt)?)?;
         let mut input = open_content_file(&source_path)?;
         let mut output = OpenOptions::new()
             .write(true)
@@ -383,7 +836,7 @@ fn release_changed() -> SdsError {
     SdsError::new("RELEASE_CHANGED","This release is already cached with different immutable metadata. Review it with the Store administrator.",false)
 }
 
-fn validate_operation(plan: &PreparedOperation) -> Result<(), SdsError> {
+pub(crate) fn validate_operation(plan: &PreparedOperation) -> Result<(), SdsError> {
     if uuid::Uuid::parse_str(&plan.id).is_err()
         || !["install", "remove"].contains(&plan.kind.as_str())
         || plan.runtime_epoch.is_empty()
@@ -404,6 +857,8 @@ fn validate_operation(plan: &PreparedOperation) -> Result<(), SdsError> {
         return Err(operation_error());
     }
     validate_directory_path(&plan.target.path)?;
+    plan.reviewed_root
+        .validate_shape(plan.target.path.parent().ok_or_else(operation_error)?)?;
     if plan.target.path.file_name().and_then(|name| name.to_str())
         != Some(&plan.release.install_name)
     {

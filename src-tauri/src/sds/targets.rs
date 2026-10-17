@@ -61,6 +61,22 @@ impl TargetService {
     pub fn inspect_mcp(&self, required: Option<&[String]>) -> super::contracts::McpReport {
         super::mcp::inspect_agent_mcp("aipro", &self.home.join(".aipro/mcp.json"), required)
     }
+    #[cfg(feature = "sds")]
+    pub(crate) fn with_current_target<T>(
+        &self,
+        expected: &Target,
+        commit: impl FnOnce() -> Result<T, SdsError>,
+    ) -> Result<T, SdsError> {
+        let _gate = self.gate.lock().map_err(|_| settings_error())?;
+        let root = resolve_aipro_global(&self.home, self.read_override()?.as_deref())?;
+        if root.agent_key != expected.agent_key
+            || root.workspace_id != expected.workspace_id
+            || expected.path.parent() != Some(root.path.as_path())
+        {
+            return Err(super::journal::review());
+        }
+        commit()
+    }
     fn view(
         &self,
         root: Option<std::path::PathBuf>,

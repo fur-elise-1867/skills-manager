@@ -12,6 +12,55 @@ use std::{
 };
 use unicode_normalization::UnicodeNormalization;
 
+impl super::contracts::ReviewedRoot {
+    pub fn capture(root: &Path) -> Result<Self, SdsError> {
+        validate_directory_path(root)?;
+        let root_existed = match std::fs::symlink_metadata(root) {
+            Ok(_) => true,
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => false,
+            Err(_) => return Err(conflict()),
+        };
+        let anchor = if root_existed {
+            root
+        } else {
+            root.parent().ok_or_else(conflict)?
+        };
+        let pins = DirectoryPins::acquire(anchor)?;
+        Ok(Self {
+            anchor: anchor.into(),
+            identity: super::journal::identity(pins.leaf())?,
+            root_existed,
+        })
+    }
+    pub(crate) fn validate_shape(&self, root: &Path) -> Result<(), SdsError> {
+        validate_directory_path(&self.anchor)?;
+        if (self.root_existed && self.anchor != root)
+            || (!self.root_existed && Some(self.anchor.as_path()) != root.parent())
+            || self.identity.file_id.len() != 32
+            || !self.identity.file_id.bytes().all(|b| b.is_ascii_hexdigit())
+        {
+            return Err(conflict());
+        }
+        Ok(())
+    }
+    pub(crate) fn pin(&self, root: &Path) -> Result<DirectoryPins, SdsError> {
+        self.validate_shape(root)?;
+        let pins = DirectoryPins::acquire(&self.anchor)?;
+        if super::journal::identity(pins.leaf())? != self.identity {
+            return Err(conflict());
+        }
+        let exists = match std::fs::symlink_metadata(root) {
+            Ok(_) => true,
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => false,
+            Err(_) => return Err(conflict()),
+        };
+        if exists != self.root_existed {
+            return Err(conflict());
+        }
+        Ok(pins)
+    }
+}
+
 /// Existing directory handles stay open without delete sharing on Windows. This pins
 /// the path's ancestors while the caller reads, stages, or commits below them.
 pub(crate) struct DirectoryPins {
@@ -19,11 +68,31 @@ pub(crate) struct DirectoryPins {
 }
 impl DirectoryPins {
     pub(crate) fn acquire(path: &Path) -> Result<Self, SdsError> {
+        Self::open(path, false)
+    }
+    pub(crate) fn create(path: &Path) -> Result<Self, SdsError> {
+        Self::open(path, true)
+    }
+    pub(crate) fn leaf(&self) -> &File {
+        self._handles
+            .last()
+            .expect("An absolute path has a root handle")
+    }
+    fn open(path: &Path, create: bool) -> Result<Self, SdsError> {
         validate_directory_path(path)?;
         let mut ancestors: Vec<_> = path.ancestors().collect();
         ancestors.reverse();
         let mut handles = Vec::new();
         for ancestor in ancestors {
+            if create
+                && matches!(std::fs::symlink_metadata(ancestor),Err(error) if error.kind()==std::io::ErrorKind::NotFound)
+            {
+                match std::fs::create_dir(ancestor) {
+                    Ok(()) => (),
+                    Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => (),
+                    Err(_) => return Err(conflict()),
+                }
+            }
             let mut options = OpenOptions::new();
             options.read(true);
             #[cfg(windows)]

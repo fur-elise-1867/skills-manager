@@ -6,7 +6,11 @@ pub mod deployment;
 pub mod error;
 #[cfg(debug_assertions)]
 pub mod fixtures;
+#[cfg(feature = "sds")]
+pub mod journal;
 pub mod mcp;
+#[cfg(feature = "sds")]
+pub mod operations;
 #[cfg(feature = "sds")]
 pub mod packages;
 pub mod profile;

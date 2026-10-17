@@ -233,6 +233,21 @@ pub struct InstallRequest {
     pub release_id: String,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct FileIdentity {
+    pub volume: u64,
+    pub file_id: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct ReviewedRoot {
+    pub anchor: std::path::PathBuf,
+    pub identity: FileIdentity,
+    pub root_existed: bool,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PreparedOperation {
@@ -240,6 +255,7 @@ pub struct PreparedOperation {
     pub kind: String,
     pub release: Release,
     pub target: Target,
+    pub reviewed_root: ReviewedRoot,
     pub expected_fingerprint: Option<String>,
     pub mcp: McpReport,
     pub requires_mcp_ack: bool,

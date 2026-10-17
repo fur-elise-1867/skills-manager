@@ -338,6 +338,42 @@ impl SessionService {
         }
         publish()
     }
+    /// Keep account/profile changes queued until the bounded filesystem/SQLite
+    /// commit finishes. Content verification runs on a blocking worker, not on
+    /// the async executor. Extraction and copying must finish before this call.
+    #[cfg(feature = "sds")]
+    pub(crate) async fn commit_for<T: Send + 'static>(
+        self: &Arc<Self>,
+        context: &SessionContext,
+        publish: impl FnOnce() -> Result<T, SdsError> + Send + 'static,
+    ) -> Result<T, SdsError> {
+        let session = self.clone();
+        let context = context.clone();
+        tokio::task::spawn_blocking(move || {
+            let state = session.state.blocking_lock();
+            if state.generation != context.generation
+                || state.profile.as_ref().map(|profile| &profile.id) != Some(&context.profile_id)
+                || state.user.as_ref().map(|user| &user.id) != Some(&context.account_id)
+                || matches!(
+                    state.status,
+                    SessionStatus::SignedOut | SessionStatus::Expired
+                )
+            {
+                return Err(stale_context());
+            }
+            let result = publish();
+            drop(state);
+            result
+        })
+        .await
+        .map_err(|_| {
+            SdsError::new(
+                "COMMIT_INTERRUPTED",
+                "The installation commit could not finish. Restart SDS to reconcile its journal.",
+                false,
+            )
+        })?
+    }
     pub async fn download_for(
         &self,
         context: &SessionContext,

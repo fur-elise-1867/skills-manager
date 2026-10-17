@@ -1,6 +1,6 @@
-# Phase 1 — operation and Library foundations (A07 in progress)
+# Phase 1 — historical A07 foundation checkpoint
 
-Date: 2026-10-17. No operation service, journal recovery or actual AIPro installation is claimed complete here.
+Date: 2026-10-17, foundation commit `a52573a`. The statements below describe that partial checkpoint. Later A07 source/review/test evidence is recorded in [install and recovery evidence](phase1-install-recovery.md); real AIPro acceptance remains pending.
 
 Implemented foundations:
 

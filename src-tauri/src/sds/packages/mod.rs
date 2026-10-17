@@ -46,7 +46,7 @@ pub struct ManifestEntry {
 pub struct Manifest {
     pub entries: Vec<ManifestEntry>,
 }
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct VerifiedArtifact {
     pub root: PathBuf,
     pub manifest: Manifest,

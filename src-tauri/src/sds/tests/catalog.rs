@@ -330,16 +330,32 @@ async fn debug_fixture_services_are_loopback_locked_ephemeral_and_do_not_persist
         services.connection().await.unwrap().unwrap().base_url,
         server.base_url
     );
+    drop(services);
     let restarted = SdsServices::new_fixture(root.path(), &server.base_url).unwrap();
     assert_eq!(
         restarted.session.status().await.unwrap().status,
         crate::sds::contracts::SessionStatus::SignedOut
     );
-    let entries: Vec<_> = std::fs::read_dir(root.path())
+    let mut entries: Vec<_> = std::fs::read_dir(root.path())
         .unwrap()
         .map(|entry| entry.unwrap().file_name())
         .collect();
-    assert_eq!(entries, [std::ffi::OsString::from("agent-home")]);
+    entries.sort();
+    assert_eq!(
+        entries,
+        [
+            std::ffi::OsString::from("agent-home"),
+            std::ffi::OsString::from("pilot")
+        ]
+    );
+    let database = std::fs::read(root.path().join("pilot/pilot.sqlite3")).unwrap();
+    for secret in [
+        b"synthetic-access-one".as_slice(),
+        b"synthetic-refresh-one",
+        b"synthetic-password",
+    ] {
+        assert!(!database.windows(secret.len()).any(|part| part == secret));
+    }
     assert_eq!(
         std::fs::read_dir(root.path().join("agent-home/.aipro"))
             .unwrap()
