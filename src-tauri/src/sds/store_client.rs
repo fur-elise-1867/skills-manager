@@ -55,6 +55,24 @@ impl ReqwestTransport {
             })?;
         Ok(Self { client })
     }
+    #[cfg(debug_assertions)]
+    pub fn fixture() -> Result<Self, SdsError> {
+        // Synthetic fixture traffic never goes through an employee's proxy.
+        let client = reqwest::Client::builder()
+            .no_proxy()
+            .redirect(reqwest::redirect::Policy::none())
+            .connect_timeout(Duration::from_secs(10))
+            .timeout(Duration::from_secs(30))
+            .build()
+            .map_err(|_| {
+                SdsError::new(
+                    "STORE_UNAVAILABLE",
+                    "Development fixture transport is unavailable",
+                    false,
+                )
+            })?;
+        Ok(Self { client })
+    }
 }
 impl HttpTransport for ReqwestTransport {
     fn send(&self, request: HttpRequest) -> HttpFuture<'_> {

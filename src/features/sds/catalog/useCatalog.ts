@@ -17,5 +17,8 @@ export default function useCatalog(query: CatalogQuery, revision: number) {
     });
     return () => { active = false; };
   }, [key, query, refreshStatus]);
+  useEffect(() => {
+    if (result.key === key && result.data && session?.status === "offline") void refreshStatus();
+  }, [result,key,session?.status,refreshStatus]);
   return result.key === key ? result : {key};
 }

@@ -10,7 +10,7 @@ export function Compatibility({ agents }: {agents:string[] | null | undefined}) 
   return <span className="sds-compatibility">{agents == null ? "Compatibility not declared" : agents.length ? `Declared compatibility: ${agents.map((agent) => ({aipro:"AIPro",claude_code:"Claude Code",gemini_cli:"Gemini CLI",codex:"Codex"})[agent] ?? agent).join(", ")}` : "No compatible agents declared"}</span>;
 }
 export default function SkillDetailPanel({skillId,onBack,onInstall}:{skillId:string;onBack:()=>void;onInstall?:(release:Release)=>void}) {
-  const { generation, refreshStatus } = useSdsSession();
+  const { generation, refreshStatus, session } = useSdsSession();
   const [revision,setRevision] = useState(0);
   const key = JSON.stringify([skillId,generation,revision]);
   const [result,setResult] = useState<{key:string;detail?:SkillDetail;error?:string}>({key:""});
@@ -23,6 +23,9 @@ export default function SkillDetailPanel({skillId,onBack,onInstall}:{skillId:str
     });
     return () => { active = false; };
   },[key,skillId,refreshStatus]);
+  useEffect(()=>{
+    if(result.key === key && result.detail && session?.status === "offline") void refreshStatus();
+  },[result,key,session?.status,refreshStatus]);
   const current = result.key === key ? result : undefined;
   const detail = current?.detail;
   const release = detail?.latestRelease;

@@ -45,7 +45,7 @@ export default function CatalogPage() {
           <p className="sds-card-author">{skill.creator.displayName}</p><Compatibility agents={skill.compatibleAgents} />
           <button className="sds-text-button" aria-label={`View ${skill.name}`} onClick={()=>setSelected(skill.id)}>View skill →</button>
         </article>)}</div>
-        <div className="sds-pagination"><span>{result.data.totalItems.toLocaleString()} skills · Page {query.page}</span><div><button disabled={query.page === 1} aria-label="Previous page" onClick={()=>setQuery({...query,page:query.page-1})}>←</button><button disabled={query.page * query.pageSize >= result.data.totalItems} aria-label="Next page" onClick={()=>setQuery({...query,page:query.page+1})}>→</button></div></div>
+        <div className="sds-pagination"><span>{result.data.totalItems.toLocaleString()} {result.data.totalItems === 1 ? "skill" : "skills"} · Page {query.page}</span><div><button disabled={query.page === 1} aria-label="Previous page" onClick={()=>setQuery({...query,page:query.page-1})}>←</button><button disabled={query.page * query.pageSize >= result.data.totalItems} aria-label="Next page" onClick={()=>setQuery({...query,page:query.page+1})}>→</button></div></div>
       </>}
   </section>;
 }

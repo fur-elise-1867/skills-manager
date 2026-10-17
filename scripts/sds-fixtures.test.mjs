@@ -1,0 +1,23 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { startFixtureStore } from './sds-fixtures.mjs';
+
+test('explicit fixture HTTP Store accepts only its sample account and serves real desktop envelopes', async () => {
+  const fixture = await startFixtureStore();
+  try {
+    assert.match(fixture.baseUrl,/^http:\/\/127\.0\.0\.1:\d+\/skm$/);
+    const bad = await fetch(`${fixture.baseUrl}/api/v1/auth/login`, {method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({email:'someone@example.invalid',password:'synthetic-password'})});
+    assert.equal(bad.status,400);
+    const login = await fetch(`${fixture.baseUrl}/api/v1/auth/login`, {method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({email:'employee@example.invalid',password:'synthetic-password'})});
+    const envelope = await login.json(); assert.equal(envelope.success,true); assert.equal(envelope.data.userId,1001);
+    const headers = {authorization:`Bearer ${envelope.data.accessToken}`};
+    const denied = await fetch(`${fixture.baseUrl}/api/v1/desktop/skills`); assert.equal(denied.status,401);
+    const page = await (await fetch(`${fixture.baseUrl}/api/v1/desktop/skills?q=jira&mode=all_time&sourceId=quality&page=1&pageSize=20`,{headers})).json();
+    assert.equal(page.data.totalItems,1); assert.equal(page.data.items[0].name,'Jira Weekly Report');
+    const detail = await (await fetch(`${fixture.baseUrl}/api/v1/desktop/skills/skill-123`,{headers})).json();
+    assert.equal(detail.data.latestRelease.skillId,'skill-123'); assert.deepEqual(detail.data.latestRelease.requiredMcps,['jira-mcp']);
+    assert.equal((await fetch(`${fixture.baseUrl}/api/v1/desktop/skills?mode=hot`,{headers})).status,422);
+    assert.equal((await fetch(`${fixture.baseUrl}/api/v1/desktop/skills?q=__unavailable`,{headers})).status,503);
+    const empty = await (await fetch(`${fixture.baseUrl}/api/v1/desktop/skills?q=__empty`,{headers})).json(); assert.equal(empty.data.totalItems,0);
+  } finally { await fixture.close(); }
+});

@@ -114,3 +114,9 @@ test.each([
   expect(screen.queryByRole("heading",{name:"No skills found"})).not.toBeInTheDocument();
   expect(screen.queryByText("synthetic-access-one")).not.toBeInTheDocument();
 });
+
+test("refreshes session status when an offline account successfully browses again",async()=>{
+  render(tree({...account,session:{status:"offline",user:account.session!.user}}));
+  await screen.findByRole("button",{name:"View Jira Weekly Report"});
+  await waitFor(()=>expect(account.refreshStatus).toHaveBeenCalledOnce());
+});

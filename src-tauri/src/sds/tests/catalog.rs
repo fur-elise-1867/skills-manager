@@ -294,3 +294,46 @@ async fn a_late_catalog_response_is_rejected_after_account_generation_changes() 
     release.notify_one();
     assert_eq!(request.await.unwrap().unwrap_err().code, "REVIEW_REQUIRED");
 }
+
+#[tokio::test]
+#[cfg(debug_assertions)]
+async fn debug_fixture_services_are_loopback_locked_ephemeral_and_do_not_persist_credentials() {
+    use crate::sds::commands::SdsServices;
+    let root = tempfile::tempdir().unwrap();
+    assert!(SdsServices::new_fixture(root.path(), "https://store.example.invalid/skm").is_err());
+    let server = TestServer::start(|request| async move {
+        Response::json(
+            200,
+            if request.path.ends_with("/auth/login") {
+                fixture("login")
+            } else {
+                fixture("catalog")
+            },
+        )
+    })
+    .await;
+    let services = SdsServices::new_fixture(root.path(), &server.base_url).unwrap();
+    services
+        .session
+        .login("employee@example.invalid", "synthetic-password")
+        .await
+        .unwrap();
+    assert_eq!(
+        services.session.status().await.unwrap().status,
+        crate::sds::contracts::SessionStatus::Authenticated
+    );
+    assert!(services
+        .set_connection("https://store.example.invalid/skm")
+        .await
+        .is_err());
+    assert_eq!(
+        services.connection().await.unwrap().unwrap().base_url,
+        server.base_url
+    );
+    let restarted = SdsServices::new_fixture(root.path(), &server.base_url).unwrap();
+    assert_eq!(
+        restarted.session.status().await.unwrap().status,
+        crate::sds::contracts::SessionStatus::SignedOut
+    );
+    assert_eq!(std::fs::read_dir(root.path()).unwrap().count(), 0);
+}

@@ -31,9 +31,8 @@ pub fn run() {
     let profile = SdsProfile::resolve().expect("Invalid SDS build profile");
     std::fs::create_dir_all(profile.data_root()).expect("Cannot create SDS data directory");
     let logs = profile.data_root().join("logs");
-    let services =
-        super::commands::SdsServices::new(profile.data_root(), profile.info().environment)
-            .expect("Cannot initialize SDS services");
+    let services = super::commands::SdsServices::from_profile(&profile)
+        .expect("Cannot initialize SDS services");
     tauri::Builder::default()
         .manage(profile)
         .manage(services)

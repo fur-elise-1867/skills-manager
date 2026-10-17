@@ -26,6 +26,24 @@ fn release_build_refuses_fixture_mode() {
 }
 
 #[test]
+fn explicit_debug_fixtures_use_a_child_root_separate_from_real_sds_data() {
+    let root = tempfile::tempdir().unwrap();
+    let normal =
+        SdsProfile::new(root.path().into(), Environment::Development, false, true).unwrap();
+    let fixture =
+        SdsProfile::new(root.path().into(), Environment::Development, true, true).unwrap();
+    assert_ne!(normal.data_root(), fixture.data_root());
+    assert_eq!(
+        fixture.data_root(),
+        root.path().join("development-fixtures")
+    );
+    assert!(
+        !fixture.data_root().exists(),
+        "profile resolution must not create fixture targets"
+    );
+}
+
+#[test]
 fn environment_must_be_explicitly_valid() {
     assert_eq!(
         Environment::parse("development").unwrap(),

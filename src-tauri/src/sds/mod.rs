@@ -2,6 +2,8 @@ pub mod commands;
 pub mod contracts;
 pub mod credentials;
 pub mod error;
+#[cfg(debug_assertions)]
+pub mod fixtures;
 pub mod profile;
 pub mod runtime;
 pub mod session;

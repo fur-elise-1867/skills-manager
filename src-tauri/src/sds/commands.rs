@@ -20,6 +20,7 @@ pub struct SdsServices {
     data_root: PathBuf,
     settings_gate: Mutex<()>,
     connection_error: Mutex<Option<SdsError>>,
+    fixture_profile_id: Option<String>,
 }
 impl SdsServices {
     pub fn new(data_root: &Path, environment: Environment) -> Result<Self, SdsError> {
@@ -39,10 +40,59 @@ impl SdsServices {
             data_root: data_root.into(),
             settings_gate: Mutex::new(()),
             connection_error: Mutex::new(error),
+            fixture_profile_id: None,
+        })
+    }
+    pub fn from_profile(profile: &super::profile::SdsProfile) -> Result<Self, SdsError> {
+        if profile.info().fixture_mode {
+            #[cfg(debug_assertions)]
+            return Self::new_fixture(
+                profile.data_root(),
+                option_env!("SDS_FIXTURE_URL").ok_or_else(|| {
+                    SdsError::invalid("Start fixtures through the explicit development launcher")
+                })?,
+            );
+            #[cfg(not(debug_assertions))]
+            return Err(SdsError::invalid(
+                "Fixtures are unavailable in release builds",
+            ));
+        }
+        Self::new(profile.data_root(), profile.info().environment)
+    }
+    #[cfg(debug_assertions)]
+    pub fn new_fixture(data_root: &Path, base_url: &str) -> Result<Self, SdsError> {
+        super::fixtures::loopback_fixture_url(base_url)?;
+        let profile = StoreProfile::new(base_url, Environment::Development)?;
+        let id = profile.id.clone();
+        let session = Arc::new(SessionService::new(
+            Environment::Development,
+            Some(profile),
+            Arc::new(ReqwestTransport::fixture()?),
+            Arc::new(super::fixtures::FixtureVault::default()),
+        ));
+        Ok(Self {
+            store: StoreClient::new(session.clone()),
+            session,
+            data_root: data_root.into(),
+            settings_gate: Mutex::new(()),
+            connection_error: Mutex::new(None),
+            fixture_profile_id: Some(id),
         })
     }
     pub async fn set_connection(&self, base_url: &str) -> Result<StoreProfile, SdsError> {
         let _gate = self.settings_gate.lock().await;
+        if let Some(id) = &self.fixture_profile_id {
+            if &StoreProfile::new(base_url, Environment::Development)?.id != id {
+                return Err(SdsError::invalid(
+                    "Development fixture Store is fixed for this session",
+                ));
+            }
+            return self
+                .session
+                .connection()
+                .await
+                .ok_or_else(|| SdsError::invalid("Development fixture Store is unavailable"));
+        }
         let profile = self.session.set_connection(base_url).await?;
         let root = self.data_root.clone();
         let saved = profile.clone();

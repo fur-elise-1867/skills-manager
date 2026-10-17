@@ -59,3 +59,13 @@ test('inherited fixture environment cannot split frontend and backend profiles',
     else process.env.VITE_SDS_FIXTURES = original;
   }
 });
+
+test('fixtures require explicit local development opt-in and can never enter an installer', () => {
+  const launch = makeLaunch('dev', ['--fixtures']);
+  assert.equal(launch.env.SDS_FIXTURES, '1');
+  assert.equal(launch.env.VITE_SDS_FIXTURES, '1');
+  assert.equal(launch.args.includes('--fixtures'), false);
+  assert.throws(() => makeLaunch('build', ['--fixtures']), /fixture/i);
+  assert.throws(() => makeLaunch('build', ['--debug', '--fixtures']), /fixture/i);
+  assert.throws(() => makeLaunch('dev', ['--environment', 'internal', '--fixtures']), /fixture/i);
+});

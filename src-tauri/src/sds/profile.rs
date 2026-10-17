@@ -46,7 +46,11 @@ impl SdsProfile {
             ));
         }
         Ok(Self {
-            data_root,
+            data_root: if fixture_mode {
+                data_root.join("development-fixtures")
+            } else {
+                data_root
+            },
             environment,
             fixture_mode,
         })

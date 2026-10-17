@@ -14,7 +14,7 @@ export default function SdsShell({ profile }: { profile: ProfileInfo }) {
   const settings = page === "settings" || account.connection === null;
   return <div className="sds-app">
     <a className="sds-skip" href="#sds-main">Skip to content</a>
-    <header className="sds-titlebar"><Box size={15} aria-hidden="true" /><span>SDS Skills Manager</span><span className="sds-environment">{profile.environment === "development" ? "Local development" : "Internal"}</span></header>
+    <header className="sds-titlebar"><Box size={15} aria-hidden="true" /><span>SDS Skills Manager</span><span className="sds-environment">{profile.environment === "development" ? "Local development" : "Internal"}{profile.fixtureMode ? " · Fixtures" : ""}</span></header>
     <aside className="sds-sidebar">
       <div className="sds-brand"><span className="sds-brand-mark">SDS</span><div><strong>Skills Manager</strong><small>Your internal workspace</small></div></div>
       <nav aria-label="Main navigation">
@@ -29,14 +29,14 @@ export default function SdsShell({ profile }: { profile: ProfileInfo }) {
       {account.session?.user && <button onClick={() => { void account.logout(); }}>Sign out</button>}
     </aside>
     <main id="sds-main" className="sds-main" tabIndex={-1}>
-      <div className="sds-page-heading"><div><p className="sds-eyebrow">INTERNAL WORKSPACE</p><h1>{settings ? "Settings" : "Skills Store"}</h1><p>Find and manage skills from your internal Skills Store.</p></div><span className="sds-badge" data-status={account.session?.status}>{account.session?.status === "authenticated" ? "Signed in" : account.connection ? "Connection configured" : "Setup required"}</span></div>
+      {profile.fixtureMode && <p role="status" className="sds-fixture">Development fixtures — sample data and isolated targets. Sample account: employee@example.invalid · Password: synthetic-password. Search __empty, __slow or __unavailable to inspect states.</p>}
+      <div className="sds-page-heading"><div><p className="sds-eyebrow">INTERNAL WORKSPACE</p><h1>{settings ? "Settings" : "Skills Store"}</h1><p>Find and manage skills from your internal Skills Store.</p></div><span className="sds-badge" data-status={account.session?.status}>{account.session?.status === "authenticated" ? "Signed in" : account.session?.status === "offline" ? "Offline" : account.session?.status === "expired" ? "Session expired" : account.connection ? "Connection configured" : "Setup required"}</span></div>
       {account.error && <p role="alert" className="sds-error">{account.error}</p>}
-      {settings ? <ConnectionSettings key={account.connection?.id ?? "new"} current={account.connection ?? null} environment={profile.environment} onSaved={(connection) => { account.connectionSaved(connection); setPage("store"); }} />
+      {settings ? <ConnectionSettings key={account.connection?.id ?? "new"} current={account.connection ?? null} environment={profile.environment} locked={profile.fixtureMode} onSaved={(connection) => { account.connectionSaved(connection); setPage("store"); }} />
         : !account.connection || !account.session ? <p role="status">Checking your Store connection…</p>
         : account.session.status === "signedOut" || account.session.status === "expired" ? <SignIn key={account.connection.id} onSignedIn={account.signedIn} />
         : null}
       {account.session?.user && account.session.status !== "expired" && <div hidden={settings}><CatalogPage key={`${account.connection?.id}:${account.session.user.id}:${account.generation}`} /></div>}
-      {profile.fixtureMode && <p role="status" className="sds-fixture">Development fixtures — sample data and isolated targets</p>}
     </main>
   </div>;
 }
