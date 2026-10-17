@@ -57,3 +57,24 @@ First NSIS attempt encountered OS error32 (file in use); closing the smoke execu
 ## Resume
 
 A00 baseline evidence captured with known failures. A01 source implemented and focused checks pass. A02 source and debug installer smoke implemented; release/native acceptance items remain above. A03–A10 and Store S01–S04 have not started. Keep the installed smoke directory while it is registered; uninstall it before deleting this plan's scratch workspace at final cleanup.
+
+## Release/native follow-up — 2026-10-17 10:37–10:41 Asia/Saigon
+
+Later checkpoint superseding the pending release items above. Source commit `72f3f59` includes A03 session and A04 catalog; the intervening `3a1bff8` only records the user's pilot ordering decision. Rust and dist-sds were held unchanged during this release build. Newly added development-fixture scripts and the unconnected InstallReview component are not included in this artifact.
+
+`npm run sds:build -- --bundles nsis` completed exit0, Rust release compile7m44s. Environment internal, fixtures0, default CLI feature disabled. Raw transcript: [phase0-release-installer.txt](phase0-release-installer.txt).
+
+Artifact: `src-tauri/target/release/bundle/nsis/SDS Skills Manager_1.42.0_x64-setup.exe`.
+Size4,763,666 bytes; SHA256 `b3efba2e09ddeea048a42bf75819012b71d1b66a0dfcf9a85b0d064141516140`.
+
+Generated release NSIS test passes with `SDS_INSTALLER_PROFILE=release node --test scripts/sds-installer.test.mjs`. The script sets currentUser/user execution level, SDS-specific binary/identifier, and excludes upstream CLI/public updater. Silent install over the prior debug shell exit0 into the same task-owned registered installed-shell directory. Files: main exe17,960,448bytes and uninstall.exe79,204bytes only. No upstream process was running or closed by the test.
+
+The installed release started with Internal identity, preserved the previous dark preference, rendered actual Store settings, and closed/reopened normally. Native Tab showed the skip link's visible focus; Shift+Tab showed Save connection and Store URL focus despite UIA reporting only the containing WebView document. Screenshots: [skip focus](screenshots/release-keyboard-skip.jpg), [URL focus](screenshots/release-keyboard-url.jpg).
+
+At the configured minimum client1100×640 (captured outer1102×672), heading/form/footer/buttons remained visible without horizontal overflow: [minimum layout](screenshots/release-min-settings.jpg). A corner drag did not resize the window, so the test closed SDS, saved its own window-state file, set width/height to1100/640, reopened and inspected the actual restored native window. Original1440×860 state was restored after closing. No upstream configuration was edited.
+
+Entering `http://127.0.0.1:8080/skm` into the installed Internal build and clicking Save returned the static validation error through real IPC. The profile was not saved and no auth/network request was made: [rejected HTTP](screenshots/release-internal-http-rejected.jpg).
+
+Fresh before/after snapshots covered `%USERPROFILE%/.skills-manager`, `%APPDATA%/skills-manager`, `%APPDATA%/com.agentskills.desktop`, `%LOCALAPPDATA%/com.agentskills.desktop`, `%LOCALAPPDATA%/skills-manager`. All five were absent before and after. This proves those roots were not initialized by this smoke test; it does not test preservation of pre-existing upstream user data, which was no longer present when the fresh audit ran. Earlier locked-file audit remains inconclusive. Scratch manifests/script are retained under this plan's `.superpowers/sdd` directory.
+
+A02 release startup, restart/theme, minimum layout and observed keyboard checks now have native evidence. Full upstream baseline is still NOT PASS. A04's standalone fixture/native catalog states, A05–A10 and Store integration/additive audit are still outstanding. The registered installed-shell directory now contains this release and must be uninstalled before deletion; the app was closed at the end of the test.
