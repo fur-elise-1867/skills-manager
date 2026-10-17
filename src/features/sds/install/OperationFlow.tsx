@@ -72,6 +72,7 @@ export default function OperationFlow({request,onClose,onCompleted}:{request:Ope
     {running && !finished && <><div className="sds-operation-bar" aria-hidden="true"/><p role="status">{result?.stage==="removal-cleanup" ? "Finishing removal cleanup" : result ? stageLabels[result.state] : "Starting operation…"}</p></>}
     {success && <p className="sds-operation-success">{request.kind==="remove" ? "Removed from target" : "Installed successfully"}</p>}
     {result?.state==="cancelled" && <p>Cancelled. The operation stopped before commit.</p>}
+    {result?.state==="recoveryRequired" && <p>This operation needs recovery. Restart SDS to reconcile its journal before retrying. Its files have been kept for review.</p>}
     {(prepError || error || result?.error) && <p role="alert" className="sds-error">{prepError || error || storeErrorMessage(result?.error)}</p>}
     {result?.operationId && <p className="sds-operation-id">Operation {result.operationId}</p>}
     {result?.error?.code==="CLEANUP_REVIEW_REQUIRED" && <p>Review the retained staging files beside your skills folder before cleaning them up.</p>}

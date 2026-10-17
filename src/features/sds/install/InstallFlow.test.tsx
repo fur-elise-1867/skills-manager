@@ -41,6 +41,20 @@ test("late preparation from an earlier request cannot replace the current review
   await act(async()=>resolveFirst({...plan,release:{...plan.release,installName:"old-result"}}));
   expect(screen.queryByText(/old-result/)).not.toBeInTheDocument();
 });
+test("a retained commit intent explains startup recovery even when its cause is a review error",async()=>{
+  vi.mocked(invoke).mockImplementation(async command=>{
+    if(command==="sds_prepare_install")return plan as never;
+    if(command==="sds_execute")return {operationId:plan.id} as never;
+    if(command==="sds_operation_status")return {operationId:plan.id,state:"recoveryRequired",stage:"recovery-required",error:{code:"REVIEW_REQUIRED",message:"untrusted provider detail",retryable:true}} as never;
+    throw new Error(`Unexpected ${command}`);
+  });
+  const refreshed=vi.fn();render(<OperationFlow request={{kind:"install",skillId:"skill-123",releaseId:"rel-003"}} onClose={vi.fn()} onCompleted={refreshed}/>);
+  fireEvent.click(await screen.findByRole("button",{name:"Install anyway"}));
+  expect(await screen.findByText(/Restart SDS to reconcile its journal before retrying/)).toBeInTheDocument();
+  expect(screen.queryByText("Installed successfully")).not.toBeInTheDocument();
+  expect(screen.queryByText("untrusted provider detail")).not.toBeInTheDocument();
+  expect(refreshed).not.toHaveBeenCalled();
+});
 test("remove enters the same execution/status flow without asking for MCP or deleting Library",async()=>{
   vi.mocked(invoke).mockImplementation(async command=>{
     if(command==="sds_prepare_remove")return {...plan,kind:"remove",requiresMcpAck:false,expectedFingerprint:"a".repeat(64)} as never;
