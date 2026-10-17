@@ -345,3 +345,51 @@ fn competing_update_and_remove_have_only_one_commit_winner() {
         }
     }
 }
+
+#[test]
+fn forgetting_a_workspace_rejects_pending_and_deployed_references_and_keeps_project_files() {
+    use crate::sds::{contracts::ReviewedRoot, workspaces::WorkspaceService};
+    let root = tempfile::tempdir().unwrap();
+    let (repository, template, artifact) = super::recovery::prepared(root.path());
+    let repository = Arc::new(repository);
+    let workspaces = WorkspaceService::new(repository.clone());
+    let project = root.path().join("project");
+    let skills = project.join(".aipro/skills");
+    std::fs::create_dir_all(&skills).unwrap();
+    std::fs::write(project.join("owned-project.txt"), b"retain project data").unwrap();
+    let workspace = workspaces.add(&project).unwrap();
+    let mut plan = template.clone();
+    plan.id = uuid::Uuid::new_v4().to_string();
+    plan.target.workspace_id = workspace.id.clone();
+    plan.target.path = skills.join(&plan.release.install_name);
+    plan.reviewed_root = ReviewedRoot::capture(&skills).unwrap();
+    repository.create_operation(&plan, &OperationResult {
+        operation_id: plan.id.clone(), state: OperationState::Prepared,
+        stage: "review".into(), error: None,
+    }).unwrap();
+    assert_eq!(workspaces.remove(&workspace.id).unwrap_err().code, "WORKSPACE_IN_USE");
+    assert_eq!(workspaces.list().unwrap().len(), 1);
+    repository.record_result(&OperationResult {
+        operation_id: plan.id.clone(), state: OperationState::Cancelled,
+        stage: "cancelled".into(), error: None,
+    }).unwrap();
+    workspaces.remove(&workspace.id).unwrap();
+    assert!(workspaces.list().unwrap().is_empty());
+    assert_eq!(std::fs::read(project.join("owned-project.txt")).unwrap(), b"retain project data");
+
+    let workspace = workspaces.add(&project).unwrap();
+    plan.id = uuid::Uuid::new_v4().to_string();
+    plan.target.workspace_id = workspace.id.clone();
+    repository.create_operation(&plan, &OperationResult {
+        operation_id: plan.id.clone(), state: OperationState::Prepared,
+        stage: "review".into(), error: None,
+    }).unwrap();
+    let intent = CommitIntent::stage_install(&repository, &plan, &artifact).unwrap();
+    commit_install(&repository, &plan, &intent).unwrap();
+    let fingerprint = fingerprint_tree(&plan.target.path).unwrap().1;
+    assert_eq!(repository.operation_status(&plan.id).unwrap().state, OperationState::Completed);
+    assert_eq!(workspaces.remove(&workspace.id).unwrap_err().code, "WORKSPACE_IN_USE");
+    assert_eq!(fingerprint_tree(&plan.target.path).unwrap().1, fingerprint);
+    assert_eq!(std::fs::read(project.join("owned-project.txt")).unwrap(), b"retain project data");
+    assert_eq!(workspaces.list().unwrap()[0].id, workspace.id);
+}
