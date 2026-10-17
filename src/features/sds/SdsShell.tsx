@@ -1,10 +1,11 @@
 import { useContext, useState } from "react";
-import { BookOpen, Box, Library, Settings, SunMoon } from "lucide-react";
+import { Box, Library, Settings, SunMoon } from "lucide-react";
 import type { ProfileInfo } from "./contracts";
 import { SdsThemeContext } from "./theme";
 import { useSdsSession } from "./session/context";
 import SignIn from "./session/SignIn";
 import ConnectionSettings from "./settings/ConnectionSettings";
+import CatalogPage from "./catalog/CatalogPage";
 
 export default function SdsShell({ profile }: { profile: ProfileInfo }) {
   const { theme, toggle } = useContext(SdsThemeContext);
@@ -18,7 +19,7 @@ export default function SdsShell({ profile }: { profile: ProfileInfo }) {
       <div className="sds-brand"><span className="sds-brand-mark">SDS</span><div><strong>Skills Manager</strong><small>Your internal workspace</small></div></div>
       <nav aria-label="Main navigation">
         <p className="sds-nav-group">SKILLS</p>
-        <button disabled title="Configure your Store connection first"><Box size={16} aria-hidden="true" />Skills Store</button>
+        <button disabled={!account.connection} onClick={() => setPage("store")} aria-current={!settings ? "page" : undefined} title={!account.connection ? "Configure your Store connection first" : undefined}><Box size={16} aria-hidden="true" />Skills Store</button>
         <button disabled title="Your installed skills will appear here"><Library size={16} aria-hidden="true" />Library</button>
         <p className="sds-nav-group">PREFERENCES</p>
         <button onClick={() => setPage("settings")} aria-current={settings ? "page" : undefined}><Settings size={16} aria-hidden="true" />Settings</button>
@@ -33,7 +34,8 @@ export default function SdsShell({ profile }: { profile: ProfileInfo }) {
       {settings ? <ConnectionSettings key={account.connection?.id ?? "new"} current={account.connection ?? null} environment={profile.environment} onSaved={(connection) => { account.connectionSaved(connection); setPage("store"); }} />
         : !account.connection || !account.session ? <p role="status">Checking your Store connection…</p>
         : account.session.status === "signedOut" || account.session.status === "expired" ? <SignIn key={account.connection.id} onSignedIn={account.signedIn} />
-        : <section className="sds-welcome"><div className="sds-welcome-icon"><BookOpen size={28} aria-hidden="true" /></div><h2>{account.session.status === "offline" ? "Skills Store is unavailable" : "Connected to Skills Store"}</h2><p>{account.session.status === "offline" ? "Check your Store connection before browsing online content." : "Your account is ready. Skill browsing will be available soon."}</p></section>}
+        : null}
+      {account.session?.user && account.session.status !== "expired" && <div hidden={settings}><CatalogPage key={`${account.connection?.id}:${account.session.user.id}:${account.generation}`} /></div>}
       {profile.fixtureMode && <p role="status" className="sds-fixture">Development fixtures — sample data and isolated targets</p>}
     </main>
   </div>;

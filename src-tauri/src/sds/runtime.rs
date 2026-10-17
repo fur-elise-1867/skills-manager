@@ -8,6 +8,9 @@ pub const COMMANDS: &[&str] = &[
     "sds_session_status",
     "sds_login",
     "sds_logout",
+    "sds_catalog_taxonomy",
+    "sds_catalog_search",
+    "sds_skill_detail",
 ];
 
 /// A mismatched binary/config pair exposes only its identity, never storage.
@@ -61,7 +64,10 @@ pub fn run() {
             super::commands::sds_set_connection,
             super::commands::sds_session_status,
             super::commands::sds_login,
-            super::commands::sds_logout
+            super::commands::sds_logout,
+            super::commands::sds_catalog_taxonomy,
+            super::commands::sds_catalog_search,
+            super::commands::sds_skill_detail
         ])
         .run(tauri::generate_context!())
         .expect("Error running SDS desktop");

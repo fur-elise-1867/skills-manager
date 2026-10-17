@@ -24,8 +24,9 @@ export default function SessionProvider({ children }: { children: ReactNode }) {
   }, []);
   const signedIn = useCallback((view: SessionView) => { epoch.current += 1; setGeneration(epoch.current); setSession(view); setError(""); }, []);
   const connectionSaved = useCallback((profile: StoreProfile) => {
+    if (profile.id === connection?.id) { setConnection(profile); setError(""); return; }
     epoch.current += 1; setGeneration(epoch.current); setConnection(profile); setSession(signedOut); setError("");
-  }, []);
+  }, [connection?.id]);
   const logout = useCallback(async () => {
     const started = ++epoch.current; setGeneration(started); setSession(signedOut); setError("");
     try { await signOut(); } catch (failure) { if (epoch.current === started) setError(storeErrorMessage(failure)); }

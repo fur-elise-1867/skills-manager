@@ -1,5 +1,5 @@
 use super::{
-    contracts::{SessionStatus, SessionView, StoreProfile, UserView},
+    contracts::{SessionContext, SessionStatus, SessionView, StoreProfile, UserView},
     credentials::CredentialVault,
     error::SdsError,
     profile::Environment,
@@ -286,9 +286,53 @@ impl SessionService {
         }
         Ok(())
     }
-    pub async fn request(&self, mut request: HttpRequest) -> Result<HttpResponse, SdsError> {
+    pub async fn request(&self, request: HttpRequest) -> Result<HttpResponse, SdsError> {
+        self.request_inner(None, request).await
+    }
+
+    pub async fn scope(&self) -> Result<(StoreProfile, SessionContext), SdsError> {
+        self.ensure_restored().await?;
+        let state = self.state.lock().await;
+        let user = state
+            .user
+            .as_ref()
+            .filter(|_| {
+                !matches!(
+                    state.status,
+                    SessionStatus::SignedOut | SessionStatus::Expired
+                )
+            })
+            .ok_or_else(|| http_error(401, false))?;
+        let profile = state.profile.clone().ok_or_else(no_connection)?;
+        let context = SessionContext {
+            profile_id: profile.id.clone(),
+            account_id: user.id.clone(),
+            generation: state.generation,
+        };
+        Ok((profile, context))
+    }
+    pub async fn request_for(
+        &self,
+        context: &SessionContext,
+        request: HttpRequest,
+    ) -> Result<HttpResponse, SdsError> {
+        self.request_inner(Some(context), request).await
+    }
+    async fn request_inner(
+        &self,
+        context: Option<&SessionContext>,
+        mut request: HttpRequest,
+    ) -> Result<HttpResponse, SdsError> {
         let (profile, generation, revision, access) = {
             let state = self.state.lock().await;
+            if context.is_some_and(|context| {
+                context.generation != state.generation
+                    || state.profile.as_ref().map(|profile| &profile.id)
+                        != Some(&context.profile_id)
+                    || state.user.as_ref().map(|user| &user.id) != Some(&context.account_id)
+            }) {
+                return Err(stale_context());
+            }
             if state.user.is_none()
                 || matches!(
                     state.status,

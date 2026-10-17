@@ -2,6 +2,8 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, expect, test, vi } from "vitest";
 import { invoke } from "@tauri-apps/api/core";
 import SdsApp from "./SdsApp";
+import taxonomy from "../../../contracts/sds-desktop/v1/fixtures/taxonomy.json";
+import catalog from "../../../contracts/sds-desktop/v1/fixtures/catalog.json";
 
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn() }));
 
@@ -36,6 +38,8 @@ test("configures a real Store profile and signs in through the SDS shell", async
     if (command === "sds_session_status") return session as never;
     if (command === "sds_set_connection") { connection = { id: "profile-one", baseUrl: "https://store.example.invalid/skm", environment: "internal" }; return connection as never; }
     if (command === "sds_login") { session = { status: "authenticated", user: { id: "1001", displayName: "Example Employee" } }; return session as never; }
+    if (command === "sds_catalog_taxonomy") return taxonomy.data as never;
+    if (command === "sds_catalog_search") return catalog.data as never;
     throw new Error(`Unexpected upstream command: ${command}`);
   });
   render(<SdsApp />);
@@ -46,6 +50,11 @@ test("configures a real Store profile and signs in through the SDS shell", async
   fireEvent.change(screen.getByLabelText("Password"), { target: { value: "synthetic-password" } });
   fireEvent.click(screen.getByRole("button", { name: "Sign in" }));
   expect(await screen.findByText("Example Employee")).toBeInTheDocument();
+  await screen.findByRole("button",{name:"View Jira Weekly Report"});
+  fireEvent.click(screen.getByRole("button",{name:"Settings"}));
+  fireEvent.click(screen.getByRole("button",{name:"Save connection"}));
+  await waitFor(()=>expect(screen.getByText("Example Employee")).toBeInTheDocument());
+  expect(screen.queryByRole("button",{name:"Sign in"})).not.toBeInTheDocument();
 });
 
 test("renders_keyboard_accessible_shell", async () => {

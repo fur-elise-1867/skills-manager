@@ -19,6 +19,84 @@
         }
       }
     },
+    "catalog-query": {
+      "type": "object",
+      "properties": {
+        "q": { "type": "string", "maxLength": 1024, "default": "" },
+        "mode": { "enum": ["all_time", "trending", "hot"], "default": "all_time" },
+        "sourceId": { "type": ["string", "null"], "maxLength": 256 },
+        "page": { "type": "integer", "minimum": 1, "default": 1 },
+        "pageSize": { "type": "integer", "minimum": 1, "maximum": 100, "default": 20 }
+      }
+    },
+    "user": {
+      "type": "object", "required": ["id", "displayName"],
+      "properties": { "id": { "type": "string", "minLength": 1 }, "displayName": { "type": "string", "minLength": 1 } }
+    },
+    "release-ref": {
+      "type": "object", "required": ["id", "sequence", "version"],
+      "properties": { "id": { "type": "string", "minLength": 1 }, "sequence": { "type": "integer", "minimum": 1 }, "version": { "type": "string", "minLength": 1 } }
+    },
+    "compatible-agents": { "type": ["array", "null"], "items": { "type": "string" }, "uniqueItems": true },
+    "skill-metadata": {
+      "type": "object", "required": ["id", "name", "description", "metadataRevision", "roles", "tags", "categoryIds", "sourceIds", "creator", "canDownload", "updatedAt"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 }, "name": { "type": "string", "minLength": 1 }, "description": { "type": "string" },
+        "metadataRevision": { "type": "integer", "minimum": 0 },
+        "roles": { "type": "array", "items": { "type": "string" } }, "tags": { "type": "array", "items": { "type": "string" } },
+        "categoryIds": { "type": "array", "items": { "type": "string" } }, "sourceIds": { "type": "array", "items": { "type": "string" } },
+        "creator": { "$ref": "#/definitions/user" }, "compatibleAgents": { "$ref": "#/definitions/compatible-agents" },
+        "canDownload": { "type": "boolean" }, "updatedAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "skill-summary": {
+      "allOf": [ { "$ref": "#/definitions/skill-metadata" }, { "properties": { "latestRelease": { "anyOf": [ { "$ref": "#/definitions/release-ref" }, { "type": "null" } ] } } } ]
+    },
+    "package": {
+      "type": "object", "required": ["format", "fileName", "sizeBytes", "sha256", "downloadPath"],
+      "properties": {
+        "format": { "enum": ["zip", "7z"] }, "fileName": { "type": "string", "minLength": 1 },
+        "sizeBytes": { "type": "integer", "minimum": 1 }, "sha256": { "type": "string", "pattern": "^[a-fA-F0-9]{64}$" },
+        "downloadPath": { "type": "string", "pattern": "^/?api/v1/desktop/" }
+      }
+    },
+    "release-data": {
+      "allOf": [ { "$ref": "#/definitions/release-ref" }, {
+        "type": "object", "required": ["skillId", "installName", "publishedAt", "changelog", "package"],
+        "properties": {
+          "skillId": { "type": "string", "minLength": 1 }, "installName": { "type": "string", "minLength": 1 }, "publishedAt": { "type": "string", "format": "date-time" },
+          "changelog": { "type": "string" }, "compatibleAgents": { "$ref": "#/definitions/compatible-agents" },
+          "requiredMcps": { "type": ["array", "null"], "items": { "type": "string", "minLength": 1 }, "uniqueItems": true }, "package": { "$ref": "#/definitions/package" }
+        }
+      } ]
+    },
+    "catalog": {
+      "type": "object", "required": ["success", "data"],
+      "properties": { "success": { "const": true }, "data": {
+        "type": "object", "required": ["items", "page", "pageSize", "totalItems"],
+        "properties": { "items": { "type": "array", "maxItems": 100, "items": { "$ref": "#/definitions/skill-summary" } },
+          "page": { "type": "integer", "minimum": 1 }, "pageSize": { "type": "integer", "minimum": 1, "maximum": 100 }, "totalItems": { "type": "integer", "minimum": 0 } }
+      } }
+    },
+    "detail": {
+      "type": "object", "required": ["success", "data"],
+      "properties": { "success": { "const": true }, "data": { "allOf": [ { "$ref": "#/definitions/skill-metadata" }, { "properties": {
+        "storePageUrl": { "type": ["string", "null"] }, "latestRelease": { "anyOf": [ { "$ref": "#/definitions/release-data" }, { "type": "null" } ] }
+      } } ] } }
+    },
+    "release": {
+      "type": "object", "required": ["success", "data"],
+      "properties": { "success": { "const": true }, "data": { "$ref": "#/definitions/release-data" } }
+    },
+    "taxonomy": {
+      "type": "object", "required": ["success", "data"],
+      "properties": { "success": { "const": true }, "data": {
+        "type": "object", "required": ["sources", "catalogModes"], "properties": {
+          "sources": { "type": "array", "items": { "type": "object", "required": ["id", "label"], "properties": { "id": { "type": "string", "minLength": 1 }, "label": { "type": "string", "minLength": 1 } } } },
+          "catalogModes": { "type": "array", "items": { "type": "object", "required": ["id", "label", "available"], "properties": { "id": { "enum": ["all_time", "trending", "hot"] }, "label": { "type": "string", "minLength": 1 }, "available": { "type": "boolean" } } } }
+        }
+      } }
+    },
     "auth-refresh": {
       "type": "object",
       "required": ["success", "data"],

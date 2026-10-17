@@ -50,3 +50,142 @@ pub struct SessionContext {
     pub account_id: String,
     pub generation: u64,
 }
+
+#[derive(Debug, Copy, Clone, Serialize, Deserialize, PartialEq, Eq, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum CatalogMode {
+    #[default]
+    AllTime,
+    Trending,
+    Hot,
+}
+impl CatalogMode {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::AllTime => "all_time",
+            Self::Trending => "trending",
+            Self::Hot => "hot",
+        }
+    }
+}
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase", default)]
+pub struct CatalogQuery {
+    pub q: String,
+    pub mode: CatalogMode,
+    pub source_id: Option<String>,
+    pub page: u32,
+    pub page_size: u32,
+}
+impl Default for CatalogQuery {
+    fn default() -> Self {
+        Self {
+            q: String::new(),
+            mode: CatalogMode::AllTime,
+            source_id: None,
+            page: 1,
+            page_size: 20,
+        }
+    }
+}
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Page<T> {
+    pub items: Vec<T>,
+    pub page: u32,
+    pub page_size: u32,
+    pub total_items: u64,
+}
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Source {
+    pub id: String,
+    pub label: String,
+}
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Mode {
+    pub id: CatalogMode,
+    pub label: String,
+    pub available: bool,
+}
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Taxonomy {
+    pub sources: Vec<Source>,
+    pub catalog_modes: Vec<Mode>,
+}
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SkillMetadata {
+    pub id: String,
+    pub name: String,
+    pub description: String,
+    pub metadata_revision: u64,
+    pub roles: Vec<String>,
+    pub tags: Vec<String>,
+    pub category_ids: Vec<String>,
+    pub source_ids: Vec<String>,
+    pub creator: UserView,
+    pub compatible_agents: Option<Vec<String>>,
+    pub can_download: bool,
+    pub updated_at: String,
+}
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ReleaseRef {
+    pub id: String,
+    pub sequence: u64,
+    pub version: String,
+}
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SkillSummary {
+    #[serde(flatten)]
+    pub metadata: SkillMetadata,
+    pub latest_release: Option<ReleaseRef>,
+}
+#[derive(Debug, Copy, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum PackageFormat {
+    Zip,
+    #[serde(rename = "7z")]
+    SevenZip,
+}
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PackageInfo {
+    pub format: PackageFormat,
+    pub file_name: String,
+    pub size_bytes: u64,
+    pub sha256: String,
+    pub download_path: String,
+}
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Release {
+    pub skill_id: String,
+    pub id: String,
+    pub sequence: u64,
+    pub version: String,
+    pub install_name: String,
+    pub published_at: String,
+    pub changelog: String,
+    pub compatible_agents: Option<Vec<String>>,
+    pub required_mcps: Option<Vec<String>>,
+    pub package: PackageInfo,
+}
+impl Release {
+    pub fn reference(&self) -> ReleaseRef {
+        ReleaseRef {
+            id: self.id.clone(),
+            sequence: self.sequence,
+            version: self.version.clone(),
+        }
+    }
+}
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SkillDetail {
+    pub summary: SkillSummary,
+    pub store_page_url: Option<String>,
+    pub latest_release: Option<Release>,
+}

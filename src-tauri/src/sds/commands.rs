@@ -1,10 +1,12 @@
 use super::{
-    contracts::{SessionView, StoreProfile},
+    contracts::{
+        CatalogQuery, Page, SessionView, SkillDetail, SkillSummary, StoreProfile, Taxonomy,
+    },
     credentials::WindowsCredentialVault,
     error::SdsError,
     profile::Environment,
     session::SessionService,
-    store_client::ReqwestTransport,
+    store_client::{ReqwestTransport, StoreClient},
 };
 use std::{
     path::{Path, PathBuf},
@@ -14,6 +16,7 @@ use tokio::sync::Mutex;
 
 pub struct SdsServices {
     pub session: Arc<SessionService>,
+    pub store: StoreClient,
     data_root: PathBuf,
     settings_gate: Mutex<()>,
     connection_error: Mutex<Option<SdsError>>,
@@ -24,13 +27,15 @@ impl SdsServices {
             Ok(profile) => (profile, None),
             Err(error) => (None, Some(error)),
         };
+        let session = Arc::new(SessionService::new(
+            environment,
+            profile,
+            Arc::new(ReqwestTransport::new()?),
+            Arc::new(WindowsCredentialVault::new(data_root)),
+        ));
         Ok(Self {
-            session: Arc::new(SessionService::new(
-                environment,
-                profile,
-                Arc::new(ReqwestTransport::new()?),
-                Arc::new(WindowsCredentialVault::new(data_root)),
-            )),
+            store: StoreClient::new(session.clone()),
+            session,
             data_root: data_root.into(),
             settings_gate: Mutex::new(()),
             connection_error: Mutex::new(error),
@@ -129,4 +134,25 @@ pub async fn sds_login(
 #[tauri::command]
 pub async fn sds_logout(state: tauri::State<'_, SdsServices>) -> Result<(), SdsError> {
     state.session.logout().await
+}
+
+#[tauri::command]
+pub async fn sds_catalog_taxonomy(
+    state: tauri::State<'_, SdsServices>,
+) -> Result<Taxonomy, SdsError> {
+    state.store.taxonomy().await
+}
+#[tauri::command]
+pub async fn sds_catalog_search(
+    state: tauri::State<'_, SdsServices>,
+    query: CatalogQuery,
+) -> Result<Page<SkillSummary>, SdsError> {
+    state.store.search(query).await
+}
+#[tauri::command]
+pub async fn sds_skill_detail(
+    state: tauri::State<'_, SdsServices>,
+    skill_id: String,
+) -> Result<SkillDetail, SdsError> {
+    state.store.detail(&skill_id).await
 }

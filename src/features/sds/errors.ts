@@ -9,6 +9,12 @@ const messages: Record<string, string> = {
   REVIEW_REQUIRED: "Your connection or account changed. Review this action and try again.",
   RATE_LIMITED: "Too many requests. Wait before trying again.",
   INVALID_RESPONSE: "Skills Store returned an unsupported response. Contact your administrator.",
+  INVALID_REQUEST: "The Store request is invalid. Check your filters and try again.",
+  CATALOG_MODE_UNAVAILABLE: "This catalog mode is not available. Choose another mode.",
+  NOT_FOUND: "This skill is unavailable or you no longer have access to it.",
+  RELEASE_WITHDRAWN: "This release has been withdrawn from the Store.",
+  RELEASE_CHANGED: "The release changed. Reload its details before installing.",
+  SETTINGS_SAVE_FAILED: "Your Store connection could not be saved. Try again.",
 };
 
 export function storeErrorMessage(error: unknown): string {

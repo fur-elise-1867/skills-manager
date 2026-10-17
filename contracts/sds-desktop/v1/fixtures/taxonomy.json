@@ -1,0 +1,1 @@
+{"success":true,"data":{"sources":[{"id":"quality","label":"Quality"},{"id":"security","label":"Security"}],"catalogModes":[{"id":"all_time","label":"All Time","available":true},{"id":"trending","label":"Trending","available":false},{"id":"hot","label":"Hot","available":false}]}}

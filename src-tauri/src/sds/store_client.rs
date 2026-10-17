@@ -151,3 +151,157 @@ pub fn validate_protected_url(base: &str, url: &Url) -> Result<(), SdsError> {
     }
     Ok(())
 }
+
+use super::contracts::{
+    CatalogQuery, Page, Release, SkillDetail, SkillMetadata, SkillSummary, Taxonomy,
+};
+use super::session::SessionService;
+use serde::Deserialize;
+use std::sync::Arc;
+
+pub struct StoreClient {
+    session: Arc<SessionService>,
+}
+impl StoreClient {
+    pub fn new(session: Arc<SessionService>) -> Self {
+        Self { session }
+    }
+    pub async fn taxonomy(&self) -> Result<Taxonomy, SdsError> {
+        self.get(&["taxonomy"], None).await
+    }
+    pub async fn search(&self, mut query: CatalogQuery) -> Result<Page<SkillSummary>, SdsError> {
+        query.q = query.q.trim().to_string();
+        query.source_id = query
+            .source_id
+            .map(|source| source.trim().to_string())
+            .filter(|source| !source.is_empty());
+        if query.page == 0
+            || !(1..=100).contains(&query.page_size)
+            || query.q.chars().count() > 1024
+            || query
+                .source_id
+                .as_ref()
+                .is_some_and(|source| source.chars().count() > 256)
+        {
+            return Err(SdsError::new(
+                "INVALID_REQUEST",
+                "Invalid catalog filters or pagination",
+                false,
+            ));
+        }
+        let page: Page<SkillSummary> = self.get(&["skills"], Some(&query)).await?;
+        if page.page != query.page
+            || page.page_size != query.page_size
+            || page.items.len() > query.page_size as usize
+            || page.total_items < page.items.len() as u64
+            || page
+                .items
+                .iter()
+                .any(|skill| skill.metadata.id.is_empty() || skill.metadata.name.trim().is_empty())
+        {
+            return Err(catalog_response_error());
+        }
+        Ok(page)
+    }
+    pub async fn detail(&self, skill_id: &str) -> Result<SkillDetail, SdsError> {
+        #[derive(Deserialize)]
+        #[serde(rename_all = "camelCase")]
+        struct WireDetail {
+            #[serde(flatten)]
+            metadata: SkillMetadata,
+            store_page_url: Option<String>,
+            latest_release: Option<Release>,
+        }
+        let detail: WireDetail = self.get(&["skills", skill_id], None).await?;
+        if detail.metadata.id != skill_id
+            || detail.metadata.name.trim().is_empty()
+            || detail
+                .latest_release
+                .as_ref()
+                .is_some_and(|release| release.skill_id != skill_id)
+        {
+            return Err(catalog_response_error());
+        }
+        Ok(SkillDetail {
+            summary: SkillSummary {
+                metadata: detail.metadata,
+                latest_release: detail.latest_release.as_ref().map(Release::reference),
+            },
+            store_page_url: detail.store_page_url,
+            latest_release: detail.latest_release,
+        })
+    }
+    pub async fn release(&self, skill_id: &str, release_id: &str) -> Result<Release, SdsError> {
+        let release: Release = self
+            .get(&["skills", skill_id, "releases", release_id], None)
+            .await?;
+        if release.skill_id != skill_id || release.id != release_id {
+            return Err(catalog_response_error());
+        }
+        Ok(release)
+    }
+    async fn get<T: serde::de::DeserializeOwned>(
+        &self,
+        segments: &[&str],
+        query: Option<&CatalogQuery>,
+    ) -> Result<T, SdsError> {
+        let (profile, context) = self.session.scope().await?;
+        let mut url = join_api(&profile.base_url, "api/v1/desktop/")?;
+        {
+            let mut path = url
+                .path_segments_mut()
+                .map_err(|_| catalog_response_error())?;
+            path.pop_if_empty();
+            for segment in segments {
+                if segment.is_empty()
+                    || *segment == "."
+                    || *segment == ".."
+                    || segment.contains(['/', '\\'])
+                    || segment.chars().any(char::is_control)
+                    || segment.len() > 256
+                {
+                    return Err(SdsError::new(
+                        "INVALID_REQUEST",
+                        "Invalid Store content identifier",
+                        false,
+                    ));
+                }
+                path.push(segment);
+            }
+        }
+        if let Some(query) = query {
+            let mut pairs = url.query_pairs_mut();
+            pairs
+                .append_pair("q", &query.q)
+                .append_pair("mode", query.mode.as_str());
+            if let Some(source) = &query.source_id {
+                pairs.append_pair("sourceId", source);
+            }
+            pairs
+                .append_pair("page", &query.page.to_string())
+                .append_pair("pageSize", &query.page_size.to_string());
+        }
+        let response = self
+            .session
+            .request_for(&context, HttpRequest::get(url))
+            .await?;
+        #[derive(Deserialize)]
+        struct Envelope<T> {
+            success: bool,
+            data: T,
+        }
+        let envelope: Envelope<T> =
+            serde_json::from_slice(&response.body).map_err(|_| catalog_response_error())?;
+        if !envelope.success {
+            return Err(catalog_response_error());
+        }
+        Ok(envelope.data)
+    }
+}
+fn catalog_response_error() -> SdsError {
+    SdsError::new(
+        "INVALID_RESPONSE",
+        "Skills Store returned an unsupported response",
+        false,
+    )
+}
