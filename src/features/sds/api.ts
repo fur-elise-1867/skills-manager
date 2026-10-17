@@ -19,3 +19,5 @@ export const prepareOperation = (request:OperationRequest) => request.kind === "
 export const executeOperation = (operationId:string,ackMcp:boolean) => invoke<{operationId:string}>("sds_execute",{operationId,ackMcp});
 export const cancelOperation = (operationId:string) => invoke<OperationResult>("sds_cancel",{operationId});
 export const getOperationStatus = (operationId:string) => invoke<OperationResult>("sds_operation_status",{operationId});
+export const revealDeployment = (deploymentId:string) => invoke<void>("sds_reveal_deployment",{deploymentId});
+export const revealLogs = () => invoke<void>("sds_reveal_logs");

@@ -35,7 +35,8 @@ fn fixture(name: &str) -> serde_json::Value {
 #[test]
 fn contract_fixture_domain_shapes() {
     use crate::sds::contracts::{Page, Release, SkillDetail, SkillSummary, Taxonomy};
-    let catalog: Page<SkillSummary> = serde_json::from_value(fixture("catalog")["data"].clone()).unwrap();
+    let catalog: Page<SkillSummary> =
+        serde_json::from_value(fixture("catalog")["data"].clone()).unwrap();
     let data = fixture("detail")["data"].clone();
     let summary: SkillSummary = serde_json::from_value(data.clone()).unwrap();
     let detail = SkillDetail {
@@ -46,17 +47,39 @@ fn contract_fixture_domain_shapes() {
     let release: Release = serde_json::from_value(fixture("release")["data"].clone()).unwrap();
     let taxonomy: Taxonomy = serde_json::from_value(fixture("taxonomy")["data"].clone()).unwrap();
     for name in ["catalog", "detail"] {
-        let original = if name == "catalog" { fixture(name)["data"]["items"][0].clone() } else { fixture(name)["data"].clone() };
+        let original = if name == "catalog" {
+            fixture(name)["data"]["items"][0].clone()
+        } else {
+            fixture(name)["data"].clone()
+        };
         let mut extended = original.clone();
         extended["futureField"] = serde_json::json!({"enabled": true});
         assert!(serde_json::from_value::<SkillSummary>(extended).is_ok());
-        for key in ["id", "name", "description", "metadataRevision", "roles", "tags", "categoryIds", "sourceIds", "creator", "canDownload", "updatedAt"] {
+        for key in [
+            "id",
+            "name",
+            "description",
+            "metadataRevision",
+            "roles",
+            "tags",
+            "categoryIds",
+            "sourceIds",
+            "creator",
+            "canDownload",
+            "updatedAt",
+        ] {
             let mut missing = original.clone();
             missing.as_object_mut().unwrap().remove(key);
-            assert!(serde_json::from_value::<SkillSummary>(missing).is_err(), "missing {name}.{key}");
+            assert!(
+                serde_json::from_value::<SkillSummary>(missing).is_err(),
+                "missing {name}.{key}"
+            );
         }
     }
-    println!("SDS_CONTRACT_DOMAINS={}", serde_json::json!({"catalog":catalog,"detail":detail,"release":release,"taxonomy":taxonomy}));
+    println!(
+        "SDS_CONTRACT_DOMAINS={}",
+        serde_json::json!({"catalog":catalog,"detail":detail,"release":release,"taxonomy":taxonomy})
+    );
 }
 
 async fn client(server: &TestServer) -> (Arc<SessionService>, StoreClient) {

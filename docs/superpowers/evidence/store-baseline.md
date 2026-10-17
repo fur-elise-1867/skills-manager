@@ -1,0 +1,15 @@
+# Store S01 baseline and isolated runtime
+
+2026-10-17. Store root: `D:/Documents/Git Project/skills-manager-app/skills-store/skill-management`. All additions are under `backend/desktop-pilot/` and the new `application-desktop-pilot.yml`; existing source files remain unchanged. The Store already contains Git metadata; no repository was initialized or reset.
+
+Before additions, a sorted inventory recorded 537 existing files with relative path, size and SHA-256. A copy is `store-files-before.json` beside this evidence. The initial upstream schema was bootstrapped on a fresh dedicated PostgreSQL cluster/database before any desktop objects; its deterministic object definitions are `store-schema-before.json`. No shared database was bootstrapped or modified.
+
+Java 21.0.7 and an existing user-local Maven 3.9.11 runtime were used. The original Maven wrapper configuration is missing; original wrapper/pom files were not repaired. Baseline command: Maven `-B test`, exit 0, 114 tests, zero failures/errors/skips, 51.874 seconds (`s01-store-baseline.log` in the app worktree). Original H2 test settings remain unchanged.
+
+The pre-existing PostgreSQL service requires separate credentials and was not changed. A new task-owned PostgreSQL 18.1 cluster was initialized under the ignored task ledger's `postgres-pilot/data`, bound only to `127.0.0.1:15432`, with a fresh random local password. Database `sds_desktop_pilot_20261017` has the exact marker `SDS_DESKTOP_PILOT_ISOLATED_20261017`. Secrets remain in the ignored local task directory/process environment, never in this evidence or frontend.
+
+`desktop-pilot/start.ps1` verified the actual database identity/marker before starting Maven with the new profile. Existing upstream Flyway migrations completed on the empty dedicated DB; Hibernate validation passed. Store HTTP started at `http://127.0.0.1:8080/skm`, Java PID 26400, task exec session 28296. The caller owns this process; stop only that recorded process/session after rechecking its executable identity. PostgreSQL shutdown uses the installed `pg_ctl.exe -D <exact task-owned data directory> -w stop`; do not stop the pre-existing PostgreSQL service.
+
+Guard tests passed: wrong database name, remote address, query parameters, wrong marker and mismatched identity refused. Audit tests passed: changed/deleted file, changed/deleted object and an extra index on an existing table refused. A real S01 audit compared 856 current files with the original 537 and the schema snapshots: every existing file/object unchanged, 319 additions including Maven generated `backend/target` files, zero desktop schema objects. PostgreSQL's internal char fields required explicit text casts in the initial read-only schema query; the corrected snapshot command exited 0.
+
+S02 catalog/ACL, S03 immutable releases, S04 full provider/consumer HTTP audit and A10 Windows/AIPro acceptance remain required. This runtime is local development over HTTP; internal deployment remains HTTPS-only.

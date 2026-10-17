@@ -1,7 +1,8 @@
 import {useEffect,useRef,useState} from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import {getLibrary,getLibraryPreview} from "../api";
+import {getLibrary,getLibraryPreview,revealDeployment} from "../api";
+import {writeText} from "@tauri-apps/plugin-clipboard-manager";
 import type {CacheStatus,DeploymentStatus,LibraryItem,Release} from "../contracts";
 
 const cacheLabels:Record<CacheStatus,string>={verified:"Downloaded",corrupt:"Cache needs attention",missing:"Cache missing",unverifiable:"Cache unavailable"};
@@ -18,6 +19,7 @@ export default function LibraryPage({onInstall,onRemove}:{onInstall?:(release:Re
   const [revision,setRevision]=useState(0);
   const [result,setResult]=useState<{revision:number;items?:LibraryItem[];error?:string}>({revision:-1});
   const [query,setQuery]=useState("");
+  const [actionMessage,setActionMessage]=useState("");
   const [filter,setFilter]=useState<"all"|"installed"|"available">("all");
   const [locationsId,setLocationsId]=useState<string|null>(null);
   const [selected,setSelected]=useState<LibraryItem|null>(null);
@@ -40,7 +42,10 @@ export default function LibraryPage({onInstall,onRemove}:{onInstall?:(release:Re
   const items=current?.items?.filter(item=>(filter==="all" || (filter==="installed" ? item.deployments.length>0 : item.deployments.length===0)) && [item.release.installName,item.release.version,item.release.skillId,...item.deployments.map(deployment=>deployment.target.path)].some(value=>value.toLocaleLowerCase().includes(keyword)));
   const locations=items?.find(item=>item.id===locationsId)??items?.[0];
   function refresh(){setSelected(null);setRevision(value=>value+1);}
+  async function copyPath(path:string){try{await writeText(path);setActionMessage("Destination path copied.");}catch{setActionMessage("The path could not be copied. Select the displayed path to copy it manually.");}}
+  async function reveal(id:string){try{await revealDeployment(id);setActionMessage("");}catch{setActionMessage("The recorded destination could not be revealed safely. Refresh Library and check its location.");}}
   return <section className="sds-library" aria-label="Downloaded releases">
+    {actionMessage && <p role="status">{actionMessage}</p>}
     <div className="sds-library-toolbar"><label className="sds-library-search"><span className="sds-visually-hidden">Search Library</span><input type="search" value={query} onChange={event=>setQuery(event.target.value)} placeholder="Search skills in your Library…"/></label><div className="sds-library-filters" aria-label="Library status"><button aria-pressed={filter==="all"} onClick={()=>setFilter("all")}>All</button><button aria-pressed={filter==="installed"} onClick={()=>setFilter("installed")}>Installed</button><button aria-pressed={filter==="available"} onClick={()=>setFilter("available")}>Available</button><button className="sds-secondary-button" onClick={refresh} disabled={!current}>Refresh Library</button></div></div>
     {!current ? <p role="status">Checking local releases and destinations…</p>
       : current.error ? <div className="sds-error" role="alert"><p>{current.error}</p><button className="sds-secondary-button" onClick={refresh}>Try again</button></div>
@@ -57,7 +62,7 @@ export default function LibraryPage({onInstall,onRemove}:{onInstall?:(release:Re
         <button className="sds-text-button" onClick={()=>setLocationsId(item.id)} aria-pressed={locations?.id===item.id}>View destinations →</button>
       </article>)}</div>}
     {locations && <section className="sds-locations" aria-label="Installed locations"><div className="sds-locations-heading"><h3>{locations.release.installName} · Installed locations</h3><span>{locations.deployments.length} recorded {locations.deployments.length===1?"target":"targets"}</span></div><div className="sds-table-scroll"><table><thead><tr><th>Agent</th><th>Scope / Path</th><th>Version</th><th>Local status</th><th>Action</th></tr></thead><tbody>
-      {locations.deployments.map(deployment=><tr key={deployment.id}><td><span className="sds-agent-dot"/>AIPro</td><td><strong>Global</strong><p className="sds-target-path">{deployment.target.path}</p><p>MCP at installation: {mcpLabels[deployment.mcp.state]}{deployment.mcp.missing.length ? ` · ${deployment.mcp.missing.join(", ")}` : ""}</p></td><td>{locations.release.version}</td><td><span className="sds-badge" data-local-status={deployment.status}>{deploymentLabels[deployment.status]}</span>{deployment.reason && <p className="sds-library-reason">{deployment.reason}</p>}</td><td>{onRemove && <button className="sds-text-button" onClick={()=>onRemove(deployment.id)}>Remove from target</button>}</td></tr>)}
+      {locations.deployments.map(deployment=><tr key={deployment.id}><td><span className="sds-agent-dot"/>AIPro</td><td><strong>Global</strong><p className="sds-target-path">{deployment.target.path}</p><div className="sds-library-path-actions"><button className="sds-text-button" onClick={()=>{void copyPath(deployment.target.path);}}>Copy path</button><button className="sds-text-button" disabled={deployment.status==="missing" || deployment.status==="unverifiable"} onClick={()=>{void reveal(deployment.id);}}>Reveal folder</button></div><p>MCP at installation: {mcpLabels[deployment.mcp.state]}{deployment.mcp.missing.length ? ` · ${deployment.mcp.missing.join(", ")}` : ""}</p></td><td>{locations.release.version}</td><td><span className="sds-badge" data-local-status={deployment.status}>{deploymentLabels[deployment.status]}</span>{deployment.reason && <p className="sds-library-reason">{deployment.reason}</p>}</td><td>{onRemove && <button className="sds-text-button" onClick={()=>onRemove(deployment.id)}>Remove from target</button>}</td></tr>)}
       {!locations.deployments.length && <tr><td colSpan={5}>No installed destinations. Your downloaded copy remains in Library.</td></tr>}
     </tbody></table></div><p className="sds-locations-note">Each target keeps its own content. Changing Library files does not update other locations.</p></section>}
     {selected && <section className="sds-library-preview" aria-label="Local skill preview"><div className="sds-library-toolbar"><h2>Skill document · {selected.release.installName}</h2><button className="sds-secondary-button" onClick={()=>{setSelected(null);previewTrigger.current?.focus();}}>Close preview</button></div>

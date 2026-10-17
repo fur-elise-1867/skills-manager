@@ -162,6 +162,9 @@ async fn new_files_after_db_removal_are_kept_in_quarantine_and_a_new_target_is_n
     let intent = stage_remove(&repository, &plan).unwrap();
     commit_remove_test_hook(&repository, &plan, &intent, |at| {
         if matches!(at, RemoveBoundary::AfterDatabase) {
+            let in_progress = operations.status(&plan.id).unwrap();
+            assert_eq!(in_progress.state, OperationState::Committing);
+            assert_eq!(in_progress.stage, "removal-cleanup");
             std::fs::write(intent.stage_path().join("user-new.txt"), b"keep quarantine").unwrap();
             std::fs::create_dir(&install.target.path).unwrap();
             std::fs::write(install.target.path.join("user-new.txt"), b"keep target").unwrap();

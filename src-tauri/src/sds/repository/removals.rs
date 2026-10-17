@@ -68,7 +68,7 @@ impl Repository {
             operation_id: plan.id.clone(),
             state: OperationState::Completed,
             stage: if intent.is_some() {
-                "removed"
+                "removal-cleanup"
             } else {
                 "record-removed"
             }

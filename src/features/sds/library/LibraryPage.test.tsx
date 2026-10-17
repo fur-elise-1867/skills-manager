@@ -1,14 +1,17 @@
 import {fireEvent,render,screen} from "@testing-library/react";
 import {beforeEach,expect,test,vi} from "vitest";
 import {invoke} from "@tauri-apps/api/core";
+import {writeText} from "@tauri-apps/plugin-clipboard-manager";
 import LibraryPage from "./LibraryPage";
 import release from "../../../../contracts/sds-desktop/v1/fixtures/release.json";
 
 vi.mock("@tauri-apps/api/core",()=>({invoke:vi.fn()}));
+vi.mock("@tauri-apps/plugin-clipboard-manager",()=>({writeText:vi.fn(async()=>{})}));
 const item={id:"a".repeat(64),profileId:"profile-one",release:release.data,cachedAt:"2026-10-17T00:00:00Z",cacheStatus:"verified",deployments:[{id:"deployment-one",target:{agentKey:"aipro",workspaceId:"global",path:"C:\\Synthetic\\.aipro\\skills\\jira-weekly-report"},status:"installed",mcp:{state:"missing",missing:["jira-mcp"],reason:null,checkedAt:"2026-10-17T00:00:00Z"},installedAt:"2026-10-17T00:00:00Z",reason:null}]};
 beforeEach(()=>{vi.mocked(invoke).mockImplementation(async command=>{
     if(command==="sds_library")return [item] as never;
     if(command==="sds_library_preview")return "# Local skill\n![remote](https://example.invalid/tracker.png)\n[External](https://example.invalid/)" as never;
+    if(command==="sds_reveal_deployment")return undefined as never;
     throw new Error(`Unexpected command ${command}`);
 });});
 
@@ -26,6 +29,17 @@ test("shows independent cache and target status locally, searches paths and prev
     expect(document.querySelector("img")).toBeNull();
     expect(screen.queryByRole("link",{name:"External"})).not.toBeInTheDocument();
     expect(vi.mocked(invoke).mock.calls.map(([command])=>command)).toEqual(["sds_library","sds_library_preview"]);
+});
+
+test("reveals only the selected backend deployment ID and copies its displayed path on click",async()=>{
+    render(<LibraryPage/>);
+    await screen.findByRole("button",{name:"Reveal folder"});
+    expect(invoke).not.toHaveBeenCalledWith("sds_reveal_deployment",expect.anything());
+    fireEvent.click(screen.getByRole("button",{name:"Reveal folder"}));
+    expect(invoke).toHaveBeenCalledWith("sds_reveal_deployment",{deploymentId:item.deployments[0].id});
+    fireEvent.click(screen.getByRole("button",{name:"Copy path"}));
+    expect(await screen.findByRole("status")).toHaveTextContent("Destination path copied");
+    expect(writeText).toHaveBeenCalledWith(item.deployments[0].target.path);
 });
 
 test("an unreadable Library is an error rather than an empty result and supports retry",async()=>{

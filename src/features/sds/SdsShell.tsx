@@ -6,6 +6,7 @@ import { useSdsSession } from "./session/context";
 import SignIn from "./session/SignIn";
 import ConnectionSettings from "./settings/ConnectionSettings";
 import TargetSettings from "./settings/TargetSettings";
+import ActivitySettings from "./settings/ActivitySettings";
 import CatalogPage from "./catalog/CatalogPage";
 import LibraryPage from "./library/LibraryPage";
 import OperationFlow from "./install/OperationFlow";
@@ -39,7 +40,7 @@ export default function SdsShell({ profile }: { profile: ProfileInfo }) {
       {profile.fixtureMode && <p role="status" className="sds-fixture">Development fixtures — sample data and isolated targets. Sample account: employee@example.invalid · Password: synthetic-password. Search __empty, __slow or __unavailable to inspect states.</p>}
       <div className="sds-page-heading"><div><p className="sds-eyebrow">INTERNAL WORKSPACE</p><h1>{library ? "Library" : settings ? "Settings" : "Skills Store"}</h1><p>{library ? "Downloaded releases and their destinations on this computer." : "Find and manage skills from your internal Skills Store."}</p></div><span className="sds-badge" data-status={account.session?.status}>{library ? "Local Library" : account.session?.status === "authenticated" ? "Signed in" : account.session?.status === "offline" ? "Offline" : account.session?.status === "expired" ? "Session expired" : account.connection ? "Connection configured" : "Setup required"}</span></div>
       {account.error && <p role="alert" className="sds-error">{account.error}</p>}
-      {library ? <LibraryPage key={libraryRevision} onInstall={install} onRemove={deploymentId=>setOperation({kind:"remove",deploymentId})} /> : settings ? <><ConnectionSettings key={account.connection?.id ?? "new"} current={account.connection ?? null} environment={profile.environment} locked={profile.fixtureMode} onSaved={(connection) => { account.connectionSaved(connection); setPage("store"); }} /><TargetSettings /></>
+      {library ? <LibraryPage key={libraryRevision} onInstall={install} onRemove={deploymentId=>setOperation({kind:"remove",deploymentId})} /> : settings ? <div className="sds-settings-grid"><ConnectionSettings key={account.connection?.id ?? "new"} current={account.connection ?? null} environment={profile.environment} locked={profile.fixtureMode} onSaved={(connection) => { account.connectionSaved(connection); setPage("store"); }} /><TargetSettings /><ActivitySettings /></div>
         : !account.connection || !account.session ? <p role="status">Checking your Store connection…</p>
         : account.session.status === "signedOut" || account.session.status === "expired" ? <SignIn key={account.connection.id} onSignedIn={account.signedIn} />
         : null}

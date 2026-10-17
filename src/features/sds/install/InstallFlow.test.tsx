@@ -64,3 +64,22 @@ test("a failed download remains an explicit failure instead of installation succ
   expect(screen.queryByText("Installed successfully")).not.toBeInTheDocument();
   expect(screen.queryByText("synthetic-secret")).not.toBeInTheDocument();
 });
+
+test("removal waits for cleanup and displays the authoritative retained-files warning",async()=>{
+  let cleaned=false;
+  vi.mocked(invoke).mockImplementation(async command=>{
+    if(command==="sds_prepare_remove")return {...plan,kind:"remove",requiresMcpAck:false,expectedFingerprint:"a".repeat(64)} as never;
+    if(command==="sds_execute")return {operationId:plan.id} as never;
+    return {operationId:plan.id,state:"completed",stage:cleaned?"removed-files-kept":"removal-cleanup",error:cleaned?{code:"CLEANUP_REVIEW_REQUIRED",message:"synthetic-secret"}:null} as never;
+  });
+  const refresh=vi.fn();
+  render(<OperationFlow request={{kind:"remove",deploymentId:"deployment-one"}} onClose={vi.fn()} onCompleted={refresh}/>);
+  fireEvent.click(await screen.findByRole("button",{name:"Remove from target"}));
+  await screen.findByRole("heading",{name:"Removing skill"});
+  expect(screen.queryByRole("button",{name:"Done"})).not.toBeInTheDocument();
+  expect(refresh).not.toHaveBeenCalled();
+  cleaned=true;
+  expect(await screen.findByRole("alert",{}, {timeout:3000})).toHaveTextContent(/retained|kept/i);
+  expect(await screen.findByRole("button",{name:"Done"})).toBeInTheDocument();
+  expect(refresh).toHaveBeenCalledOnce();
+});

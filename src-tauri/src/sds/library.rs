@@ -10,6 +10,33 @@ use super::{
 use sha2::{Digest, Sha256};
 use std::io::Read;
 
+pub(crate) fn with_deployment_path<T>(
+    repository: &Repository,
+    id: &str,
+    action: impl FnOnce(&std::path::Path) -> Result<T, SdsError>,
+) -> Result<T, SdsError> {
+    if uuid::Uuid::parse_str(id).is_err() {
+        return Err(location_error());
+    }
+    let deployment = repository
+        .deployments()?
+        .into_iter()
+        .find(|entry| entry.id == id)
+        .ok_or_else(location_error)?;
+    validate_directory_path(&deployment.target.path)?;
+    let root = DirectoryPins::acquire(deployment.target.path.parent().ok_or_else(location_error)?)?;
+    let target = DirectoryPins::acquire(&deployment.target.path)?;
+    if identity(root.leaf())? != deployment.root_identity
+        || identity(target.leaf())? != deployment.identity
+    {
+        return Err(location_error());
+    }
+    action(&deployment.target.path)
+}
+fn location_error() -> SdsError {
+    SdsError::new("LOCATION_UNAVAILABLE", "The recorded destination cannot be revealed safely. Refresh Library and check its location.", false)
+}
+
 pub(crate) fn load(repository: &Repository) -> Result<Vec<LibraryItem>, SdsError> {
     let entries = repository.list_library()?;
     let deployments = repository.deployments()?;

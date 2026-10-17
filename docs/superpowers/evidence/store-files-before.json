@@ -1,0 +1,2687 @@
+[
+  {
+    "path": "/.env.example",
+    "size": 308,
+    "sha256": "cc448150d6385f220af57673bead2201a857a3dff2ee393ff039a569b0fcc962"
+  },
+  {
+    "path": "/.git/config",
+    "size": 379,
+    "sha256": "73bb3ca5d0c28b881bb738ab8d19087614c9fec83f2ff9368d8b7f4753cd14bd"
+  },
+  {
+    "path": "/.git/description",
+    "size": 73,
+    "sha256": "85ab6c163d43a17ea9cf7788308bca1466f1b0a8d1cc92e26e9bf63da4062aee"
+  },
+  {
+    "path": "/.git/FETCH_HEAD",
+    "size": 908,
+    "sha256": "e1d7dadfbb620211917947e200866370f79647548d631f658ee613b7573f5c9f"
+  },
+  {
+    "path": "/.git/HEAD",
+    "size": 25,
+    "sha256": "a1fbb9eb97e41009a3ecffe00adad8aa5329eee823c5e627c91fff2c0e83e854"
+  },
+  {
+    "path": "/.git/hooks/applypatch-msg.sample",
+    "size": 478,
+    "sha256": "0223497a0b8b033aa58a3a521b8629869386cf7ab0e2f101963d328aa62193f7"
+  },
+  {
+    "path": "/.git/hooks/commit-msg.sample",
+    "size": 896,
+    "sha256": "1f74d5e9292979b573ebd59741d46cb93ff391acdd083d340b94370753d92437"
+  },
+  {
+    "path": "/.git/hooks/fsmonitor-watchman.sample",
+    "size": 4655,
+    "sha256": "f3c0228d8e827f1c5260ac59fdd92c3d425c46e54711ef713c5a54ae0a4db2b4"
+  },
+  {
+    "path": "/.git/hooks/post-update.sample",
+    "size": 189,
+    "sha256": "81765af2daef323061dcbc5e61fc16481cb74b3bac9ad8a174b186523586f6c5"
+  },
+  {
+    "path": "/.git/hooks/pre-applypatch.sample",
+    "size": 424,
+    "sha256": "e15c5b469ea3e0a695bea6f2c82bcf8e62821074939ddd85b77e0007ff165475"
+  },
+  {
+    "path": "/.git/hooks/pre-commit.sample",
+    "size": 1643,
+    "sha256": "f9af7d95eb1231ecf2eba9770fedfa8d4797a12b02d7240e98d568201251244a"
+  },
+  {
+    "path": "/.git/hooks/pre-merge-commit.sample",
+    "size": 416,
+    "sha256": "d3825a70337940ebbd0a5c072984e13245920cdf8898bd225c8d27a6dfc9cb53"
+  },
+  {
+    "path": "/.git/hooks/pre-push.sample",
+    "size": 1374,
+    "sha256": "ecce9c7e04d3f5dd9d8ada81753dd1d549a9634b26770042b58dda00217d086a"
+  },
+  {
+    "path": "/.git/hooks/pre-rebase.sample",
+    "size": 4898,
+    "sha256": "4febce867790052338076f4e66cc47efb14879d18097d1d61c8261859eaaa7b3"
+  },
+  {
+    "path": "/.git/hooks/pre-receive.sample",
+    "size": 544,
+    "sha256": "a4c3d2b9c7bb3fd8d1441c31bd4ee71a595d66b44fcf49ddb310252320169989"
+  },
+  {
+    "path": "/.git/hooks/prepare-commit-msg.sample",
+    "size": 1492,
+    "sha256": "e9ddcaa4189fddd25ed97fc8c789eca7b6ca16390b2392ae3276f0c8e1aa4619"
+  },
+  {
+    "path": "/.git/hooks/push-to-checkout.sample",
+    "size": 2783,
+    "sha256": "a53d0741798b287c6dd7afa64aee473f305e65d3f49463bb9d7408ec3b12bf5f"
+  },
+  {
+    "path": "/.git/hooks/update.sample",
+    "size": 3650,
+    "sha256": "8d5f2fa83e103cf08b57eaa67521df9194f45cbdbcb37da52ad586097a14d106"
+  },
+  {
+    "path": "/.git/index",
+    "size": 27860,
+    "sha256": "0fe1d7d18acee7edbad9e21253c127337416eb525a5831036d9e2b5928f0c22f"
+  },
+  {
+    "path": "/.git/info/exclude",
+    "size": 240,
+    "sha256": "6671fe83b7a07c8932ee89164d1f2793b2318058eb8b98dc5c06ee0a5a3b0ec1"
+  },
+  {
+    "path": "/.git/logs/HEAD",
+    "size": 406,
+    "sha256": "d4703ddc081fee96f8634101264cea51981efc3e178db3c3563df579dcc7da25"
+  },
+  {
+    "path": "/.git/logs/refs/heads/main",
+    "size": 217,
+    "sha256": "3d3ac8b533ac8f7ae7e5e3875caca6abbf369fe2daf48e46a2ae030e899dc61b"
+  },
+  {
+    "path": "/.git/logs/refs/heads/sdsv-api",
+    "size": 200,
+    "sha256": "7bc0c66651fee1b3ba6acaa6c93d1db03c06bbfcee2347eca43db0c17bcafb14"
+  },
+  {
+    "path": "/.git/logs/refs/remotes/origin/HEAD",
+    "size": 217,
+    "sha256": "3d3ac8b533ac8f7ae7e5e3875caca6abbf369fe2daf48e46a2ae030e899dc61b"
+  },
+  {
+    "path": "/.git/logs/refs/remotes/origin/sdsv-api",
+    "size": 170,
+    "sha256": "ad54b36cf011c0474d6e38feead08860adf0293f3070c8bcb338d332e4a8a7f9"
+  },
+  {
+    "path": "/.git/objects/pack/pack-1ce4a43c6f20419153178e3019334ad6c623b1e3.idx",
+    "size": 43268,
+    "sha256": "d16e87f7b743ec14d172a4ebec75d32cf9fc747a8d46a2e8f54e26a318c0c1b0"
+  },
+  {
+    "path": "/.git/objects/pack/pack-1ce4a43c6f20419153178e3019334ad6c623b1e3.pack",
+    "size": 42002618,
+    "sha256": "8652c1267ae8466c68c25b57b604657338fa8801bb7fd041f3283e0041aee1b9"
+  },
+  {
+    "path": "/.git/packed-refs",
+    "size": 498,
+    "sha256": "dfe1e522f31df2f40502b79b71e1b87f32111421af300dc33f8497e5446de548"
+  },
+  {
+    "path": "/.git/refs/heads/main",
+    "size": 41,
+    "sha256": "02fec79600e5211e26f0a08f6d1ce152739c3ff381eb5a631b7f0fb995671759"
+  },
+  {
+    "path": "/.git/refs/heads/sdsv-api",
+    "size": 41,
+    "sha256": "02fec79600e5211e26f0a08f6d1ce152739c3ff381eb5a631b7f0fb995671759"
+  },
+  {
+    "path": "/.git/refs/remotes/origin/HEAD",
+    "size": 30,
+    "sha256": "2bb6a24aa0fc6c484100f5d51a29bbad841cd2c755f5d93faa204e5dbb4eb2b4"
+  },
+  {
+    "path": "/.git/refs/remotes/origin/sdsv-api",
+    "size": 41,
+    "sha256": "02fec79600e5211e26f0a08f6d1ce152739c3ff381eb5a631b7f0fb995671759"
+  },
+  {
+    "path": "/.gitignore",
+    "size": 1012,
+    "sha256": "88b7d69f9f4407fb806104b830aa2d365a67e403be71d390381b65372c794b58"
+  },
+  {
+    "path": "/backend/.dockerignore",
+    "size": 78,
+    "sha256": "a4add9a61bd9444565379b075bd8ec28d1e02748fa6d8710b79498b014711473"
+  },
+  {
+    "path": "/backend/Dockerfile",
+    "size": 1089,
+    "sha256": "1faa1b035e93db50cade00e8a12f0221cea739f0d47a068c031084c034ab7d98"
+  },
+  {
+    "path": "/backend/mvnw",
+    "size": 11598,
+    "sha256": "c281386fd59332ce247332ce68cdf0deb006964f7ddd54331fd135877b197b60"
+  },
+  {
+    "path": "/backend/mvnw.cmd",
+    "size": 7797,
+    "sha256": "26994a76bb5f5551244e607c143177eb7a798d022c4a3b118a31b39eb17d8af9"
+  },
+  {
+    "path": "/backend/pom.xml",
+    "size": 3911,
+    "sha256": "44c0581e44fc08cde4133859bbdeead3f6f9331a7ff42c8918bdee5da0c7c692"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/auth/controller/AuthenticationController.java",
+    "size": 5727,
+    "sha256": "daa92f4117f6cecd1cecd8bc66c26a94bbfc60f99669aba589d8d666fcc5377a"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/auth/dto/AuthenticationResponse.java",
+    "size": 639,
+    "sha256": "e6459745a644a5651a4c25930548bf0023e070006285fbd27974e166682c690b"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/auth/dto/ChangePasswordRequest.java",
+    "size": 330,
+    "sha256": "804085294bc23c66a8573f4d7f33b5407d51a0d808f07f9cf99d742b307af8a4"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/auth/dto/LoginRequest.java",
+    "size": 304,
+    "sha256": "b0a711dde339fcd9fef27dec5508688033b78327f53e1d891a723c468cd81e9c"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/auth/dto/LoginResponse.java",
+    "size": 979,
+    "sha256": "bc4440d256f54746e5d472d57e1efaa63645b4d832859e24c87f8af74d68a4f1"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/auth/dto/LogoutRequest.java",
+    "size": 115,
+    "sha256": "829cd9b398964822d833b820ecbef004751d53cc3a946b088b3434e749e7afb0"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/auth/dto/MeResponse.java",
+    "size": 536,
+    "sha256": "8fccd54ab0fd7f8c75bcfc8208ac9a42a4704d3db8466448c7260a41aa6c4013"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/auth/dto/OrgRef.java",
+    "size": 645,
+    "sha256": "2aa2c3a6af909364f2d545ae79433484bc3b3113fc6fa5b0461be9788d06f0d3"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/auth/dto/OtpRequest.java",
+    "size": 283,
+    "sha256": "e0612beca702afae73c067a1be656978a754e507021b150088e8a5b576ae3566"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/auth/dto/OtpVerifyRequest.java",
+    "size": 344,
+    "sha256": "87ab8002b767c5008701a5664e6b866b21c1508f49bfc688c3152918e43273c3"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/auth/dto/RefreshTokenRequest.java",
+    "size": 248,
+    "sha256": "60ecc5a08be8b55dd575db7742a3e240bb54dbba11b38c0fee1a5387b1fb1864"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/auth/dto/RegisterRequest.java",
+    "size": 569,
+    "sha256": "83de5af07ff830f05f758ebb5b8dc98f44f7e568e5c7e6c21722c8488cd2fc12"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/auth/dto/ResetPasswordRequest.java",
+    "size": 375,
+    "sha256": "8e33c9dd01b0b1831809ae23e004f2cf3bf084e911b03da530b880787fe51be4"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/auth/model/BlacklistedToken.java",
+    "size": 697,
+    "sha256": "82ee459aca69c016b1bbb65e77bf35616bf0d1ef7437848def37bbf6ae250e1c"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/auth/model/LoginManagement.java",
+    "size": 971,
+    "sha256": "e6ee565170e016164da2370ed1d3fbf4a46d60c2b69539af151cb118d3532f57"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/auth/model/OtpManagement.java",
+    "size": 1292,
+    "sha256": "02c778b3703cd96030e890e78b8d1635f44dc2ad6de150d8225916303ba2e971"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/auth/model/RefreshToken.java",
+    "size": 906,
+    "sha256": "fc7b5c85bd9cd2574748463f46a66cb3f3bd17289a283cc771cd4c53d001b488"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/auth/repository/BlacklistedTokenRepository.java",
+    "size": 740,
+    "sha256": "337752f8af27ecb8799aae5d9f19bfaf8673c41ae599a22afe1eeda4c8c78a9e"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/auth/repository/LoginRepository.java",
+    "size": 271,
+    "sha256": "261a4ace0fac7e03b358ce9a98f1b4aaaa8948595c81f6d2e2a3a2ca58458f44"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/auth/repository/OtpRepository.java",
+    "size": 755,
+    "sha256": "c715679c8157a6c6a80242b854858f4891fe487e621bba8855ab63391eb99551"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/auth/repository/RefreshTokenRepository.java",
+    "size": 910,
+    "sha256": "db906c75ac0da19847deb6c40d206adcb66779039bc879e3beaacdb163c9ec33"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/auth/service/AuthenticationService.java",
+    "size": 1600,
+    "sha256": "31286ecf10eb5f3922ea6908dc6a216fe7d2957cbf2ff36168c963cadd270782"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/auth/service/BlacklistService.java",
+    "size": 191,
+    "sha256": "34f128fce3db991c24ccd74cb2141282d8af25d62ab9dfb35c72e14b32812a47"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/auth/service/impl/AuthenticationServiceImpl.java",
+    "size": 12118,
+    "sha256": "3bc6eadd364bdfd5fb7cb97d16cd94e0ca38112ac0fb3dc1dc2ed71203c7f648"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/auth/service/impl/BlacklistServiceImpl.java",
+    "size": 2105,
+    "sha256": "a158b6a21cf633c46f8881358ccb00f1a167c7410e61a0579237efee3063dbac"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/auth/service/impl/JwtServiceImpl.java",
+    "size": 3127,
+    "sha256": "ade159aec5cca926a4123966d5ecbd11a0ab929ee39eabe17152e2d14c5cdc43"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/auth/service/impl/OtpServiceImpl.java",
+    "size": 4944,
+    "sha256": "ea13b7819480b331b10c1e21ed866c77ae35f19f60625691257be7cd0df54361"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/auth/service/impl/RefreshTokenServiceImpl.java",
+    "size": 3623,
+    "sha256": "ece80010d9b40e77c2e34471aba490fd9eabaf66a4ccd113407b95d7bee9edaf"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/auth/service/JwtService.java",
+    "size": 752,
+    "sha256": "8b41a2f0b269721473018d8643cea85e4df0002bfc87aa136462e40682915568"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/auth/service/OtpService.java",
+    "size": 1127,
+    "sha256": "bbbcd9967732100dcf9a4e0904f0e0b4f098728bd83d8cb2786f5f101fc322f9"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/auth/service/PasswordPolicy.java",
+    "size": 1956,
+    "sha256": "0a020befa983bb7da2b03b106de508a59b74d0d9eae3306d9bfeb0ce324e97c0"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/auth/service/RefreshTokenService.java",
+    "size": 499,
+    "sha256": "1b6b0d523a486d634ac18d6ce847f261db478f1610ae4fff80dc21e98f827853"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/common/controller/HealthController.java",
+    "size": 757,
+    "sha256": "ada154783a0b0b15c3723695d605ccd8b22303e4b3efcd33e5edf11d6c175e81"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/common/dto/ApiResponse.java",
+    "size": 1445,
+    "sha256": "2318e954cff055103994c41de369e854afc2e74dd31438513dea21976cd4cf06"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/common/dto/MessageResponse.java",
+    "size": 114,
+    "sha256": "bb79b4b1edecfea26f3dd867a3511a869ed644ef626e1d5cd4ff4260f9a2143a"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/common/RateLimiter.java",
+    "size": 333,
+    "sha256": "9009a6683d4ba6a33ce0c8d60491d5f11db8a166f546e66340de61ca959eeadc"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/common/scheduler/TokenCleanupScheduler.java",
+    "size": 1261,
+    "sha256": "4accf3fe4c5070eb41227871c0f8dfb8504ed6a49587ba1c068ecccd66974088"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/config/ApplicationConfig.java",
+    "size": 2011,
+    "sha256": "7b0d6a4dbbbeec90a305a33712e1e654a980789e4d5a7d19830dbe4f19800709"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/config/CorsConfig.java",
+    "size": 2160,
+    "sha256": "abc24e3d742366c5cffec47da9d45b9c6481c442d99808887cb2b5d8770c990c"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/config/DataSeeder.java",
+    "size": 3788,
+    "sha256": "27efe1d4108e30c196841d0eb6d8c0b17408b7a5124aa61c4c7ccef2b5b52c86"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/config/filter/JwtAuthenticationFilter.java",
+    "size": 3474,
+    "sha256": "cf71c17c8646c1812d2ff114509a10221aed5daa69dfccdfbd15ad844a939b34"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/config/SecurityConfig.java",
+    "size": 3986,
+    "sha256": "043aa1ac12d481959a1addf6a584e0dea62b0c95062fbc7135e91b15813790a8"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/config/WebMvcConfig.java",
+    "size": 1203,
+    "sha256": "e729578c4987aaa195d97a7f072865e34d214ea4777d791d6e52662303cb8f94"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/exception/BadRequestException.java",
+    "size": 197,
+    "sha256": "a95530e06e0f390cc5a31483849518febbe73c031234479842fb935d88acd901"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/exception/BusinessErrorCode.java",
+    "size": 4852,
+    "sha256": "d4c8fd4a0b0aff23317230a2e7f932abfe18ae51e69ccd9b4364396aaea29b1b"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/exception/BusinessException.java",
+    "size": 695,
+    "sha256": "518412d5b309cee38ffb085a7ce6d5f7555cddfb0b81d822196eac002fe0824a"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/exception/GlobalExceptionHandler.java",
+    "size": 5525,
+    "sha256": "7ede01b3e83099766666d39291de1014573490c7f17797aff28abe863efca2d3"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/exception/ResourceNotFoundException.java",
+    "size": 209,
+    "sha256": "2bcc3933768033741467957e50d4f6922d666571781f04ae00544a248cb9f53c"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/exception/TokenRefreshException.java",
+    "size": 201,
+    "sha256": "9cc225177db23b544df1ae38dec9f2952585b181bd797cb52fa846a391c85ab9"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/exception/TokenReuseException.java",
+    "size": 197,
+    "sha256": "45259e7d9f47f31d7bab52dfca03a8e844bef79c8ca0caa74fd2933183199a37"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/feedback/controller/AdminFeedbackController.java",
+    "size": 1653,
+    "sha256": "250941f7e07c1c685d00450de8613273df37c33eb1f79bd444f9be1135f9e350"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/feedback/controller/FeedbackController.java",
+    "size": 2001,
+    "sha256": "8427f76ce7122d53a2d15b09f2f9918006a4477d4c2460c070af5710ad9bbc1d"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/feedback/dto/FeedbackDetailResponse.java",
+    "size": 567,
+    "sha256": "1fe72efd4e38c40b5ba87d1fa99748ef334678a1006a897d711d10102a2ef501"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/feedback/dto/FeedbackItem.java",
+    "size": 522,
+    "sha256": "93eca652c4b409c5a7d2b906c531a2b5b9c3146027d670e1d867e8eed6182d96"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/feedback/dto/FeedbackRequest.java",
+    "size": 271,
+    "sha256": "b844dd7a3a395b324fd20e477c49561a0aead01a94a6cf6f16e39472208a1f02"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/feedback/dto/FeedbackSearchRequest.java",
+    "size": 294,
+    "sha256": "6f264adfa08972b14ceb7584acd9a4c53eda2e4e03f37664c03dbb1017349359"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/feedback/dto/FeedbackSearchResult.java",
+    "size": 225,
+    "sha256": "20e184eb5321b669b5ff1e90ffb077321caaebec0b46ef74c51cf7cee5afafd6"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/feedback/dto/FeedbackStatusRequest.java",
+    "size": 277,
+    "sha256": "aa73bfb452d8311982761f8f70e20115841e8649bab30962431d28818dd8a643"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/feedback/model/Feedback.java",
+    "size": 2136,
+    "sha256": "95a7ac4e019d1f6f84914b45b9500d458a51de03435a901dfeccdb39421ec2ed"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/feedback/repository/FeedbackRepository.java",
+    "size": 710,
+    "sha256": "b189aa9e0d681de25d37304f84f06d13f17a06df1381bfc6456a8a8e678182d5"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/feedback/service/FeedbackService.java",
+    "size": 986,
+    "sha256": "4ce16afd553689fcb60cfc0f31d03ef750f7d78a67ee22790cf9b16866c29d97"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/feedback/service/impl/FeedbackServiceImpl.java",
+    "size": 14641,
+    "sha256": "dde6904f30973441fc9339743b0bfab5adb7470a65ef63fc77e6b5e31f8a83a2"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/home/controller/HomeController.java",
+    "size": 1458,
+    "sha256": "9ffca7768ad90dbd0919bcc0cecf2e716a1f14881eb5cc58b86c5576b3f8836d"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/home/dto/HomeSkillItem.java",
+    "size": 499,
+    "sha256": "7917590e17e3a6e953463ba263e84fd407c59accd791657371c4757adf9cd855"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/home/dto/HomeSummary.java",
+    "size": 431,
+    "sha256": "b1a296999687611433a6415260df3046d91c13696b2a6f3f8f2319e83a2df310"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/home/service/HomeService.java",
+    "size": 513,
+    "sha256": "e132d7881b3065c89066daf29b0222deb395a6c5a5c4d536503c92b5e35ef3d1"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/home/service/impl/HomeServiceImpl.java",
+    "size": 5996,
+    "sha256": "163a71f498c6f46e222130eee0af05af32f1cb35f209dc82ddffedbb999e50b8"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/mail/EmailService.java",
+    "size": 461,
+    "sha256": "21a1c5ba18025cd14aba371c020b469e838f9fa2a4f7d8a7ddc146862afabd7c"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/mail/impl/KnoxMailServiceImpl.java",
+    "size": 4951,
+    "sha256": "3af53c112fdea332b137396eaf014049f3d0b6ac3ba6101a0e761a11965cc6e5"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/mail/impl/LogEmailServiceImpl.java",
+    "size": 2879,
+    "sha256": "59bfb67de75b1ff309a0285c19377a2b8a178ddbce7af3ec0581deef5c3df4f9"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/mail/KnoxMailClient.java",
+    "size": 6779,
+    "sha256": "d1c68940d15bbd1b21c40db5068dcacf1d3ff1fa2e31e9137bf20d5a499da599"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/mail/KnoxMailException.java",
+    "size": 401,
+    "sha256": "ff0cb7fc21baf168e622f83b0c8917dddfe40e0c74851e2cc862467606ddf3b0"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/model/EmailManagement.java",
+    "size": 1184,
+    "sha256": "c7cf5c1e34c1d7a06f4e8b7d989f68e905fc5fe3070dd5827b4eb3d5e6010784"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/model/Role.java",
+    "size": 761,
+    "sha256": "f0e658ed481111d6f1e242ccffee9a24d915ce723a15d606f7269b664fa48c5d"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/notification/controller/NotificationController.java",
+    "size": 2037,
+    "sha256": "d5c22ad0bdfc7e8a3af44b73e589c3c9d8bed7dc15985eaf4566104afacb5e3c"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/notification/dto/NotificationItem.java",
+    "size": 356,
+    "sha256": "95457f5e62b9f78fd014f53da93117b872debfcf6b375858a6f0b2351afc5119"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/notification/dto/NotificationsRequest.java",
+    "size": 162,
+    "sha256": "d6545b348db8ef934e6c85e70d1602931bc79541a72277c6e589aa47a42439de"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/notification/model/Notification.java",
+    "size": 1008,
+    "sha256": "e09dbfe5539da66a8d64ad6a337c4b93dd106c6aa0b2b42d2fefccca709c2256"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/notification/repository/NotificationRepository.java",
+    "size": 784,
+    "sha256": "8df49e876f52bef8f2bec6773942950f3b4e97c08924dbbcb02875c6b9bcea1e"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/notification/service/impl/NotificationServiceImpl.java",
+    "size": 1895,
+    "sha256": "6a08d9a84b431c82bcf55c440d164f136bb7a50309b32647234b5e58923575de"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/notification/service/NotificationService.java",
+    "size": 611,
+    "sha256": "ebaa59f605d366ed782b659d730c06b7803430983a8d5cdac8f01728300d3e70"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/org/controller/AdminOrganizationController.java",
+    "size": 3048,
+    "sha256": "3fd92d0b8b9341b7b2117241f0be14039382137453b4acccfdc17cfddada6875"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/org/dto/OrgImportResponse.java",
+    "size": 542,
+    "sha256": "8a8009874740a271a22d9b66d1d8edd32e13881af16408be45f05fd327c1f9b8"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/org/dto/OrgImportRowResult.java",
+    "size": 791,
+    "sha256": "1d0661475205d498ed627910eea325d275e47cbf5a9b74c62bd92c814610637f"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/org/dto/OrgListItem.java",
+    "size": 581,
+    "sha256": "ab0f7d67c76b06f32665aa27154123962d2499e1ad566a51bc45a5e6583ba52d"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/org/dto/OrgSearchRequest.java",
+    "size": 381,
+    "sha256": "0fc2e6cad24a600ca123709a7a4a35c125aca160625fc2988866af14f7c4be48"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/org/dto/OrgSearchResult.java",
+    "size": 216,
+    "sha256": "3cba888c427f6dc3485e87aa11750cd6150e8ebf612eec2ad765ca78cae6f7b0"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/org/model/OrganizationMaster.java",
+    "size": 1965,
+    "sha256": "e9808cc62a6e26c0ed2d31c62792fb678d0f6f1e62c73eb776a9f4b71c89d2ad"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/org/repository/OrganizationRepository.java",
+    "size": 2377,
+    "sha256": "059250302804070aa21c530d0f85496ce08d12eadc53368b7548e4b152ef1c64"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/org/service/impl/OrganizationServiceImpl.java",
+    "size": 25046,
+    "sha256": "b28a53686623958a7d564934b9027aafaa7c2262bd7efafede22f3d5255c2b9a"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/org/service/OrganizationService.java",
+    "size": 1388,
+    "sha256": "d6cda690bc3e7a222d48fdda1a4390b7f9b86b837b42e6b6f5593465f6b1fdfc"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/repository/EmailRepository.java",
+    "size": 261,
+    "sha256": "e183f508ffcdd5b7ab1ac0dff61aaf8af87b8293b63bed7166b488a7cc12bd90"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/repository/RoleRepository.java",
+    "size": 377,
+    "sha256": "4bb146edbf2068a614ef562f8cac3e0172c21fee2b0471082298d47b5b928618"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/skill/controller/AdminSkillTaxonomyController.java",
+    "size": 2297,
+    "sha256": "1ed18ac5de4906afc91d85347c2a774debc3ff4b4de62262d85c48bde4d1690a"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/skill/controller/SkillController.java",
+    "size": 21045,
+    "sha256": "2e08007370afe7034d56a919e89bf4e5bcb3c7514d1c59c467c7c0f3e962babb"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/skill/controller/SkillUserSearchController.java",
+    "size": 1349,
+    "sha256": "ca2798e92c3e0df32adfae2463d6e95fa0bcd4c387e649feccc8b3b17bf7cb16"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/skill/dto/SearchUserItem.java",
+    "size": 422,
+    "sha256": "61bffb4c6d5077087c31962478145e70fb22d9198ad9956ac422bd8967decfe8"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/skill/dto/SearchUserResult.java",
+    "size": 222,
+    "sha256": "7c6fe5596478d93bcdfed220d8abc7b97fa2ca107842c083d8cb7d6439b28102"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/skill/dto/SkillCommentItem.java",
+    "size": 311,
+    "sha256": "c29fe9de2986f89742294aad1b364ac678a2237e00abb09847b4ee8d2eecba22"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/skill/dto/SkillCommentPage.java",
+    "size": 220,
+    "sha256": "ffce6ecdf3b8af030e7fc2aa5ac80461ab0748a03a4489592a54ed409abb052a"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/skill/dto/SkillCommentRequest.java",
+    "size": 107,
+    "sha256": "e95d60345dc298c5373d0cb24ab1d3237c97577bf38269d5fdb02d52c28b2354"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/skill/dto/SkillDeleteCheckResponse.java",
+    "size": 436,
+    "sha256": "f44a46139d0f0838b155b08a7e649378b754807305b0b8c1dc91b6f4e78ec7f5"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/skill/dto/SkillDeleteRequest.java",
+    "size": 192,
+    "sha256": "50204e78120e6dd089ad055aec56b2257a80aef985b02c5aa12477c3e748bb65"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/skill/dto/SkillDetailResponse.java",
+    "size": 806,
+    "sha256": "3c29017ba7eb60b9b6a91cf46ffc9692872309eeeb435f6fc5aa95e5e825617c"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/skill/dto/SkillFileItem.java",
+    "size": 283,
+    "sha256": "34e093387711a9448cac377f0ac384b629a58ba5b82c53c33a663ec54d2b7482"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/skill/dto/SkillListItem.java",
+    "size": 562,
+    "sha256": "72bde92f629bef943380d85175b6463c961b1b01c64646e0cb5bb70f12d15462"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/skill/dto/SkillRatingRequest.java",
+    "size": 105,
+    "sha256": "e20677082ed70880922ad23352e38b1dd6776cbb82127ec13dbc99a2d286732e"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/skill/dto/SkillRatingResponse.java",
+    "size": 191,
+    "sha256": "6165e3d7046c067a90d57bc53ec6a4fb29f0fbb23307a76d52684bf0990c01fe"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/skill/dto/SkillSearchRequest.java",
+    "size": 857,
+    "sha256": "4d38d6cbedef0dc4f9e537ecd79e62563ed9c2ab384356729105230e47553dc5"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/skill/dto/SkillSearchResult.java",
+    "size": 222,
+    "sha256": "13fd101689669cce34f5d498606922a7b1eb45cfa070d422dc89fad9684bb909"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/skill/dto/SkillStatusRequest.java",
+    "size": 137,
+    "sha256": "67c802181d99fabd746c051a708dc74dcb96a7fca25b51a0f137184aeafac89d"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/skill/dto/SkillTaxonomyCreateRequest.java",
+    "size": 226,
+    "sha256": "f5cf515e0e63ec3cf363b612df56918f37572f8fcc9f287f7a6481d3b7ce8228"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/skill/dto/SkillTaxonomyItem.java",
+    "size": 346,
+    "sha256": "7cd9be145f847bc851d634ee2b8c0d793572e793825d7e7dafefc26bf234055d"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/skill/model/ProcessStage.java",
+    "size": 1119,
+    "sha256": "77cdb8122fc7edd6c2f85b373da110a156c4d6a04c9d5b61a63e9b3895d240a8"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/skill/model/Skill.java",
+    "size": 2848,
+    "sha256": "bd92c9e45ce37f82034462d1d854cdbfa1fd7e6e44f0a11e0df3ff67d08b4aee"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/skill/model/SkillCategory.java",
+    "size": 902,
+    "sha256": "10a4a89ca32e9f15c206fa61488906922f3826887e853c5449c5bd3434b9f662"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/skill/model/SkillCategoryMapping.java",
+    "size": 858,
+    "sha256": "860913d8614dff4f04e773ce0f29fb4c41589ddf1ad74efa0ef7dd90c4093d1a"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/skill/model/SkillComment.java",
+    "size": 1136,
+    "sha256": "cf84022a6f6c8cb8cb88afc7453f2b1369c919a7319cd8afc9c0afcc87f5bf3d"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/skill/model/SkillFile.java",
+    "size": 1318,
+    "sha256": "3a2cbd64fe9cb988d88a793e0f1adca83ea03dedd98c2c2bfae2506eef061f79"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/skill/model/SkillRating.java",
+    "size": 1205,
+    "sha256": "9ab3c8bfe2870ffe8b3675fa1255f461944975a4755f68612beaac69fa397d41"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/skill/model/SkillStageMapping.java",
+    "size": 836,
+    "sha256": "bc250f47d67c260950c028e197a56731adcda3ebb91173e5eaa9c3e75cf30e6e"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/skill/model/SkillStatusHistory.java",
+    "size": 1250,
+    "sha256": "db2f9cb02ab51c7ad1361791b0e4c9c1b3785acfd5ac76120ec5ffab70a9ae38"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/skill/model/SkillSubscription.java",
+    "size": 1275,
+    "sha256": "a75fd4bb1fa1613f3032ede425d3cf517c318114926c5df97532c2da08757f3c"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/skill/model/SkillViewLog.java",
+    "size": 992,
+    "sha256": "937ff2201d52c0decdd8e340ab93ea1d2e6519ecbcb4771b7135f5e62442bf89"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/skill/repository/ProcessStageRepository.java",
+    "size": 454,
+    "sha256": "610cafaefc71c9c57c2aea67ecd36a0925ea648285826228f1832e314a86e89a"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/skill/repository/SkillCategoryMappingRepository.java",
+    "size": 1245,
+    "sha256": "e11f4946907b7348af69e362103ee216fe6892d48798e5a2219df1df9d396e13"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/skill/repository/SkillCategoryRepository.java",
+    "size": 459,
+    "sha256": "903dec1a45ff542db41bee2bdffdc44219f87005669fba937c5a11676e33cebd"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/skill/repository/SkillCommentRepository.java",
+    "size": 838,
+    "sha256": "aa6fa9a924dbdf76938576039cd0b322893b2c891fcbfabbc33d98feda358672"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/skill/repository/SkillFileRepository.java",
+    "size": 483,
+    "sha256": "8fc8ee62fe202970defcf5d92b4280f28cf42787e182a06add478fef76a4d66b"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/skill/repository/SkillRatingRepository.java",
+    "size": 1117,
+    "sha256": "b0e4741ad64e43014fe1fba4e6971cf9a3c3a1aba8edac1d7ef0879b6d22ab0a"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/skill/repository/SkillRepository.java",
+    "size": 6475,
+    "sha256": "dddfaac9a8839e590e8fe638a896478d79b45f57f5fa5e2fd63204dfd5437199"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/skill/repository/SkillStageMappingRepository.java",
+    "size": 1188,
+    "sha256": "e00e2e2725374c969c7316f62a95d989eb3544b3126ff478b1cea6cecb26a46d"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/skill/repository/SkillStatusHistoryRepository.java",
+    "size": 399,
+    "sha256": "03e34b0491f1de3a29ade5b6ab12c8b61a64beaf8cf4187c7085fc64093747ae"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/skill/repository/SkillSubscriptionRepository.java",
+    "size": 691,
+    "sha256": "b172d8be1ef05b0be775ec493e4e3293fa4c369b7a82d7332e43e8decaae38b6"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/skill/repository/SkillViewLogRepository.java",
+    "size": 491,
+    "sha256": "385ca9e922807d38c712dc0bac12f38e4611205c426cc3ee3cf2550e78e605b5"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/skill/service/ExcelExportStyle.java",
+    "size": 3698,
+    "sha256": "bce2d980ce84e0f8652d9d5a6cbd2722c77e77992754324e36c531e8a2d3e0f1"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/skill/service/impl/SkillCommentServiceImpl.java",
+    "size": 5697,
+    "sha256": "2ad393010825d0a62aab099e0f5591e07dfa601397c0b336dff7632e9b8a97d3"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/skill/service/impl/SkillFileStorageServiceImpl.java",
+    "size": 5021,
+    "sha256": "bd7d4bf027874e084b92db5b1227b68975147948244d9071cfdc398a9f164383"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/skill/service/impl/SkillRatingServiceImpl.java",
+    "size": 3609,
+    "sha256": "6694f09a38d325e00650cdff1995af55b0d045acfb0c52de0c5d1a7e92cd5dc0"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/skill/service/impl/SkillServiceImpl.java",
+    "size": 45855,
+    "sha256": "714f1c02ca3568b9e48d672473841e8ab22666047ce877ead93ca41f541bcf7e"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/skill/service/impl/SkillTaxonomyServiceImpl.java",
+    "size": 6951,
+    "sha256": "b11e73ce8b50e119127064d73b8e5864fc1a2b5064c7c0cc68a20991a16ed64f"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/skill/service/impl/SkillWorkflowServiceImpl.java",
+    "size": 6743,
+    "sha256": "ee523143aa7b25b7ccb1bc2979a8e1e9025ebaa52e8de60bdf6761da13cd4838"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/skill/service/impl/SlidingWindowRateLimiter.java",
+    "size": 1154,
+    "sha256": "a897481222b94d958520de2f1b81789f68458b39a1dceae3108e925816b8e501"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/skill/service/SkillAccessHelper.java",
+    "size": 2881,
+    "sha256": "057cfbfa9718ce82f85a2394a854826aae76335826dbe5c6bf0eef8e12727af0"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/skill/service/SkillCommentService.java",
+    "size": 644,
+    "sha256": "c9eede05bd17b842b779edb85e42cd2cf118c5d352172dfb4e07fb406ed22d18"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/skill/service/SkillFileStorageService.java",
+    "size": 995,
+    "sha256": "58b210d206335b27d69093e22aa0d27e0db718ec4d5c993497f34a42eb950599"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/skill/service/SkillRatingService.java",
+    "size": 712,
+    "sha256": "172bc8f4c441ab59a2ae5d242cbd79808d674af027755994ff575856b9a1f57d"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/skill/service/SkillService.java",
+    "size": 3302,
+    "sha256": "450ecfa6bdc9fbf01e90d178c984a1e53a648338a62fdcc062a4daae9d78f1a9"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/skill/service/SkillTaxonomyService.java",
+    "size": 990,
+    "sha256": "34456d6a6db2dc82295ca601bae26d727a61c2ff437ecc659208d6e1bfe537af"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/skill/service/SkillWorkflowService.java",
+    "size": 896,
+    "sha256": "f460eb3faacd9c548ca28b730407869d1e8b97ed388b0854ab803b6e2eb175b1"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/SkillManagementApplication.java",
+    "size": 447,
+    "sha256": "686574e3660893a01874dffc712f2b9d31e5e0640621f7629d589efe87314347"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/user/controller/AdminUserController.java",
+    "size": 4137,
+    "sha256": "7f71f2bed268024e144c91486772f56afa80e63a26213cf8557919e8f03f58cf"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/user/controller/UserController.java",
+    "size": 2882,
+    "sha256": "4e18b2cef194519ad4221116d42909585872a0b45685e0b16b7738d6df568369"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/user/dto/BulkRowResult.java",
+    "size": 767,
+    "sha256": "5a6afd5bffa465e1b6992c46241b2b58b74cf90e2db98c1869c29530c3a0da1f"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/user/dto/BulkSaveRequest.java",
+    "size": 270,
+    "sha256": "66f288b991688cbce45191f0bb79ae116beb004bb0a31c4bd2e1fd321990e6a2"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/user/dto/BulkSaveResult.java",
+    "size": 140,
+    "sha256": "279c3ef40b4a75ab196ddc51793f88ae076115798812815581f78c147c3ba755"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/user/dto/BulkUploadResponse.java",
+    "size": 229,
+    "sha256": "dda3aaa596db44d8909be5f15db2ca6d875d1afbacaa26cfd2ef9c3c165f8fdc"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/user/dto/CreateUserRequest.java",
+    "size": 638,
+    "sha256": "5ee98a8a0cbe913ddf58d014a542d3901ca27271fa40ba5df4546a5ec51f12bb"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/user/dto/PreferencesRequest.java",
+    "size": 253,
+    "sha256": "632e3b142e37092566555628b9c2b552146fc4e329a834445b4599c87502de08"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/user/dto/ProfileUpdateRequest.java",
+    "size": 382,
+    "sha256": "c4d8b637a5e19b4d6412bc1d6e4e7733eb9863c62dbd192f28d503a5477e82c1"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/user/dto/UpdateUserRequest.java",
+    "size": 495,
+    "sha256": "111159653a8088b1b3425e53f0c9a221b5255adfb35c4878adbf5195cf2fe57f"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/user/dto/UserDetailResponse.java",
+    "size": 584,
+    "sha256": "f0275b052cc688c77305a32dd70e96209c609e502c9147ae48daa8a318f23a17"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/user/dto/UserListItem.java",
+    "size": 531,
+    "sha256": "bf3685f497d9f9305b90a6d79a18acaa7bd6350e7746ae4e57b2f9087513900d"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/user/dto/UserSearchRequest.java",
+    "size": 655,
+    "sha256": "47cc879ea8a5c63f36980ef45638bc8f641ac2db02e4c55e65135cac33da6113"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/user/dto/UserSearchResult.java",
+    "size": 219,
+    "sha256": "5dc064fcc9c9314e33ffbdf30888cc030b34fa5d5f4bc8fb4658eff4d0dc4201"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/user/model/User.java",
+    "size": 3898,
+    "sha256": "1828943a4e2ee4929fa09b4cd0deb69777e51705364b7e2c0de1f09994c80d0a"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/user/model/UserHistory.java",
+    "size": 1227,
+    "sha256": "fd390c6b8f9d386c1db0331d68f207025d0014a2bd83ca24cbc9f0d2f1f75a40"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/user/model/UserSettings.java",
+    "size": 1175,
+    "sha256": "63a96c8c725ab04d0b7d2fbf1312adbd57c8ba6beb18870cc21b699df43c2207"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/user/repository/UserHistoryRepository.java",
+    "size": 269,
+    "sha256": "d8922ed5125021670629f8a2060c148ea68bbcbd9799e5b1974e91072cb63004"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/user/repository/UserRepository.java",
+    "size": 1259,
+    "sha256": "ca48ca84665f709e9976edabf622cab32847a318cbd92c089daaf6e9cfcf7cf3"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/user/repository/UserSettingsRepository.java",
+    "size": 272,
+    "sha256": "1af8599aa19517de2e2cfeed65e31adc4c3f9ed9008cb1032ccba61f5bc440fa"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/user/service/AdminUserService.java",
+    "size": 1820,
+    "sha256": "a4e2f41a46bdbd70a6486a7369c29e937d2055c3c7e8d495fcf79c2cae08394a"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/user/service/FileStorageService.java",
+    "size": 348,
+    "sha256": "2e09df70d1c37f7f8d2d4ea5a2a84d6f62f3f8b7d8d83900f1904ab983d22117"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/user/service/impl/AdminUserServiceImpl.java",
+    "size": 28131,
+    "sha256": "903f52b3adbd8bd9072b335daa6af03f924f893b58345c178d8c2a6eaed59718"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/user/service/impl/FileStorageServiceImpl.java",
+    "size": 3489,
+    "sha256": "87af723e2a1dbae366a5f73049211d80752f9aeefe9d8da7db996c5b8582b4b9"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/user/service/impl/UserServiceImpl.java",
+    "size": 11807,
+    "sha256": "ef815c8df0e0be9f747159bd1f6ae19d3d9ea558ff00d02480e191c3cac75311"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/user/service/NascFileDetector.java",
+    "size": 2196,
+    "sha256": "c6c97868db4a09da50cdb4900f4466a127d95007b4468f96211c2cb6e2be8ceb"
+  },
+  {
+    "path": "/backend/src/main/java/com/furelise/skillmanagement/user/service/UserService.java",
+    "size": 1232,
+    "sha256": "60489967bc55d600be2ff68ef5beee88bb0f1872c4062b1cc103ae5b776403fc"
+  },
+  {
+    "path": "/backend/src/main/resources/application.yml",
+    "size": 4510,
+    "sha256": "fa7d234f267b103054ad232558471375536a88606c211751f0316720763ee931"
+  },
+  {
+    "path": "/backend/src/main/resources/db/migration/V1__init_schema.sql",
+    "size": 704,
+    "sha256": "69dccbeb6eeaf79b40ace4324472644e524292c350062ffd01ca267643318e7e"
+  },
+  {
+    "path": "/backend/src/main/resources/db/migration/V10__sync_user_sequence.sql",
+    "size": 379,
+    "sha256": "3baf72522c102a33ea3f4a6b24de06995d5cd2a21a40e7bde8b472c66437bc92"
+  },
+  {
+    "path": "/backend/src/main/resources/db/migration/V11__fix_user_settings_defaults.sql",
+    "size": 380,
+    "sha256": "e55c6ccf840509c89ac7004dab78976852b42f634680cf698f696f68be51b309"
+  },
+  {
+    "path": "/backend/src/main/resources/db/migration/V12__organization_management.sql",
+    "size": 1230,
+    "sha256": "aeec1580324be8dd2914e8291b733330723e699a9c5ccbeac5ef27de8a476c90"
+  },
+  {
+    "path": "/backend/src/main/resources/db/migration/V13__user_knox_org_link.sql",
+    "size": 3088,
+    "sha256": "6987ea4a974da6f11d74dd2f310718f61b8214040db9d654836facb1837304bc"
+  },
+  {
+    "path": "/backend/src/main/resources/db/migration/V14__org_part_columns.sql",
+    "size": 1638,
+    "sha256": "6f0b240d4e9a2e5b005ffca7187b6834c261e43ad65a37f30a676261563972f4"
+  },
+  {
+    "path": "/backend/src/main/resources/db/migration/V15__skill_management.sql",
+    "size": 5326,
+    "sha256": "e1f6bd1055424d7ec08b65a8280729c7cdc4655667132977d249b45652ada3ed"
+  },
+  {
+    "path": "/backend/src/main/resources/db/migration/V16__fix_skill_deleted_yn_type.sql",
+    "size": 404,
+    "sha256": "96020f963cc75e2e8381b6008059cc46a11489a73eeb68fa99895cb27bf59a13"
+  },
+  {
+    "path": "/backend/src/main/resources/db/migration/V17__skill_files_multi.sql",
+    "size": 1085,
+    "sha256": "18dfda7d91954a9e423f55a43fd2c729342d88074b0a31d029fe55d3b39ea87a"
+  },
+  {
+    "path": "/backend/src/main/resources/db/migration/V18__seed_test_user.sql",
+    "size": 1463,
+    "sha256": "060c37d953b2445ea4a3c4ad5fe8a9503b0f14e41fa4e498ac5cbaa9c910308c"
+  },
+  {
+    "path": "/backend/src/main/resources/db/migration/V19__rename_status_published_to_approved.sql",
+    "size": 1161,
+    "sha256": "ef9bcfb2b6a04a6bccd44b73cfd5c86d67e8627eefaf61b94482cda78ebba11d"
+  },
+  {
+    "path": "/backend/src/main/resources/db/migration/V2__add_role_and_user_fields.sql",
+    "size": 2058,
+    "sha256": "36a575a1e68e516293722a77abbc8a1f3a615571bcf03cc81caa850b3b5f37a2"
+  },
+  {
+    "path": "/backend/src/main/resources/db/migration/V20__fix_skill_file_path.sql",
+    "size": 435,
+    "sha256": "0413f7c27d7d1eb387524151b8e4a02ad9b2efc4b4413ad5d97838c74c0c650a"
+  },
+  {
+    "path": "/backend/src/main/resources/db/migration/V21__sync_skill_sequences.sql",
+    "size": 1107,
+    "sha256": "75b7bf2074efed7cbbdd4bf2605f8dc59a0a6d87dec09d94bd15444332901f78"
+  },
+  {
+    "path": "/backend/src/main/resources/db/migration/V22__partial_skill_name_index.sql",
+    "size": 537,
+    "sha256": "44ea6e41d23b3f8b06fa050ebe2a9856a5483b0a19c54ee1a315901c26fdb0ab"
+  },
+  {
+    "path": "/backend/src/main/resources/db/migration/V23__skill_name_unique_per_creator.sql",
+    "size": 529,
+    "sha256": "e38c5d813b0f5dc7002fd16f799439348efd21d41c5da1fe0af78292c8555e4f"
+  },
+  {
+    "path": "/backend/src/main/resources/db/migration/V29__feedback_table.sql",
+    "size": 1181,
+    "sha256": "56138e1eaf9a92db071ac2ba64a57ba647bb177061bbf466e2089201970a1466"
+  },
+  {
+    "path": "/backend/src/main/resources/db/migration/V30__notification_feedback_id.sql",
+    "size": 407,
+    "sha256": "6bf7e6cfd5fd63f9ab312f9608a7cc0cfa5d86ee88d6c8c23f3a509a9a6fc39d"
+  },
+  {
+    "path": "/backend/src/main/resources/db/migration/V31__skill_categories_stages.sql",
+    "size": 1979,
+    "sha256": "dd9b4c268e8ea18c6d636d8dc9aaf956a1b2365acfbc8cbe881a8a24f5e85eea"
+  },
+  {
+    "path": "/backend/src/main/resources/db/migration/V32__feedback_content_no_length_check.sql",
+    "size": 474,
+    "sha256": "257f3c0fd362f68ada2112d38d4372ca7d152a6f99ab58f38add18c6e1e7b78a"
+  },
+  {
+    "path": "/backend/src/main/resources/db/migration/V33__process_stage_description.sql",
+    "size": 939,
+    "sha256": "4943b0c42525c29281a997c81a87074c2708834ac5c9f0390e932216abdb9e4f"
+  },
+  {
+    "path": "/backend/src/main/resources/db/migration/V4__add_refresh_and_blacklist_tokens.sql",
+    "size": 1138,
+    "sha256": "ba6d2d495e8227c52eed22936a2b5b2e4f561b8ffcc5aa48f073a636c4508bd5"
+  },
+  {
+    "path": "/backend/src/main/resources/db/migration/V5__add_skill_store_schema.sql",
+    "size": 4270,
+    "sha256": "809d5dcd847cf142e4ffe8e33151183b9fa16543d82272ef03f2c586a43a8c92"
+  },
+  {
+    "path": "/backend/src/main/resources/db/migration/V6__normalize_published_skill_status.sql",
+    "size": 208,
+    "sha256": "25b7cbc574f8417ed225adff30c067cbb52bcb3c1550e748c820a6e8b429155a"
+  },
+  {
+    "path": "/backend/src/main/resources/db/migration/V7__user_management_schema.sql",
+    "size": 6872,
+    "sha256": "36ef2f8e2408e99276f22a4434ade960bcc8e2a04be3413d5aa7656dc3ee51a9"
+  },
+  {
+    "path": "/backend/src/main/resources/db/migration/V8__seed_srs_roles.sql",
+    "size": 1085,
+    "sha256": "9687e673cda20b900103810d376a8c4318e7b4ffbfe6b17c1d1f841757339ca2"
+  },
+  {
+    "path": "/backend/src/main/resources/db/migration/V9__add_user_version.sql",
+    "size": 194,
+    "sha256": "437307722c2056f0a94abf179eec45647227ddaa216b9156634b6b1d9fed3dbd"
+  },
+  {
+    "path": "/backend/src/main/resources/email/otp-template.html",
+    "size": 2936,
+    "sha256": "1fb9f3d2f34669673666a33da6667d17e7ee8122614b1fceac41955a6cc31757"
+  },
+  {
+    "path": "/backend/src/test/java/com/furelise/skillmanagement/auth/AuthenticationServiceTest.java",
+    "size": 10295,
+    "sha256": "33a0206344e40fa9317eb15725ba5b1951ee3ac4482a767f1d617a8b2a1b36ed"
+  },
+  {
+    "path": "/backend/src/test/java/com/furelise/skillmanagement/auth/BlacklistServiceTest.java",
+    "size": 2844,
+    "sha256": "00db190d1c840e1bbee4b3717884df057a17e20121af4e961080d9f644380510"
+  },
+  {
+    "path": "/backend/src/test/java/com/furelise/skillmanagement/auth/JwtServiceTest.java",
+    "size": 1932,
+    "sha256": "e246559a14282d4fffa005b60df0dc3fe58351645dfe8815120f4fc63d46bab1"
+  },
+  {
+    "path": "/backend/src/test/java/com/furelise/skillmanagement/auth/OtpServiceTest.java",
+    "size": 6816,
+    "sha256": "403a73d632d67735b9e844a5f9566564551a2cbc0f0292dc81a3e4372d15766c"
+  },
+  {
+    "path": "/backend/src/test/java/com/furelise/skillmanagement/auth/RefreshTokenServiceTest.java",
+    "size": 5333,
+    "sha256": "c759e2dd1821ce82c8b12ced7a38be05ade8f24ba7376f1a1adf9b090c861e4b"
+  },
+  {
+    "path": "/backend/src/test/java/com/furelise/skillmanagement/common/TokenCleanupSchedulerTest.java",
+    "size": 1515,
+    "sha256": "f917a6b861c42017c7c02ecbc74995af6a96b732ea9e54ba3af0f70266786132"
+  },
+  {
+    "path": "/backend/src/test/java/com/furelise/skillmanagement/config/filter/JwtAuthenticationFilterTest.java",
+    "size": 3428,
+    "sha256": "0a8346fd1ab3319ade3746fd534b6c614e3c18ed9a6f44bc3193c5b97e1d1dfa"
+  },
+  {
+    "path": "/backend/src/test/java/com/furelise/skillmanagement/KnoxMailBeanSelectionTest.java",
+    "size": 1362,
+    "sha256": "dbd8a1ec507b0c352e6229fd1faf68c0ff12212c306c64986f155efe87876906"
+  },
+  {
+    "path": "/backend/src/test/java/com/furelise/skillmanagement/mail/KnoxMailClientTest.java",
+    "size": 5902,
+    "sha256": "5bdc1ad19dbd8a6ae8eb8470001e3eed5c74af226c7bb7cd64f8d0e0d473c68b"
+  },
+  {
+    "path": "/backend/src/test/java/com/furelise/skillmanagement/mail/KnoxMailServiceTest.java",
+    "size": 5614,
+    "sha256": "91879d488436a8cc35fb03e8905e0469f102d728bb259851e5425ceb8b9c38df"
+  },
+  {
+    "path": "/backend/src/test/java/com/furelise/skillmanagement/org/OrganizationImportTest.java",
+    "size": 20590,
+    "sha256": "d4e8158754d5ad506264d43a141d12d18323bc61badd5b3d21a2e2e11d85d411"
+  },
+  {
+    "path": "/backend/src/test/java/com/furelise/skillmanagement/repository/RoleRepositoryTest.java",
+    "size": 1018,
+    "sha256": "0eaa1d170c7ad302ee2d0cd13f6fc60d1c5f37e3fa9e617086de4f1da1001439"
+  },
+  {
+    "path": "/backend/src/test/java/com/furelise/skillmanagement/repository/TokenRepositoriesTest.java",
+    "size": 3359,
+    "sha256": "5e0ddacf1de9767629f43d8ffbc7b5aae14ead719a7422f47ad6488961bfd619"
+  },
+  {
+    "path": "/backend/src/test/java/com/furelise/skillmanagement/skill/SkillRatingServiceTest.java",
+    "size": 4928,
+    "sha256": "0d3d35e48f26662b1bb0faa0c6de5fc8fe47652f6bc96a942d1bf9d2421a4936"
+  },
+  {
+    "path": "/backend/src/test/java/com/furelise/skillmanagement/skill/SkillServiceTest.java",
+    "size": 23578,
+    "sha256": "4aeaeac7855417602ac85a74e3b3ca64af52d3f2abe2e2490ddaa1840143c848"
+  },
+  {
+    "path": "/backend/src/test/java/com/furelise/skillmanagement/skill/SkillWorkflowServiceTest.java",
+    "size": 6100,
+    "sha256": "c1659a0d5e979d97512857a2f61fd80cb9dc05a6099e9764ef2d59b80c8291dd"
+  },
+  {
+    "path": "/backend/src/test/java/com/furelise/skillmanagement/SkillManagementApplicationTests.java",
+    "size": 407,
+    "sha256": "e17ad199e7f4fdd33774e3e284efeb2528a1bdeb782b22bc34a9178c17b81366"
+  },
+  {
+    "path": "/backend/src/test/java/com/furelise/skillmanagement/user/AdminUserServiceTest.java",
+    "size": 6248,
+    "sha256": "dcf955952bfc7ff0cc6ab2842e097be0972f6c3aafb1d28cb16c72e0221c5fe8"
+  },
+  {
+    "path": "/backend/src/test/java/com/furelise/skillmanagement/user/BulkUploadTest.java",
+    "size": 11069,
+    "sha256": "9b2c58e1df04017e2ea44d93256416d744198d37bebbfa18cdec758dba26a6c6"
+  },
+  {
+    "path": "/backend/src/test/java/com/furelise/skillmanagement/user/FileStorageServiceTest.java",
+    "size": 2086,
+    "sha256": "382d5660b33b153a66575ca50b7e1188cc2b2b945490fdc4ac733ed244b46be9"
+  },
+  {
+    "path": "/backend/src/test/resources/application-test.yml",
+    "size": 454,
+    "sha256": "2491233050840612e3cb96fe2da4b7bf11cf390f3e43cc48b7ce030f5db7a433"
+  },
+  {
+    "path": "/CODEBASE_ANALYSIS_MASTER.md",
+    "size": 88668,
+    "sha256": "a01cd19b9d423ba49b4ea07f9023cccc78bf2b08d189e4bce7bcc2776d5d79c0"
+  },
+  {
+    "path": "/CODEBASE_ASSESSMENT_MASTER.md",
+    "size": 35972,
+    "sha256": "ebaf7a6c1716f8150664f4b6bae8410676606bcef0326a9bec1677e092260a50"
+  },
+  {
+    "path": "/docker-compose.yml",
+    "size": 2109,
+    "sha256": "d4545c37b33a14b6b353ecf17af244538bcfa87e644a44f664279818ce0b8091"
+  },
+  {
+    "path": "/docs/API-DRAFT.md",
+    "size": 12192,
+    "sha256": "d1a5592a04f4f81973a53349e182801b2dce9c2862e09c708a9f318a555f5bdc"
+  },
+  {
+    "path": "/docs/QA_TEST_REPORT_2026-09-24.md",
+    "size": 20900,
+    "sha256": "12b0b11fae344f6ae2ba56b675aef8bcc56c0f48b5c05fc907dd83c2b9741f65"
+  },
+  {
+    "path": "/email-templates/sample-1-minimal.html",
+    "size": 1984,
+    "sha256": "fb224f635da30f947569d4026e53b538033209a50fa4a9467f2c743141ffdf0b"
+  },
+  {
+    "path": "/email-templates/sample-2-branded.html",
+    "size": 2715,
+    "sha256": "77fd55ed735be63f30d0e19a72ab4a6f5a8a3c2d5539cd87f5d6784a0db8f263"
+  },
+  {
+    "path": "/email-templates/sample-3-dark.html",
+    "size": 2983,
+    "sha256": "2260197a7a78e14f92df8ddb28d461dadb692c1f899543d89cc686a9737e8efb"
+  },
+  {
+    "path": "/frontend/.dockerignore",
+    "size": 75,
+    "sha256": "74c0a971a8c4c462777cb0ffe3721c657e6375b4f5ef451eb2e64ceebf62e643"
+  },
+  {
+    "path": "/frontend/.editorconfig",
+    "size": 216,
+    "sha256": "140a3af47b162217409f8e635fc70d0b01caf0ee81612d8904412366e83a1063"
+  },
+  {
+    "path": "/frontend/.gitattributes",
+    "size": 19,
+    "sha256": "d60f352d0db1404c70afb4bb8b2ca3fd1c610572aa40720e8a0b7baa7885418c"
+  },
+  {
+    "path": "/frontend/.gitignore",
+    "size": 396,
+    "sha256": "aaf850032ebd5ba963ab779a087807f817e1bcb5d49350d2087f12f591ca82ef"
+  },
+  {
+    "path": "/frontend/.npmrc",
+    "size": 71,
+    "sha256": "76afa0b849a0987110f51f0fb1f66bb00d11917e4cd46f2114a676d1bd90e662"
+  },
+  {
+    "path": "/frontend/.oxlintrc.json",
+    "size": 227,
+    "sha256": "e7c18b68f304584ec9a4899d28d35a0b51bebf6f4dfa7e3383ce7f6e7c700a90"
+  },
+  {
+    "path": "/frontend/.prettierrc.json",
+    "size": 120,
+    "sha256": "f676d50058f1d9c72b54328a9a44c0f0df5ad31be3252849ab910ce83123cca6"
+  },
+  {
+    "path": "/frontend/auto-imports.d.ts",
+    "size": 233,
+    "sha256": "9ff922b8d79138e9a85de3eff6e73f0d705858101129595ac85bba552ecca17d"
+  },
+  {
+    "path": "/frontend/components.d.ts",
+    "size": 2774,
+    "sha256": "0e0197e9b3b24c1aaf04939242c296c27c61d8c8853f4aa8de9c2329d559cdc1"
+  },
+  {
+    "path": "/frontend/Dockerfile",
+    "size": 596,
+    "sha256": "d58dcc0de9ec8a90e138310b5b90937ea480ede8ec2394a17a951d6a952b25d9"
+  },
+  {
+    "path": "/frontend/env.d.ts",
+    "size": 38,
+    "sha256": "65996936fbb042915f7b74a200fcdde7e410f32a669b1ab9597cfaa4b0faddb5"
+  },
+  {
+    "path": "/frontend/eslint.config.ts",
+    "size": 1055,
+    "sha256": "b213544ea9438fcaf37a851052296496d591eb69c6956772feaf656c3c6d307e"
+  },
+  {
+    "path": "/frontend/index.html",
+    "size": 337,
+    "sha256": "8da5736d64ea4952845e0bc105f3ce2f65b42f53d71a4b6c37b105fbdaa7e1da"
+  },
+  {
+    "path": "/frontend/nginx.conf",
+    "size": 1348,
+    "sha256": "625f7eb27a4b914c067dbc094fd80dae1dec5c91e4eed8e06c1142f6ad5740ad"
+  },
+  {
+    "path": "/frontend/package-lock.json",
+    "size": 225202,
+    "sha256": "0cca9aa1dcbe8efd6d9a3cb4ac38f93e72c079a31a60e2fe6173ad24acf6ed7b"
+  },
+  {
+    "path": "/frontend/package.json",
+    "size": 2141,
+    "sha256": "1c53465b69341b8b7070a367c36b3858969b9ff3b06edc2f68909062d68b521b"
+  },
+  {
+    "path": "/frontend/public/favicon.ico",
+    "size": 4286,
+    "sha256": "db74ab0b78338c1f778f8398c45f4103c99aea0e845a3118a7750b4eeafd3445"
+  },
+  {
+    "path": "/frontend/README.md",
+    "size": 1522,
+    "sha256": "0fd3f082d2a174fe5a75d9bbe6600c605f310afcba866281f2c468c1f932d0df"
+  },
+  {
+    "path": "/frontend/src/App.vue",
+    "size": 1019,
+    "sha256": "c99b604c8ac797b39f7f9d0de2890cc364484b227658ede4a5478502aba2ef82"
+  },
+  {
+    "path": "/frontend/src/assets/main.css",
+    "size": 4475,
+    "sha256": "b5f16e861f446ae3efc20afcaecb65f78c8889a8f40ac1a833a7077885bf15ff"
+  },
+  {
+    "path": "/frontend/src/components/layout/AppShell.vue",
+    "size": 18127,
+    "sha256": "d954f5a147425b672cf8d2a7866f31eba681f7981ff8a7ac53f74df9539471ac"
+  },
+  {
+    "path": "/frontend/src/components/RichTextEditor.vue",
+    "size": 20972,
+    "sha256": "ed8d79fb4246d7a479c26c193b8ad8fed4ff42a6a4978b6131f1c48ca619f63b"
+  },
+  {
+    "path": "/frontend/src/design-system/components.css",
+    "size": 56063,
+    "sha256": "c7b476fd58c1dd7a406aaf09a025e3e58e1b9855370f042b578a6fcd9868765c"
+  },
+  {
+    "path": "/frontend/src/design-system/components/components.test.js",
+    "size": 29916,
+    "sha256": "9f749dbfe40851298bdd4ca52ad2c61a7635de25976ba9c305dea7af4eadf5c1"
+  },
+  {
+    "path": "/frontend/src/design-system/components/index.js",
+    "size": 3593,
+    "sha256": "4626dc42f52d6d9e935ccc95cbcc49a7bd4497391d2da6ff36c4746d2c940473"
+  },
+  {
+    "path": "/frontend/src/design-system/components/PrismAccordion.vue",
+    "size": 1183,
+    "sha256": "74084bc78f1b8a491efdc4293a24567542d375ef270ee562611778a08c8fa30e"
+  },
+  {
+    "path": "/frontend/src/design-system/components/PrismAlert.vue",
+    "size": 753,
+    "sha256": "b969281f82741abf6b490e9256dc114de8a9953a2a993bb9cb85e8e1a4cb36ed"
+  },
+  {
+    "path": "/frontend/src/design-system/components/PrismAmbientBackground.vue",
+    "size": 10497,
+    "sha256": "6880125eaa94b955a74bf4e449ea17374cc2b72288584b182a5e63855a4fc481"
+  },
+  {
+    "path": "/frontend/src/design-system/components/PrismAreaChart.vue",
+    "size": 2480,
+    "sha256": "72bb34f38e4d7a72daa75f85d87e75d76b9b02a2cc61fef82d391b1e209c9118"
+  },
+  {
+    "path": "/frontend/src/design-system/components/PrismAvatar.vue",
+    "size": 854,
+    "sha256": "39194344c51ff9226c74b4679a47d14a91923a20b47d0df229d254ab27f6f07b"
+  },
+  {
+    "path": "/frontend/src/design-system/components/PrismAvatarGroup.vue",
+    "size": 853,
+    "sha256": "4e5264c7b395e0755e588a0e7e9e8994c263cc966028803af5fa127a90355326"
+  },
+  {
+    "path": "/frontend/src/design-system/components/PrismBadge.vue",
+    "size": 242,
+    "sha256": "dda24820dfd8296cd2e4e5b3f69292c603c237536a0e6b96155b91a44a9e2ecd"
+  },
+  {
+    "path": "/frontend/src/design-system/components/PrismBarChart.vue",
+    "size": 2038,
+    "sha256": "eb08abff6103e2b1216275e89d7e0e2d2c626b9b1317f54f37ecd1410039b7fa"
+  },
+  {
+    "path": "/frontend/src/design-system/components/PrismBreadcrumbs.vue",
+    "size": 872,
+    "sha256": "65769c976151d30769a28303480236586783b12481e1329113676a3a116318d8"
+  },
+  {
+    "path": "/frontend/src/design-system/components/PrismButton.vue",
+    "size": 420,
+    "sha256": "33f8962ebf9911bd73175df489b2948c4265170430bfd48690880f2449434d29"
+  },
+  {
+    "path": "/frontend/src/design-system/components/PrismCalendar.vue",
+    "size": 3135,
+    "sha256": "e3e79714df08d08875451a454cf134a9b6c220287df2c325b41a0888cd2a6704"
+  },
+  {
+    "path": "/frontend/src/design-system/components/PrismCard.vue",
+    "size": 444,
+    "sha256": "7b60e435ac74557f96921a9469468a7fa810e8b3c9f2725d09bfe4387eeb85c9"
+  },
+  {
+    "path": "/frontend/src/design-system/components/PrismCheckbox.vue",
+    "size": 516,
+    "sha256": "fc53c658d883f8c40d67fd626504a9a208004d006a98da23ce754fbf8097968b"
+  },
+  {
+    "path": "/frontend/src/design-system/components/PrismCodeBlock.vue",
+    "size": 832,
+    "sha256": "f21d5d5eaf41b3bb69bccc4c41e2ab172f5c66c8abeb332004a183e857babd1d"
+  },
+  {
+    "path": "/frontend/src/design-system/components/PrismColorPicker.vue",
+    "size": 6019,
+    "sha256": "f75e6afb8d3ae0643fa83255498a967460890dbd8c117f0fe3ebaef03be95736"
+  },
+  {
+    "path": "/frontend/src/design-system/components/PrismCombobox.vue",
+    "size": 7894,
+    "sha256": "753249a7c7158be9f9f8783369b45c38e95ff74647375ea0e64958a7e88a63af"
+  },
+  {
+    "path": "/frontend/src/design-system/components/PrismDatePicker.vue",
+    "size": 3415,
+    "sha256": "048b25d40326ccc8f99a1b1eb2df139e7a5d6c804bd4439c5331581a68556f8a"
+  },
+  {
+    "path": "/frontend/src/design-system/components/PrismDateRangePicker.vue",
+    "size": 4227,
+    "sha256": "0a1ee56e5fe2f2ca4d1345202c126805fd1601b12abd89ce0300ecabf9d803c4"
+  },
+  {
+    "path": "/frontend/src/design-system/components/PrismDatetimePicker.vue",
+    "size": 5092,
+    "sha256": "00276f12b2fee3579a5781690c499bf129c6c7e9e50e94c021fa7d689cc7103b"
+  },
+  {
+    "path": "/frontend/src/design-system/components/PrismDialog.vue",
+    "size": 4016,
+    "sha256": "03261224b8483e50df8e1fcf241b5a150cd0576d9ac98dafccfd2526b17238fa"
+  },
+  {
+    "path": "/frontend/src/design-system/components/PrismDivider.vue",
+    "size": 403,
+    "sha256": "e1f0432eaf49193aa863c88578ed4657ba7e373ef88e1caddfb47d86e817c7cd"
+  },
+  {
+    "path": "/frontend/src/design-system/components/PrismDonutChart.vue",
+    "size": 2050,
+    "sha256": "2a7fe30d0b46f331ce1619a88c975b0c0342c188320446fbc314627bcffe8e41"
+  },
+  {
+    "path": "/frontend/src/design-system/components/PrismDrawer.vue",
+    "size": 727,
+    "sha256": "245833b699fe845f3defefa8f34268de3987390bb4594622118dfd28003ffd71"
+  },
+  {
+    "path": "/frontend/src/design-system/components/PrismDropdownMenu.vue",
+    "size": 3404,
+    "sha256": "8e2db5e69559b200ae6f65da8314693d1f0938c9c6753066b604de41d55d58f0"
+  },
+  {
+    "path": "/frontend/src/design-system/components/PrismEmptyState.vue",
+    "size": 341,
+    "sha256": "eef10a8ff62b48c5246aa8b8fef35630947e0f4c14e9308eca1861265610eb13"
+  },
+  {
+    "path": "/frontend/src/design-system/components/PrismFileUpload.vue",
+    "size": 4786,
+    "sha256": "3b93c249f9dfa322b42832cae985a07557516241e62cd45ded88463759229f35"
+  },
+  {
+    "path": "/frontend/src/design-system/components/PrismFormField.vue",
+    "size": 631,
+    "sha256": "f5e396536e1dae3b89c438fd4a04aaac077234ead63095d7ad53164b417dd077"
+  },
+  {
+    "path": "/frontend/src/design-system/components/PrismGauge.vue",
+    "size": 2148,
+    "sha256": "05bc2507c5de0ce666aba99c050e89485f9a433b9edcdb2f01db92fc5585cd5b"
+  },
+  {
+    "path": "/frontend/src/design-system/components/PrismGrid.vue",
+    "size": 315,
+    "sha256": "c98f0378e60ee9cad289af855f9c237e86ee63747803d040b43c889606dbd31f"
+  },
+  {
+    "path": "/frontend/src/design-system/components/PrismHeatmap.vue",
+    "size": 2616,
+    "sha256": "b2ba91e1a33a02cde284799e02531b4444ac2b1aaf4ebefeaa3580ece6e4436e"
+  },
+  {
+    "path": "/frontend/src/design-system/components/PrismInput.vue",
+    "size": 955,
+    "sha256": "69c53f3fae6c5156d14410a6d2b1aca74367392cc6feb48bf52e63ba0bc35269"
+  },
+  {
+    "path": "/frontend/src/design-system/components/PrismKbd.vue",
+    "size": 135,
+    "sha256": "f92cb899510756cefa1a0be8dc4973ddb34b6efc357e9c204a3d1fb32498f3c9"
+  },
+  {
+    "path": "/frontend/src/design-system/components/PrismLineChart.vue",
+    "size": 2492,
+    "sha256": "0aac886b3fb0bcba945d47ce0b5248c96d14854d332a3ab2c40f2135c85c0910"
+  },
+  {
+    "path": "/frontend/src/design-system/components/PrismList.vue",
+    "size": 1039,
+    "sha256": "b7599d98bc051f61bbf9dc1f89620528e818d074d71a59b8957a307e26900f6d"
+  },
+  {
+    "path": "/frontend/src/design-system/components/PrismNumberInput.vue",
+    "size": 4428,
+    "sha256": "fddc96ae78a7a79c7e675ac0308a4c2416c7f35bfc3244f075781ffdd54c7ca3"
+  },
+  {
+    "path": "/frontend/src/design-system/components/PrismOtpInput.vue",
+    "size": 4559,
+    "sha256": "6a373632b069b54ac6a30ae9f49fc2e3de49d836145fcf2c94acdabadf19d290"
+  },
+  {
+    "path": "/frontend/src/design-system/components/PrismPagination.vue",
+    "size": 920,
+    "sha256": "0feb0c1ffe07d2f309d7b89bcd0b8f28b1e47046159fac0d2418a5bdd1ab972c"
+  },
+  {
+    "path": "/frontend/src/design-system/components/PrismPasswordInput.vue",
+    "size": 2126,
+    "sha256": "7bc9d2f807e42964a449398d2e52f5c0eec8933d8e0dec69b1f8599f35a3086c"
+  },
+  {
+    "path": "/frontend/src/design-system/components/PrismPopover.vue",
+    "size": 706,
+    "sha256": "421e5748beb59d0b7af3deb0cb750ebbf6e63cc1ef09ca7a2e09b5f82f1ac363"
+  },
+  {
+    "path": "/frontend/src/design-system/components/PrismProgress.vue",
+    "size": 569,
+    "sha256": "418bf51611240e01713cf589f0d4487566afcfb5cb3025f87e3302bed2d9083b"
+  },
+  {
+    "path": "/frontend/src/design-system/components/PrismRadarChart.vue",
+    "size": 2367,
+    "sha256": "5c4566ac347265f8b066c410f2811e755cac59d7dea1d6e4835badbfad8ecb8b"
+  },
+  {
+    "path": "/frontend/src/design-system/components/PrismRadio.vue",
+    "size": 577,
+    "sha256": "f8dcd7739925d553ec65abe03bb82b052c0eadea779f4a471ac15b7b1e67d00b"
+  },
+  {
+    "path": "/frontend/src/design-system/components/PrismRadioGroup.vue",
+    "size": 1916,
+    "sha256": "ca07c3f25ad0885580a3c217d7dde7b507aec32c090c02c703c92795b3e19d2c"
+  },
+  {
+    "path": "/frontend/src/design-system/components/PrismSelect.vue",
+    "size": 1212,
+    "sha256": "1c0c10bf9ec4f6833f32db83bdd3ffcd80f7befaf61b45dd9b156fda8f0133c5"
+  },
+  {
+    "path": "/frontend/src/design-system/components/PrismSkeleton.vue",
+    "size": 222,
+    "sha256": "03bb48a9ffc1ee7a07e3c9d21da1e2e6bdbcb08dbe06ad4a81e2bff0c0a48a50"
+  },
+  {
+    "path": "/frontend/src/design-system/components/PrismSlider.vue",
+    "size": 666,
+    "sha256": "e1a7d5c8a49cfde0a64cdfa9a4ca0e42cb777f3914db3726c925838f2ca5ca4a"
+  },
+  {
+    "path": "/frontend/src/design-system/components/PrismSparkline.vue",
+    "size": 1505,
+    "sha256": "869de455ad23cc486a1d358b2fbaa839c17dcefb458499fceba257796f7f41cb"
+  },
+  {
+    "path": "/frontend/src/design-system/components/PrismSpinner.vue",
+    "size": 232,
+    "sha256": "210ef332ae5720d60c47199dc32e9dafa0e2c176f26911546550400eb351c93a"
+  },
+  {
+    "path": "/frontend/src/design-system/components/PrismStackedBarChart.vue",
+    "size": 2754,
+    "sha256": "83e7c1f8d623792db76f926ca77b2d6c330eadad268f551e7d743102c9b49caf"
+  },
+  {
+    "path": "/frontend/src/design-system/components/PrismStat.vue",
+    "size": 1001,
+    "sha256": "b59eeee3a39dc288ebff0379135a7bdbb6a30a0d5f4a9485128671479fbad7ec"
+  },
+  {
+    "path": "/frontend/src/design-system/components/PrismSwitch.vue",
+    "size": 459,
+    "sha256": "2224317268313c0b33bf264e314c61ae337f35f61153a1a192e4e680fef4bffa"
+  },
+  {
+    "path": "/frontend/src/design-system/components/PrismTable.vue",
+    "size": 1069,
+    "sha256": "7c77d501f290ae77ec473e269d8d545baef52719d0a80c37d0466dbe798742ad"
+  },
+  {
+    "path": "/frontend/src/design-system/components/PrismTabs.vue",
+    "size": 1698,
+    "sha256": "6f3b04073ea61b6f322056cc0de9ecc2d5628897f388f3bf7073512604d521cf"
+  },
+  {
+    "path": "/frontend/src/design-system/components/PrismTextarea.vue",
+    "size": 1017,
+    "sha256": "dcd9307930c7f3dbde3a6e4487f6bd3fafe00b560a6b99cda63a21528adf970d"
+  },
+  {
+    "path": "/frontend/src/design-system/components/PrismTimeline.vue",
+    "size": 705,
+    "sha256": "9b7c96d36415f4f02631cace7ec01c03824178a9c628ec17060ece028835b7e1"
+  },
+  {
+    "path": "/frontend/src/design-system/components/PrismToast.vue",
+    "size": 1821,
+    "sha256": "69006ea29b44973eb03df61ede8c5bb4bf80f379c3a6538e0a7adecdd7cfd886"
+  },
+  {
+    "path": "/frontend/src/design-system/components/PrismTooltip.vue",
+    "size": 2712,
+    "sha256": "22c1397538896f819ac962b05841867615941bd379755df39c9c581d2992eda1"
+  },
+  {
+    "path": "/frontend/src/design-system/components/PrismTree.vue",
+    "size": 4849,
+    "sha256": "c2fadeb6759697f6fd81d1c67b8bf1a2ea8e9e8ee04bc13f6ca628cd6202c4e8"
+  },
+  {
+    "path": "/frontend/src/design-system/components/useDatePopup.js",
+    "size": 3743,
+    "sha256": "a87d4d5844a03ca95d24afa06bfb7d6a76759e7819a7f2c81dc1e298fc3c6839"
+  },
+  {
+    "path": "/frontend/src/design-system/tokens.css",
+    "size": 2442,
+    "sha256": "f70238c2cdf5b2f9f70bf5de3e6f304e641f36db596ff5b724f8c6cb4fabdedf"
+  },
+  {
+    "path": "/frontend/src/design-system/useFloatingPanel.js",
+    "size": 5599,
+    "sha256": "4807229c8370c0206ba4dbb0c3afa80cb9409083ad988e18df57bb1ca44f33f0"
+  },
+  {
+    "path": "/frontend/src/features/app/AccessDeniedView.vue",
+    "size": 469,
+    "sha256": "cc63f854c3235577fe639fb5a916a8fe79066aede24f115c2541376371a32eda"
+  },
+  {
+    "path": "/frontend/src/features/app/PlaceholderView.vue",
+    "size": 247,
+    "sha256": "810ac5126178ef813de37a2658688af5f99beef06ea670d21a00d63708293f98"
+  },
+  {
+    "path": "/frontend/src/features/auth/api.ts",
+    "size": 1335,
+    "sha256": "c8bc709eaeeb9e93734b278e2e3f49d12eec00d598c22cbd7cfbaae1113b08eb"
+  },
+  {
+    "path": "/frontend/src/features/auth/components/OtpStep.vue",
+    "size": 2835,
+    "sha256": "efd3d278ae1df262ae3fe8f6c691495c7923bbc8acc34720c5d018a59ddeba12"
+  },
+  {
+    "path": "/frontend/src/features/auth/components/PasswordPolicy.vue",
+    "size": 1209,
+    "sha256": "5b5bdd5221c02728d998933bd9fd913d381a0f4c63fe4a38ccb4e4a0353dfb71"
+  },
+  {
+    "path": "/frontend/src/features/auth/types.ts",
+    "size": 234,
+    "sha256": "1f9e040a194919ad43c51b13129d81d1533cd85470ec979fdfcca957bd120699"
+  },
+  {
+    "path": "/frontend/src/features/auth/views/ForgotPasswordView.vue",
+    "size": 4388,
+    "sha256": "7d0c0aef7ddd7d7ba4ff121aa9b7f5cf724840dd7176ca4a85cb146873c7b5b7"
+  },
+  {
+    "path": "/frontend/src/features/auth/views/LoginView.vue",
+    "size": 2933,
+    "sha256": "280cb6cf53b33dfdd668bcd0948e24862912bda9f7c7c2f4b9c489bff54c80ed"
+  },
+  {
+    "path": "/frontend/src/features/auth/views/RegisterView.vue",
+    "size": 5771,
+    "sha256": "8d04ec6e9eee42e8dd2158341b4127a97fd0d70f982c70a960dfa692542555d7"
+  },
+  {
+    "path": "/frontend/src/features/auth/views/ResetPasswordView.vue",
+    "size": 3264,
+    "sha256": "3ffbe43dd7b5523eeb4b9fda81267e7ab42b33c2540031516715eb1f26b617f2"
+  },
+  {
+    "path": "/frontend/src/features/feedback/api.ts",
+    "size": 1127,
+    "sha256": "a9ca55c4a6ecc4e1154e21cab94e119b3a9e38b44940e4d0a5e605440f33670b"
+  },
+  {
+    "path": "/frontend/src/features/feedback/types.ts",
+    "size": 984,
+    "sha256": "80236577c4a1db8686d1a3c27acd5e793fea848bd789bb0a866336567089aab0"
+  },
+  {
+    "path": "/frontend/src/features/feedback/views/FeedbackDetailPopup.vue",
+    "size": 6811,
+    "sha256": "fc988c71e0dc6aeb12c210a185342f912449715a40b346f88607e543fd615128"
+  },
+  {
+    "path": "/frontend/src/features/feedback/views/FeedbackForm.vue",
+    "size": 6189,
+    "sha256": "65de4be0f8ad292fd5e4f518429bafb6c3a35d73a696ad6403c7c3f0da5a38ec"
+  },
+  {
+    "path": "/frontend/src/features/feedback/views/FeedbackManagementView.vue",
+    "size": 9801,
+    "sha256": "332358acd4c67923469d102f46dd7858de614c2a0b149848b10501c89954df39"
+  },
+  {
+    "path": "/frontend/src/features/feedback/views/MyFeedbackPopup.vue",
+    "size": 4850,
+    "sha256": "6282d008481a55ecaffbcccccd6fec0e9eb045357bd25211a35a157067e2d6f2"
+  },
+  {
+    "path": "/frontend/src/features/feedback/views/MyVocPopup.vue",
+    "size": 6697,
+    "sha256": "431954c93de6906f7f7bca1c45f5bed61f6d75b2cfab5182f516ad4f017eda98"
+  },
+  {
+    "path": "/frontend/src/features/home/api.ts",
+    "size": 277,
+    "sha256": "f4d6fdb9ee8e2c2e9b3b34c32514f9fcd1928a98b10f6c02e8fd6cca48e81ed3"
+  },
+  {
+    "path": "/frontend/src/features/home/types.ts",
+    "size": 463,
+    "sha256": "898a34fa3f6f74e1b2190bfb0d31b230194bd711c7752e4cd5b2693d7a0299f0"
+  },
+  {
+    "path": "/frontend/src/features/home/views/HomeView.vue",
+    "size": 11744,
+    "sha256": "4a9e2e8ab2c14ac4c784065d7df7d1ed094933af258654d4b44552d26aac5b8a"
+  },
+  {
+    "path": "/frontend/src/features/notification/api.ts",
+    "size": 506,
+    "sha256": "62203a4649c995a4867890ec6272903bc4ee7a0c5bc1cd8a614135eadb02aebd"
+  },
+  {
+    "path": "/frontend/src/features/notification/types.ts",
+    "size": 170,
+    "sha256": "d4ba894e261f72269c4f5c5da4f0a92ab7127e2e597e092b08ed7ea514670cb5"
+  },
+  {
+    "path": "/frontend/src/features/orgs/api.ts",
+    "size": 1104,
+    "sha256": "f51115e5ae777114b32310a4c76ef54b894b5779f9bf620a09d5beeec793a976"
+  },
+  {
+    "path": "/frontend/src/features/orgs/store.ts",
+    "size": 1335,
+    "sha256": "ea8ccafebf736d135a8e491240f46b6a7f81d4278d123e096e33da5990df5e40"
+  },
+  {
+    "path": "/frontend/src/features/orgs/types.ts",
+    "size": 938,
+    "sha256": "a3073910fa2698bb2cdf4c4107820e55fd3fe5f4a6a02a51b1bfc6865321667b"
+  },
+  {
+    "path": "/frontend/src/features/orgs/views/OrganizationManagementView.vue",
+    "size": 16652,
+    "sha256": "62bffda969071aca54877a93e5d60ca7f513a8ed2b64a44f553b3a8ed56f3631"
+  },
+  {
+    "path": "/frontend/src/features/skills/api.ts",
+    "size": 8660,
+    "sha256": "70f604dd2d3402a821ffd808908abf8e40c35b588410e1052e11a47fb6e001c0"
+  },
+  {
+    "path": "/frontend/src/features/skills/store.ts",
+    "size": 2143,
+    "sha256": "ea2b2eb45586f1025c324ae860d61845871cdc0f3aa7d00ad761438b90d03a5a"
+  },
+  {
+    "path": "/frontend/src/features/skills/types.ts",
+    "size": 1839,
+    "sha256": "74be951b04058b7ff94ac67129b418cbc923bb929f0432687eb62089646cf22c"
+  },
+  {
+    "path": "/frontend/src/features/skills/views/AddSkillPopup.vue",
+    "size": 12656,
+    "sha256": "921257c8facd2b4d760df9543617796c369b5b3c26f06353a43ca728b062812d"
+  },
+  {
+    "path": "/frontend/src/features/skills/views/BadgeStack.vue",
+    "size": 1268,
+    "sha256": "6eaa7afe3ecad6104aaf99552cd87ba97ce5d2e346e21c70ef8efd450c7606e1"
+  },
+  {
+    "path": "/frontend/src/features/skills/views/EditSkillPopup.vue",
+    "size": 16053,
+    "sha256": "7fd7137a8c6ed28b3f0cc41ac4ef452e00ce58525650f19cdf7195e189711aba"
+  },
+  {
+    "path": "/frontend/src/features/skills/views/ManageTaxonomyPopup.vue",
+    "size": 9801,
+    "sha256": "1bd569fcac5e4042818600065600958812073b9d6f734586658459c30d04a942"
+  },
+  {
+    "path": "/frontend/src/features/skills/views/SearchUserPopup.vue",
+    "size": 4761,
+    "sha256": "f712ea761264540a648a25e62be079ce98c2a3429151485f0e53670d1b2c103c"
+  },
+  {
+    "path": "/frontend/src/features/skills/views/SkillDetailPopup.vue",
+    "size": 29044,
+    "sha256": "5c1495b2ca7e3337ce0e62906ccb0cc52f2c9a5722c6bfa438457f32c745dc0e"
+  },
+  {
+    "path": "/frontend/src/features/skills/views/SkillManagementView.vue",
+    "size": 37425,
+    "sha256": "7dc8d5b07c1d30dbd22aaad7132d1ed85d49d59b50d000e9e4e72264bb2f8058"
+  },
+  {
+    "path": "/frontend/src/features/skills/views/TaxonomyChipSelect.vue",
+    "size": 2610,
+    "sha256": "235a7f5fc02b8e58f8dc84f166b440ed7466d6e20aec3fc0a7b0f9faca277258"
+  },
+  {
+    "path": "/frontend/src/features/users/api.ts",
+    "size": 2796,
+    "sha256": "9d1229513fee238809225d3a55381851d15e045197de47798393632a2468aee1"
+  },
+  {
+    "path": "/frontend/src/features/users/store.ts",
+    "size": 1763,
+    "sha256": "21317d666a8b3c1445a7451f6ae3d80144a2292cc868263b73c128f46eb3e4c1"
+  },
+  {
+    "path": "/frontend/src/features/users/types.ts",
+    "size": 1771,
+    "sha256": "3531407615932d876cd153fb33a85b5f1cbd200d2abad29cc8951d16d5ab2113"
+  },
+  {
+    "path": "/frontend/src/features/users/views/BulkUploadPopup.vue",
+    "size": 6888,
+    "sha256": "b9f5984ed07e5b35a5d7ed57e75a31192888eb563b83e073db855339d2dc952b"
+  },
+  {
+    "path": "/frontend/src/features/users/views/CreateUserPopup.vue",
+    "size": 4991,
+    "sha256": "84fb2864a0760bfe307c35eda5af73ff1aa540faf21a303427e98af76d6ef7a5"
+  },
+  {
+    "path": "/frontend/src/features/users/views/SettingsView.vue",
+    "size": 19200,
+    "sha256": "530ddbd755845b8b715608ec29034db8a7b9135f2c9085ce76829669675ef2a0"
+  },
+  {
+    "path": "/frontend/src/features/users/views/UserDetailPopup.vue",
+    "size": 6382,
+    "sha256": "4c9fffe558df2dcd6c7ab343902b6c37d28e64d9ea0da6dfb46aa5743629965c"
+  },
+  {
+    "path": "/frontend/src/features/users/views/UserManagementView.vue",
+    "size": 13627,
+    "sha256": "3933e6a0283156a5b86bcb13cef9fe4bc0aa542dc4631907c58ec62e126ac4a9"
+  },
+  {
+    "path": "/frontend/src/lib/api.ts",
+    "size": 3562,
+    "sha256": "3e6b9fe4272f3bbfdaf4a721b24667d3ca3e1b8dfdfcaf6a74098355655d85b4"
+  },
+  {
+    "path": "/frontend/src/lib/errorMessages.ts",
+    "size": 5475,
+    "sha256": "792020cff865a1b37848de908da4d513e0dd420255386a711cc2313614d01806"
+  },
+  {
+    "path": "/frontend/src/lib/imageCompress.ts",
+    "size": 2498,
+    "sha256": "5bf6265c861e4c0119c96f544d046097e12f4a1eaee1a56ff43e752d9bf05179"
+  },
+  {
+    "path": "/frontend/src/lib/sanitize.ts",
+    "size": 4471,
+    "sha256": "19f113b2100b0735213f18fd12521012e50807d1d39d81f1d588864633ac2b00"
+  },
+  {
+    "path": "/frontend/src/lib/toast.ts",
+    "size": 657,
+    "sha256": "b86ec183e1f1668706ee811777853507e82b83f68e0ce1f42aa77646de55e5d6"
+  },
+  {
+    "path": "/frontend/src/lib/types.ts",
+    "size": 177,
+    "sha256": "bf407aacea1f5b2d7c5dd95aafc85f7ce26789b5558c50b415b71c0bba28e1b6"
+  },
+  {
+    "path": "/frontend/src/main.ts",
+    "size": 318,
+    "sha256": "e47192269a2bfdb1bdac7eb7511c299f3624f3bf9a2f0dc2f45c3a4b8c1b7b2f"
+  },
+  {
+    "path": "/frontend/src/router/index.ts",
+    "size": 3632,
+    "sha256": "8aecab8909ead78dc8eed7ce0aad2a9938e9361369f9d11043242e7c5e237ac4"
+  },
+  {
+    "path": "/frontend/src/stores/auth.ts",
+    "size": 4626,
+    "sha256": "c789c7e631074c5dfc6af5bb19a113a5ebf657693c06d7ad60c282b72764b911"
+  },
+  {
+    "path": "/frontend/tsconfig.app.json",
+    "size": 695,
+    "sha256": "73d5901a34fc01d12e97e0580b68f9a5b03222afe810557878ae4d9a34f731eb"
+  },
+  {
+    "path": "/frontend/tsconfig.json",
+    "size": 191,
+    "sha256": "9c4d36d79809ab9835a9e674b60dd208f3c15958eb9f2dea1afb218f6d0e483b"
+  },
+  {
+    "path": "/frontend/tsconfig.node.json",
+    "size": 964,
+    "sha256": "72dbb38a180d6832378935c54353979bf05436c8b9ffd931af742af5991b6e03"
+  },
+  {
+    "path": "/frontend/tsconfig.vitest.json",
+    "size": 667,
+    "sha256": "6aed91cc02f169d58a4757b98c7a69c4c80ba55c5692f62eba97335de0059302"
+  },
+  {
+    "path": "/frontend/vite.config.ts",
+    "size": 899,
+    "sha256": "b72c1ed57c415bcce73f5ec5b3dd1d4df4e8a6f433931bead2a40f80306b8b03"
+  },
+  {
+    "path": "/frontend/vitest.config.ts",
+    "size": 386,
+    "sha256": "e99a0663f7620ef526aeb6542795084d41e06cdbda398aee048c51051797ca54"
+  },
+  {
+    "path": "/LICENSE",
+    "size": 11558,
+    "sha256": "1eb85fc97224598dad1852b5d6483bbcf0aa8608790dcc657a5a2a761ae9c8c6"
+  },
+  {
+    "path": "/neon-design-system/Design system.md",
+    "size": 43435,
+    "sha256": "3b6175f37bda6b2f92ac1e863313b4f88dcec59f9640d2f5d6ff6051144ca2a4"
+  },
+  {
+    "path": "/neon-design-system/FUTURISTIC-NEON-DESIGN-SYSTEM.md",
+    "size": 39127,
+    "sha256": "e3907c0723508961a167dfd9d81519f631bac9eb1c856ae1802a587c4f7d47ef"
+  },
+  {
+    "path": "/neon-design-system/neon-design-system/.gitignore",
+    "size": 80,
+    "sha256": "9b057ef193f66211084517d8c3d297960a05f2ebdd0ebc4c41197316d0df625e"
+  },
+  {
+    "path": "/neon-design-system/neon-design-system/CHANGELOG.md",
+    "size": 17429,
+    "sha256": "53d3af5950955c0a5774765663508fc6deb2e0bc37ca069c3600e2f3cfa48bc9"
+  },
+  {
+    "path": "/neon-design-system/neon-design-system/debug.test.js",
+    "size": 853,
+    "sha256": "3b8675d6634da8a02c773b16ac672f793a1a891db774f47f3c4c7427d211a616"
+  },
+  {
+    "path": "/neon-design-system/neon-design-system/docs/COMPONENTS.md",
+    "size": 37607,
+    "sha256": "533f44e783d1d92255106f1eef529486eb08e7a78fdedea5fa77b6cc5864ffb8"
+  },
+  {
+    "path": "/neon-design-system/neon-design-system/docs/ROADMAP.md",
+    "size": 3675,
+    "sha256": "86a1399af7f52cff84bad9029c85216831db3569f0aadd7aa0dee1416d3c3b5a"
+  },
+  {
+    "path": "/neon-design-system/neon-design-system/index.html",
+    "size": 584,
+    "sha256": "34eb46772b61fa519595b85ad88c3242d6f6618528ef5d8467895507b4e2d6db"
+  },
+  {
+    "path": "/neon-design-system/neon-design-system/package-lock.json",
+    "size": 91554,
+    "sha256": "8f49bd48be62ecab7cb6e623de381eedcc889f7d48bd9e580aa002b2f9a18537"
+  },
+  {
+    "path": "/neon-design-system/neon-design-system/package.json",
+    "size": 743,
+    "sha256": "b62c8ff2107c90ea4d7a4eb014fa839fb45322801124ae8184d91d93eca18575"
+  },
+  {
+    "path": "/neon-design-system/neon-design-system/playwright.config.js",
+    "size": 438,
+    "sha256": "e4b1940d72e3ced7b86a77f23548bd18d6954dabf326e119115ca757a226e57d"
+  },
+  {
+    "path": "/neon-design-system/neon-design-system/public/prism.svg",
+    "size": 276,
+    "sha256": "e78b7d788be13793b7c391dfbbd523152a2ba948e5cb7249c21fda92cc124598"
+  },
+  {
+    "path": "/neon-design-system/neon-design-system/README.md",
+    "size": 5182,
+    "sha256": "c113b888f690c608b125f732a2a9c3792a82eb09a279c3c4d8d26f697d30793f"
+  },
+  {
+    "path": "/neon-design-system/neon-design-system/src/App.vue",
+    "size": 48352,
+    "sha256": "290dd772f0f4a627a6620c6d1525169942c8f2a619b7da8ca039cef861b835a3"
+  },
+  {
+    "path": "/neon-design-system/neon-design-system/src/catalog.js",
+    "size": 14052,
+    "sha256": "eaf1bc128f0bad06624e5508078d44100c263f8e90355f0378d8cedaa0a31c48"
+  },
+  {
+    "path": "/neon-design-system/neon-design-system/src/components.css",
+    "size": 55353,
+    "sha256": "7f69f862875566db5a374e7cfe4020c513c822a0758e0ce3b64386ef4e8154cf"
+  },
+  {
+    "path": "/neon-design-system/neon-design-system/src/components/components.test.js",
+    "size": 29649,
+    "sha256": "165af70616e0553397b896594011d7113b1f854a62ed1498866ba4bddaecc269"
+  },
+  {
+    "path": "/neon-design-system/neon-design-system/src/components/index.js",
+    "size": 3586,
+    "sha256": "9674101ccd1461c532297617cf0cf60d62945db1286f763dd94b2983d1a95d51"
+  },
+  {
+    "path": "/neon-design-system/neon-design-system/src/components/PrismAccordion.vue",
+    "size": 1192,
+    "sha256": "e716530bff8513d37ff9910e987f6d5818e92e277068f9d1178699193961c052"
+  },
+  {
+    "path": "/neon-design-system/neon-design-system/src/components/PrismAlert.vue",
+    "size": 759,
+    "sha256": "8af337e62349d4949b6649da716c20f7877482895d7cafc1325c7fb2465b9248"
+  },
+  {
+    "path": "/neon-design-system/neon-design-system/src/components/PrismAmbientBackground.vue",
+    "size": 10670,
+    "sha256": "a19ca3a8a7ea538ba77c1745bf20963061e3eba963263258480f658e1e851cd5"
+  },
+  {
+    "path": "/neon-design-system/neon-design-system/src/components/PrismAreaChart.vue",
+    "size": 2529,
+    "sha256": "2ee64dd68921ccddc9dc108ada9d0144827a65e99663dc247ebd3734be0e4c17"
+  },
+  {
+    "path": "/neon-design-system/neon-design-system/src/components/PrismAvatar.vue",
+    "size": 867,
+    "sha256": "229194006fbe82490f0a1e6bc64403e7e93415749503fcbc0a449bff590628fa"
+  },
+  {
+    "path": "/neon-design-system/neon-design-system/src/components/PrismAvatarGroup.vue",
+    "size": 866,
+    "sha256": "408363a1f6488e826ba77413f8ad86c4936cf3fc9edae605fae50cb1522d7e18"
+  },
+  {
+    "path": "/neon-design-system/neon-design-system/src/components/PrismBadge.vue",
+    "size": 246,
+    "sha256": "2d629fc516e119414a4956a4a70b91f734ca3e5df977edcf85415b298b96d131"
+  },
+  {
+    "path": "/neon-design-system/neon-design-system/src/components/PrismBarChart.vue",
+    "size": 2088,
+    "sha256": "7f64b62caabe1fc3fc0507730a68e130ffc79859add7bbf04935cf685a3afe79"
+  },
+  {
+    "path": "/neon-design-system/neon-design-system/src/components/PrismBreadcrumbs.vue",
+    "size": 887,
+    "sha256": "9a37ba9a1d641983033b9365ff930e013fb59768af6b2fa4815c39a76abe59dc"
+  },
+  {
+    "path": "/neon-design-system/neon-design-system/src/components/PrismButton.vue",
+    "size": 428,
+    "sha256": "5ce583d14395935f1be23d2f9b815ab4fcd885fd793538ccb37e37f28ad290c6"
+  },
+  {
+    "path": "/neon-design-system/neon-design-system/src/components/PrismCalendar.vue",
+    "size": 3202,
+    "sha256": "dae45a9931e8744ac65427d213249c4e46a2d49ab0779b14ebe2b1d242868fb8"
+  },
+  {
+    "path": "/neon-design-system/neon-design-system/src/components/PrismCard.vue",
+    "size": 446,
+    "sha256": "6cf56aed1bec3291584dc2565be8bb1d6b5f7b449626775fb48c06ac879df130"
+  },
+  {
+    "path": "/neon-design-system/neon-design-system/src/components/PrismCheckbox.vue",
+    "size": 523,
+    "sha256": "96b27da8a73d4de5d88af5e49e1d3c264d0e22a02713b6f31845716f2769c397"
+  },
+  {
+    "path": "/neon-design-system/neon-design-system/src/components/PrismCodeBlock.vue",
+    "size": 840,
+    "sha256": "76428775ac20825fb81841d4f17760771960faa53a354c143cae6e88d4ce31f2"
+  },
+  {
+    "path": "/neon-design-system/neon-design-system/src/components/PrismColorPicker.vue",
+    "size": 6136,
+    "sha256": "fe94a1def44dbbdab117c9430d113800ee788441848e21f8c9bfc76ee2a93551"
+  },
+  {
+    "path": "/neon-design-system/neon-design-system/src/components/PrismCombobox.vue",
+    "size": 7130,
+    "sha256": "bd7df08429b6ceb081df0468a51ed5f7b14d782e46862569b1d1b101c9157d34"
+  },
+  {
+    "path": "/neon-design-system/neon-design-system/src/components/PrismDatePicker.vue",
+    "size": 3494,
+    "sha256": "9618ed5c60febd00d60790a734cb9adfe61ce767d3a11f69d60973c98203ce41"
+  },
+  {
+    "path": "/neon-design-system/neon-design-system/src/components/PrismDateRangePicker.vue",
+    "size": 4319,
+    "sha256": "0414674b91e3999af4251eeeab8357c3ffdf990a093e604ffc6637b8fa6969c4"
+  },
+  {
+    "path": "/neon-design-system/neon-design-system/src/components/PrismDatetimePicker.vue",
+    "size": 5201,
+    "sha256": "c3247cb610beea32a37f29ee85e380cb49ee82c85ebcdcddea5d4942d555c9e5"
+  },
+  {
+    "path": "/neon-design-system/neon-design-system/src/components/PrismDialog.vue",
+    "size": 2701,
+    "sha256": "88711227221aec054578ba05d6f0bf59e9f28b0f234e67700dfe529dea6dfebd"
+  },
+  {
+    "path": "/neon-design-system/neon-design-system/src/components/PrismDivider.vue",
+    "size": 411,
+    "sha256": "83a7d54f4555e5b10d887d991260fa3052238db1e33f26db16b2bb77600abcf8"
+  },
+  {
+    "path": "/neon-design-system/neon-design-system/src/components/PrismDonutChart.vue",
+    "size": 2090,
+    "sha256": "3f77bbda50fba3ba8ec3abaec276bdf4c7f4c3273d9ade64cf45cd8158328455"
+  },
+  {
+    "path": "/neon-design-system/neon-design-system/src/components/PrismDrawer.vue",
+    "size": 733,
+    "sha256": "68cc3427bc2cf1888db48581969e8654bf1f9f96c823af905c31d76cbacb2c40"
+  },
+  {
+    "path": "/neon-design-system/neon-design-system/src/components/PrismDropdownMenu.vue",
+    "size": 3480,
+    "sha256": "d20e05ad542d0e1ab8d43872f5821b6687df759a287ac3541c6a507461bb3417"
+  },
+  {
+    "path": "/neon-design-system/neon-design-system/src/components/PrismEmptyState.vue",
+    "size": 346,
+    "sha256": "8157f367936db1141da061d91a607c6ca7169ce65b09b37f39f63632a38c7e5e"
+  },
+  {
+    "path": "/neon-design-system/neon-design-system/src/components/PrismFileUpload.vue",
+    "size": 4853,
+    "sha256": "e04a70c31e9434643a6731dca3738e5992ee4ddce229481e569a185f7dbd0a0a"
+  },
+  {
+    "path": "/neon-design-system/neon-design-system/src/components/PrismFormField.vue",
+    "size": 642,
+    "sha256": "7b3a6b85e9f4a8efc9df639844b9160f23c4c5e8aca4e23ea788fe76acb0cc17"
+  },
+  {
+    "path": "/neon-design-system/neon-design-system/src/components/PrismGauge.vue",
+    "size": 2202,
+    "sha256": "58292ab37ab20b9f9203f29593c4b114a75d5866a1f7265a16323825962d45ed"
+  },
+  {
+    "path": "/neon-design-system/neon-design-system/src/components/PrismGrid.vue",
+    "size": 319,
+    "sha256": "183952b39e39a52e38719d48aa6880af2b74e696f3b145eafc2c60f2584a4ce7"
+  },
+  {
+    "path": "/neon-design-system/neon-design-system/src/components/PrismHeatmap.vue",
+    "size": 2678,
+    "sha256": "b78d718ffbd7bb5348014cf04ae97c295d4655be680861fcb235215eaa61125f"
+  },
+  {
+    "path": "/neon-design-system/neon-design-system/src/components/PrismInput.vue",
+    "size": 968,
+    "sha256": "b0eabc8ba397b83d6b6503e0c402e14e593844db3ed6c322b6c1c56ef59defbc"
+  },
+  {
+    "path": "/neon-design-system/neon-design-system/src/components/PrismKbd.vue",
+    "size": 141,
+    "sha256": "b4cd0083dc127c6ff6f0012df83f390f289fb37901b5557b808128430ad5392f"
+  },
+  {
+    "path": "/neon-design-system/neon-design-system/src/components/PrismLineChart.vue",
+    "size": 2542,
+    "sha256": "92a21b81b92ed14c67fd1bbfb75278a3ff8bb4c579793e05603eb59127706671"
+  },
+  {
+    "path": "/neon-design-system/neon-design-system/src/components/PrismList.vue",
+    "size": 1056,
+    "sha256": "20fa453fcec559b3c29b423c03c35b4dddca96ac1a587604efac189750fb9992"
+  },
+  {
+    "path": "/neon-design-system/neon-design-system/src/components/PrismNumberInput.vue",
+    "size": 4519,
+    "sha256": "8a7708ceeff4ff4b8db12d124f2d0d1caf392e4fc69cb11ceb44a7ece4b009d6"
+  },
+  {
+    "path": "/neon-design-system/neon-design-system/src/components/PrismPagination.vue",
+    "size": 928,
+    "sha256": "7a07da308739bfe6b303b0b3e2196f4401f7d8bba6ab91bbcfd9d0990fc7e3c6"
+  },
+  {
+    "path": "/neon-design-system/neon-design-system/src/components/PrismPasswordInput.vue",
+    "size": 2151,
+    "sha256": "5b7f04e2c4e16ddc2dd5772a5488a731a0038c17789e08548d2dd9939e5cea19"
+  },
+  {
+    "path": "/neon-design-system/neon-design-system/src/components/PrismPopover.vue",
+    "size": 723,
+    "sha256": "cea8e4119dd87b62f373157b812861b1ee159490a6b07cd37bfc22aad4bb2be0"
+  },
+  {
+    "path": "/neon-design-system/neon-design-system/src/components/PrismProgress.vue",
+    "size": 575,
+    "sha256": "dbf268d2a518396b47d282aa857ce4de67332099a05e87604b5c16750fb37c58"
+  },
+  {
+    "path": "/neon-design-system/neon-design-system/src/components/PrismRadarChart.vue",
+    "size": 2417,
+    "sha256": "049e4bc5279443637d51e084643b315ce5f55ed41e2fffe640bbb0bfdac64fb4"
+  },
+  {
+    "path": "/neon-design-system/neon-design-system/src/components/PrismRadio.vue",
+    "size": 590,
+    "sha256": "f4ae6be294033310f5a28b0f68eb4b59862f3bdd5eb4a79812fa2ca02cd2dc24"
+  },
+  {
+    "path": "/neon-design-system/neon-design-system/src/components/PrismRadioGroup.vue",
+    "size": 1946,
+    "sha256": "dece80ca920d13170b9ef7ad384cec466418919de87af1d4c3c7d07fef0cb55c"
+  },
+  {
+    "path": "/neon-design-system/neon-design-system/src/components/PrismSelect.vue",
+    "size": 1229,
+    "sha256": "c252e37c227558fb664e2598a9c04e199f8d55c4d7c7ea6d948ca938e024dc0e"
+  },
+  {
+    "path": "/neon-design-system/neon-design-system/src/components/PrismSkeleton.vue",
+    "size": 224,
+    "sha256": "e23b37b40cd0639f3265360ecb9925b8192d160a74f7b9ddeee749337f5a37bb"
+  },
+  {
+    "path": "/neon-design-system/neon-design-system/src/components/PrismSlider.vue",
+    "size": 673,
+    "sha256": "1e09e6558e96ab2fb95d691b6ba2835c65854ddc6b32ba65694a2c0920898f5a"
+  },
+  {
+    "path": "/neon-design-system/neon-design-system/src/components/PrismSparkline.vue",
+    "size": 1537,
+    "sha256": "07d6fea750c638e878cdbe55021046feafcaf59b669aea98e0c2d0bc5f120517"
+  },
+  {
+    "path": "/neon-design-system/neon-design-system/src/components/PrismSpinner.vue",
+    "size": 234,
+    "sha256": "f2ac02dcf9c92372700af64417f5836b40542680bbedda54e36f1a2f3047db74"
+  },
+  {
+    "path": "/neon-design-system/neon-design-system/src/components/PrismStackedBarChart.vue",
+    "size": 2802,
+    "sha256": "a0ade58971a9a529e81179756edf3a375e1fdcf928e930fe9ff28d08f9f3f0b4"
+  },
+  {
+    "path": "/neon-design-system/neon-design-system/src/components/PrismStat.vue",
+    "size": 1015,
+    "sha256": "69742fb56d2b8c2ad8a9cfec88eee09bf2c96652afa32e2ae66ab9077fc7e06f"
+  },
+  {
+    "path": "/neon-design-system/neon-design-system/src/components/PrismSwitch.vue",
+    "size": 464,
+    "sha256": "8e786c01d9c73527aee2f49743ed662068f469928d2b1e57a823b64513161b7a"
+  },
+  {
+    "path": "/neon-design-system/neon-design-system/src/components/PrismTable.vue",
+    "size": 1029,
+    "sha256": "58d3ac8eb2d46922fa8af2eee0cdc365d0162567fb2dca5c10f19c2563e95d9e"
+  },
+  {
+    "path": "/neon-design-system/neon-design-system/src/components/PrismTabs.vue",
+    "size": 1721,
+    "sha256": "61da39717263ef478c70220c78177442b4a4ceaafc279a406c3edde1d369c60c"
+  },
+  {
+    "path": "/neon-design-system/neon-design-system/src/components/PrismTextarea.vue",
+    "size": 1031,
+    "sha256": "162b23ca44432d56d2e86f8da11e193120721cafb3a0d852193b9b9deef62f31"
+  },
+  {
+    "path": "/neon-design-system/neon-design-system/src/components/PrismTimeline.vue",
+    "size": 720,
+    "sha256": "100b8a4fd41abb103e8f998b8801bb9e5cd853ec3d1f977a954e8a09acd6852c"
+  },
+  {
+    "path": "/neon-design-system/neon-design-system/src/components/PrismToast.vue",
+    "size": 1835,
+    "sha256": "43e441bd6e89a0bc7776c697d076cb02830d6ec036d7808ac9ccb82266e213b9"
+  },
+  {
+    "path": "/neon-design-system/neon-design-system/src/components/PrismTooltip.vue",
+    "size": 2771,
+    "sha256": "ecddad21fded684bb4b9e855ed992aa65b5c467fcec7e7c988dae5e6dd9bb41e"
+  },
+  {
+    "path": "/neon-design-system/neon-design-system/src/components/PrismTree.vue",
+    "size": 4966,
+    "sha256": "9be09222672668c0a91b9baeb097903e2b6ae447f0a1928d1d40cc7c8b7869f9"
+  },
+  {
+    "path": "/neon-design-system/neon-design-system/src/components/useDatePopup.js",
+    "size": 3827,
+    "sha256": "49450d26000894014573c24f548a2d845cebfad57b6c9d50f4a121129f9ad4bd"
+  },
+  {
+    "path": "/neon-design-system/neon-design-system/src/Hologram.vue",
+    "size": 1832,
+    "sha256": "12ec49cdf99892a36befb29394d5e66823a62d1144cb3ab196c63b3535803c81"
+  },
+  {
+    "path": "/neon-design-system/neon-design-system/src/index.js",
+    "size": 89,
+    "sha256": "70d028f3f10d51568e94408c65d2c5c5d3491056bad7e58cd5fb251b892fb889"
+  },
+  {
+    "path": "/neon-design-system/neon-design-system/src/main.js",
+    "size": 167,
+    "sha256": "e2d142fe6a65bfa520c2baecd6fee2c23bd8ba6bb1579ab4367309536a8e5747"
+  },
+  {
+    "path": "/neon-design-system/neon-design-system/src/showcase.css",
+    "size": 33523,
+    "sha256": "494c02fee79bd2a650241da34f6eef1d6bdfd2b67e4aa1b3c8025ae903ebb95b"
+  },
+  {
+    "path": "/neon-design-system/neon-design-system/src/ShowcasePanel.vue",
+    "size": 976,
+    "sha256": "fc653bccec26350155e7fddf55375e33296148afabd3e0a365f838aa1177e382"
+  },
+  {
+    "path": "/neon-design-system/neon-design-system/src/tokens.css",
+    "size": 2504,
+    "sha256": "88c1692881ece7c5405639c727771de5a017451badb6235f25532e883b6a65f5"
+  },
+  {
+    "path": "/neon-design-system/neon-design-system/src/useFloatingPanel.js",
+    "size": 5718,
+    "sha256": "94f8842705d42111e8badcc7c6214f262a0a1ea7d1ded7255fbc5a75b03831c8"
+  },
+  {
+    "path": "/neon-design-system/neon-design-system/tests/showcase.spec.js",
+    "size": 10460,
+    "sha256": "60b1c2b0f0088c4da14b7b058bff4b3e5594c58cf1b6dcd0c2212360dde91cd9"
+  },
+  {
+    "path": "/neon-design-system/neon-design-system/vite.config.js",
+    "size": 197,
+    "sha256": "f40fc7c14c4cf023fde170728ccdd943b1d02fc2529a5aa1b3baa65c0c68d1ef"
+  },
+  {
+    "path": "/neon-design-system/neon-design-system/vite.lib.config.js",
+    "size": 335,
+    "sha256": "e6b7a5b035fe9691c882148bd7eaa2e30b92bb52da01674d804fdf43e46f33cf"
+  },
+  {
+    "path": "/postgresql_17_init_and_data.sql",
+    "size": 30637,
+    "sha256": "8495aee858c2e9caddf132dcdfc0c3805a06891ecbc03122efea9a1d024d9fd7"
+  },
+  {
+    "path": "/README.md",
+    "size": 5757,
+    "sha256": "156c00b731ea089c8eaa126b75c491b3141afe4841903bae57744083e343893a"
+  },
+  {
+    "path": "/start-all.bat",
+    "size": 1551,
+    "sha256": "fd3b7cb051726e38fc842195e43b42625ffcbecfab017b05a5ed34b7b7b83be3"
+  },
+  {
+    "path": "/start-backend.bat",
+    "size": 1289,
+    "sha256": "5b83b9c7e4c2fd105341cf0b1427be050296cfbc58e0c8f8e993798f2198d4cb"
+  },
+  {
+    "path": "/start-database.bat",
+    "size": 5687,
+    "sha256": "0b350c07759ead792bc70238d07d5f54980efadd9bbc79c25a5447618d42e539"
+  },
+  {
+    "path": "/start-frontend.bat",
+    "size": 988,
+    "sha256": "348f80851635c8380f55aeea9eaf9231bd6dc1e4d14b0b99df8bff730b30f00e"
+  },
+  {
+    "path": "/stop-all.bat",
+    "size": 1945,
+    "sha256": "a0b5490fe7bfbb7f42d0b8346a1d47584a2da2730b748e8958f9dbb4427b7519"
+  },
+  {
+    "path": "/Vibe coding basline/Vibe coding basline/Sitemap_Tree.html",
+    "size": 33034,
+    "sha256": "29bd903815c68fc9d62c207c2258a3d499046db50a3ad56e06ebe5e5b54a9b6c"
+  },
+  {
+    "path": "/Vibe coding basline/Vibe coding basline/SRS/0. Error_Codes_Messages.md",
+    "size": 32036,
+    "sha256": "c269af3a027bd3c891e2b8ca0e8b9ea499b2cf14785707b1da5cadc187d1403e"
+  },
+  {
+    "path": "/Vibe coding basline/Vibe coding basline/SRS/1. Skill Management module/Add_Popup_Spec.md",
+    "size": 12767,
+    "sha256": "c60706c16bcf18f5d7132ad35f63ac7efd3e3072820de16cbebbf4d3907f87f7"
+  },
+  {
+    "path": "/Vibe coding basline/Vibe coding basline/SRS/1. Skill Management module/Add_Popup_SRS.md",
+    "size": 19995,
+    "sha256": "b5fe21653de75e068516797963fbadb2f1a0838a202b283f5f03e3e28f3b6d26"
+  },
+  {
+    "path": "/Vibe coding basline/Vibe coding basline/SRS/1. Skill Management module/Detail_Popup_Spec.md",
+    "size": 49467,
+    "sha256": "23fdcf228a52b5efd261b2815c166ab54fe314d884779f5bb937b54736176295"
+  },
+  {
+    "path": "/Vibe coding basline/Vibe coding basline/SRS/1. Skill Management module/Detail_Popup_SRS.md",
+    "size": 44210,
+    "sha256": "47c63ce47ed119f6b4c43bbce4db1db7f2c323e56aa5fc8efd31562d96bd1f16"
+  },
+  {
+    "path": "/Vibe coding basline/Vibe coding basline/SRS/1. Skill Management module/Edit_Popup_Spec.md",
+    "size": 21593,
+    "sha256": "2c91c92db659e8dfe0bc486e30a1f241850d7f137e2358bf0d3bedbe96c967f0"
+  },
+  {
+    "path": "/Vibe coding basline/Vibe coding basline/SRS/1. Skill Management module/Edit_Popup_SRS.md",
+    "size": 22879,
+    "sha256": "ef52a0e10f0b16e03b01fa79ad3a2c5087e2ff5cba346685b5125734397cdc87"
+  },
+  {
+    "path": "/Vibe coding basline/Vibe coding basline/SRS/1. Skill Management module/Skill_Management_Screen_Spec.md",
+    "size": 82392,
+    "sha256": "f51fd7ebfb80fd96b61069c1887b93c0377c58b96c44a1aabdbe90843b2a6398"
+  },
+  {
+    "path": "/Vibe coding basline/Vibe coding basline/SRS/2. User management module/Login_User Register before login_SRS.md",
+    "size": 66615,
+    "sha256": "e437f2ba4aeb8f220b8ea0dcfe73b81effdbd4f8f0320f677dd44e0b9205ca1c"
+  },
+  {
+    "path": "/Vibe coding basline/Vibe coding basline/SRS/2. User management module/Settings_Spec.md",
+    "size": 27268,
+    "sha256": "3c9aa6de281c5a576d3fb070ebc6ceb2f678c9c65efde4a68f300913cdcb8506"
+  },
+  {
+    "path": "/Vibe coding basline/Vibe coding basline/SRS/2. User management module/Settings_SRS.md",
+    "size": 24027,
+    "sha256": "3fa73f03a55210d287ba3b4c208139edb420f176de8eb65f9c6300a7960a9ecb"
+  },
+  {
+    "path": "/Vibe coding basline/Vibe coding basline/SRS/2. User management module/User Management Screen_SRS.md",
+    "size": 66133,
+    "sha256": "ccf5e34126331c3bddbeb2d94012d84e1e467ef6211b514bf7cff5d6ee012483"
+  },
+  {
+    "path": "/Vibe coding basline/Vibe coding basline/SRS/ai-news/AI_News_Batch.md",
+    "size": 31534,
+    "sha256": "251df39f025acd0560f65364ad0642dcdfb084180897c3f50c8b7ddc83ba613f"
+  },
+  {
+    "path": "/Vibe coding basline/Vibe coding basline/SRS/ai-news/AI_News_Screen_SRS.md",
+    "size": 43422,
+    "sha256": "e3e67cffeb268eeaba33af4511e343ac1a65b7036ab0289a02fc0e6c9561e073"
+  },
+  {
+    "path": "/Vibe coding basline/Vibe coding basline/SRS/ai-news/ai-news_bug.md",
+    "size": 1220,
+    "sha256": "5679b1ee7e51590b25e84bc80a505f189777e5a3b15f871fd1fc0a0ace188dce"
+  },
+  {
+    "path": "/Vibe coding basline/Vibe coding basline/SRS/ai-news/ai-news_index.md",
+    "size": 2260,
+    "sha256": "9e88af9bba203fd416669eba4710ef3c60ad3059dee40fd757960db74216e57f"
+  },
+  {
+    "path": "/Vibe coding basline/Vibe coding basline/SRS/ai-news/ai-news_sumary.md",
+    "size": 8217,
+    "sha256": "27c9700fecb7c9faf7012f3c709e211d29db2a0aadb6dc86cf99316d57fbbf3a"
+  },
+  {
+    "path": "/Vibe coding basline/Vibe coding basline/SRS/home/home_bug.md",
+    "size": 1206,
+    "sha256": "42cbb12e5d0c711ca73f50e4c73089948eff8447e6174c3a27a91baf76c34c56"
+  },
+  {
+    "path": "/Vibe coding basline/Vibe coding basline/SRS/home/home_index.md",
+    "size": 2099,
+    "sha256": "6e14fa1632c518620f9eb4e4682ecbe8a1da331338540fa940b3acfba52118f2"
+  },
+  {
+    "path": "/Vibe coding basline/Vibe coding basline/SRS/home/Home_Screen_SRS.md",
+    "size": 79208,
+    "sha256": "53fe452a1541148d4b5da6dd6ce251540c43e95bd17976455af9c17d36c6c4c8"
+  },
+  {
+    "path": "/Vibe coding basline/Vibe coding basline/SRS/home/home_sumary.md",
+    "size": 8573,
+    "sha256": "3a07a8d27c0f23eb6986ea8d09815d53b736160b5ba2dddb46686089c419c69b"
+  },
+  {
+    "path": "/Vibe coding basline/Vibe coding basline/SRS/sitemap.md",
+    "size": 25141,
+    "sha256": "b11fad598add2358f4a6ef2fb1a6427d2c5b97961f13ff3ca3c053f9d53f875e"
+  }
+]

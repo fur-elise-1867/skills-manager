@@ -158,6 +158,10 @@ button, input { font: inherit; }
 .sds-library-filters button { padding: 5px 10px; min-height: 28px; color: var(--sds-text); background: var(--sds-surface); border: 1px solid var(--sds-border); border-radius: var(--sds-radius); cursor: pointer; }
 .sds-library-filters button[aria-pressed="true"] { background: var(--sds-text); color: var(--sds-surface); }
 .sds-library-card[data-selected="true"] { border-color: var(--sds-primary); }
+.sds-library-path-actions { display: flex; gap: 14px; }
+.sds-library-path-actions .sds-text-button { font-size: 11px; }
+.sds-settings-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 20px; padding-top: 24px; }
+.sds-settings-grid .sds-welcome { width: 100%; max-width: none; margin: 0; padding: 24px; }
 .sds-locations { margin-top: 20px; border: 1px solid var(--sds-border); border-radius: var(--sds-radius); background: var(--sds-surface); overflow: hidden; }
 .sds-locations-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 14px; background: var(--sds-sidebar); }
 .sds-locations-heading h3 { margin: 0; font-size: 13px; }

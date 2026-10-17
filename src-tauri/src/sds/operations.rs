@@ -70,7 +70,13 @@ impl OperationService {
         }
     }
     pub fn status(&self, id: &str) -> Result<OperationResult, SdsError> {
-        self.repository.operation_status(id)
+        let mut result = self.repository.operation_status(id)?;
+        // The database records the deployment removal before resumable cleanup.
+        // Callers must not present final success until cleanup has resolved.
+        if result.state == OperationState::Completed && result.stage == "removal-cleanup" {
+            result.state = OperationState::Committing;
+        }
+        Ok(result)
     }
     pub(crate) fn record_dispatch_failure(
         &self,
@@ -100,6 +106,21 @@ impl OperationService {
     pub async fn library(&self) -> Result<Vec<super::contracts::LibraryItem>, SdsError> {
         let repository = self.repository.clone();
         blocking(move || super::library::load(&repository)).await
+    }
+    pub async fn reveal_deployment(&self, id: String) -> Result<(), SdsError> {
+        let repository = self.repository.clone();
+        blocking(move || {
+            super::library::with_deployment_path(&repository, &id, |path| {
+                tauri_plugin_opener::reveal_item_in_dir(path).map_err(|_| {
+                    SdsError::new(
+                        "LOCATION_UNAVAILABLE",
+                        "The destination could not be shown in File Explorer.",
+                        false,
+                    )
+                })
+            })
+        })
+        .await
     }
     pub async fn preview(&self, id: &str) -> Result<String, SdsError> {
         let (repository, id) = (self.repository.clone(), id.to_string());

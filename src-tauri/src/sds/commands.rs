@@ -334,6 +334,52 @@ pub async fn sds_prepare_remove(
 pub struct StartedOperation {
     operation_id: String,
 }
+
+#[tauri::command]
+pub async fn sds_reveal_deployment(
+    state: tauri::State<'_, SdsServices>,
+    deployment_id: String,
+) -> Result<(), SdsError> {
+    #[cfg(feature = "sds")]
+    {
+        state.operations.reveal_deployment(deployment_id).await
+    }
+    #[cfg(not(feature = "sds"))]
+    {
+        let _ = (state, deployment_id);
+        Err(profile_mismatch())
+    }
+}
+#[tauri::command]
+pub async fn sds_reveal_logs(state: tauri::State<'_, SdsServices>) -> Result<(), SdsError> {
+    #[cfg(feature = "sds")]
+    {
+        let path = state.data_root.join("logs");
+        tokio::task::spawn_blocking(move || {
+            let _pins = super::deployment::DirectoryPins::acquire(&path)?;
+            tauri_plugin_opener::reveal_item_in_dir(path).map_err(|_| {
+                SdsError::new(
+                    "LOCATION_UNAVAILABLE",
+                    "The local logs folder could not be shown in File Explorer.",
+                    false,
+                )
+            })
+        })
+        .await
+        .map_err(|_| {
+            SdsError::new(
+                "LOCATION_UNAVAILABLE",
+                "The local logs folder could not be opened.",
+                false,
+            )
+        })?
+    }
+    #[cfg(not(feature = "sds"))]
+    {
+        let _ = state;
+        Err(profile_mismatch())
+    }
+}
 #[tauri::command]
 pub async fn sds_execute(
     app: tauri::AppHandle,
@@ -357,11 +403,12 @@ pub async fn sds_execute(
         let id = operation_id.clone();
         tauri::async_runtime::spawn(async move {
             log::info!(
-                "operation={} kind={} skill={} release={} stage=starting",
+                "operation={:?} kind={:?} skill={:?} release={:?} path={:?} stage=starting",
                 id,
                 plan.kind,
                 plan.release.skill_id,
-                plan.release.id
+                plan.release.id,
+                plan.target.path
             );
             let worker = operations.execute(&id, ack_mcp);
             tokio::pin!(worker);
@@ -373,7 +420,10 @@ pub async fn sds_execute(
                     _=interval.tick()=>{
                         if let Ok(status)=operations.status(&id){
                             let snapshot=serde_json::to_string(&status).unwrap_or_default();
-                            if snapshot!=previous{let _=app.emit("sds:operation",&status);previous=snapshot;}
+                            if snapshot!=previous{
+                                log::info!("operation={:?} stage={:?} result={:?} code={:?}",id,status.stage,status.state,status.error.as_ref().map(|error|error.code.as_str()).unwrap_or("none"));
+                                let _=app.emit("sds:operation",&status);previous=snapshot;
+                            }
                         }
                     }
                 }
@@ -384,7 +434,7 @@ pub async fn sds_execute(
             };
             if let Ok(result) = result {
                 log::info!(
-                    "operation={} kind={} stage={} result={:?} code={}",
+                    "operation={:?} kind={:?} stage={:?} result={:?} code={:?}",
                     id,
                     plan.kind,
                     result.stage,
