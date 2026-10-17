@@ -36,4 +36,6 @@ Ignored entries comprise two opt-in external integrations (dedicated Store consu
 
 ## Remaining gate evidence
 
+The current full default Rust command finished with548 passed,3 failed,7 ignored in2362.15s. The failures are the two upstream directory-symlink tests requiring Windows privilege1314 (`commands::projects::tests::remove_workspace_skill_target_removes_directory_symlink_without_touching_target`, `core::sync_engine::tests::remove_target_removes_directory_symlink`) and upstream partial-clone setup (`core::git_fetcher::tests::a_detached_checkout_fails_on_a_missing_object_without_reaching_the_remote`). The latter setup could not produce its expected genuine partial clone after its owned remote was removed. These match the previously documented pilot environment failures; no tests were disabled or rewritten to obtain green. Full `--features sds` remains running and must be reported independently.
+
 Installer build/upgrade and native window checks, full Rust suite results, final two-axis review, fresh additive Store audit and final source commits must be recorded before declaring G2 complete. The known Phase0–1 upstream failures are not presumed unchanged until the current full commands return. No phase completion is inferred solely from the scoped green suite.
