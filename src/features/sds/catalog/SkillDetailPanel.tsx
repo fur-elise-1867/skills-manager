@@ -35,15 +35,22 @@ export default function SkillDetailPanel({skillId,onBack,onInstall}:{skillId:str
       : current.error ? <div role="alert"><p>{current.error}</p><button onClick={()=>setRevision(revision+1)}>Try again</button></div>
       : detail && <>
         <div className="sds-detail-heading"><div><h2>{detail.summary.name}</h2><p>{detail.summary.creator.displayName}</p></div><span className="sds-badge">{release ? release.version : "No published release"}</span></div>
-        <Compatibility agents={release ? release.compatibleAgents : detail.summary.compatibleAgents} />
-        <div className="sds-detail-columns"><article className="sds-markdown"><ReactMarkdown skipHtml remarkPlugins={[remarkGfm]} components={{img:()=>null,a:({children})=><span>{children}</span>}}>{detail.summary.description}</ReactMarkdown></article>
+        <div className="sds-detail-columns"><div className="sds-detail-content">
+          <article className="sds-markdown"><ReactMarkdown skipHtml remarkPlugins={[remarkGfm]} components={{img:()=>null,a:({children})=><span>{children}</span>}}>{detail.summary.description}</ReactMarkdown>
+            {release && <section className="sds-detail-notes"><h3>Release notes</h3><p>{release.changelog || "No release notes provided."}</p></section>}
+            <div className="sds-detail-compatibility"><Compatibility agents={release ? release.compatibleAgents : detail.summary.compatibleAgents} /></div>
+          </article>
+          {release && <section className="sds-detail-mcp" aria-labelledby="sds-detail-mcp-title"><h3 id="sds-detail-mcp-title">MCP requirements</h3>
+            {release.requiredMcps?.length ? <ul>{release.requiredMcps.map(name=><li key={name}><span>{name}</span><span className="sds-badge">Required</span></li>)}</ul> : <p>{release.requiredMcps == null ? "Requirements not declared" : "No MCP servers required"}</p>}
+            <p className="sds-field-help">AIPro configuration is checked before installation. This does not verify that MCP servers are running.</p>
+          </section>}
+        </div>
           <aside className="sds-release-info" aria-label="Release information">
             <h3>Release information</h3>
             {release ? <>
-              <dl><dt>Package</dt><dd>{release.package.format.toUpperCase()} · {(release.package.sizeBytes / 1024).toLocaleString(undefined,{maximumFractionDigits:1})} KB</dd><dt>Install folder</dt><dd>{release.installName}</dd></dl>
-              <h3>MCP requirements</h3><p>{release.requiredMcps == null ? "Requirements not declared" : release.requiredMcps.length ? release.requiredMcps.join(", ") : "No MCP servers required"}</p>
-              <h3>Release notes</h3><p>{release.changelog || "No release notes provided."}</p>
+              <dl><div><dt>Format</dt><dd>{release.package.format.toUpperCase()}</dd></div><div><dt>Size</dt><dd>{(release.package.sizeBytes / 1024).toLocaleString(undefined,{maximumFractionDigits:1})} KB</dd></div><div><dt>Version</dt><dd>{release.version}</dd></div><div><dt>Install folder</dt><dd>{release.installName}</dd></div></dl>
               <button className="sds-primary-button" disabled={!detail.summary.canDownload || !onInstall} onClick={()=>onInstall?.(release)}>Install skill</button>
+              <p className="sds-field-help">Review the AIPro destination and requirements in the next step.</p>
               {!detail.summary.canDownload && <p>You do not have download permission for this skill.</p>}
             </> : <p>This skill does not have a published installable release.</p>}
           </aside>
