@@ -3,7 +3,7 @@ use crate::sds::error::SdsError;
 use std::collections::BTreeMap;
 use unicode_normalization::UnicodeNormalization;
 
-pub(super) fn relative_path(name: &str, directory: bool, depth: usize) -> Result<String, SdsError> {
+pub(crate) fn relative_path(name: &str, directory: bool, depth: usize) -> Result<String, SdsError> {
     let name = if directory {
         name.strip_suffix('/').unwrap_or(name)
     } else {

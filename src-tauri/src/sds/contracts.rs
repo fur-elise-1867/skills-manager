@@ -44,7 +44,8 @@ impl StoreProfile {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
 pub struct SessionContext {
     pub profile_id: String,
     pub account_id: String,
@@ -223,4 +224,53 @@ pub struct McpReport {
     pub missing: Vec<String>,
     pub reason: Option<String>,
     pub checked_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct InstallRequest {
+    pub skill_id: String,
+    pub release_id: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PreparedOperation {
+    pub id: String,
+    pub kind: String,
+    pub release: Release,
+    pub target: Target,
+    pub expected_fingerprint: Option<String>,
+    pub mcp: McpReport,
+    pub requires_mcp_ack: bool,
+    pub can_execute: bool,
+    pub conflict: Option<String>,
+    pub context: SessionContext,
+    pub runtime_epoch: String,
+}
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub enum OperationState {
+    Prepared,
+    Downloading,
+    Validating,
+    Staging,
+    Committing,
+    Completed,
+    Failed,
+    Cancelled,
+    RecoveryRequired,
+}
+impl OperationState {
+    pub fn terminal(self) -> bool {
+        matches!(self, Self::Completed | Self::Failed | Self::Cancelled)
+    }
+}
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OperationResult {
+    pub operation_id: String,
+    pub state: OperationState,
+    pub stage: String,
+    pub error: Option<super::error::SdsError>,
 }

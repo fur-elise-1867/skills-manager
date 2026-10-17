@@ -1,6 +1,8 @@
 pub mod commands;
 pub mod contracts;
 pub mod credentials;
+#[cfg(feature = "sds")]
+pub mod deployment;
 pub mod error;
 #[cfg(debug_assertions)]
 pub mod fixtures;
@@ -8,6 +10,8 @@ pub mod mcp;
 #[cfg(feature = "sds")]
 pub mod packages;
 pub mod profile;
+#[cfg(feature = "sds")]
+pub mod repository;
 pub mod runtime;
 pub mod session;
 pub mod store_client;

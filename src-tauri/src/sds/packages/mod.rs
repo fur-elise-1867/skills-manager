@@ -1,4 +1,4 @@
-mod paths;
+pub(crate) mod paths;
 mod seven_zip;
 mod zip;
 
