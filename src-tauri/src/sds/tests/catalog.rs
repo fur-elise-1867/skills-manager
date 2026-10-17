@@ -21,6 +21,62 @@ impl CredentialVault for VolatileVault {
         Ok(())
     }
 }
+
+// Explicit opt-in: exercises the product Rust consumer against the real local
+// provider. No persisted vault, production account, or real agent target.
+#[tokio::test]
+#[ignore = "requires the dedicated running Store pilot and environment credentials"]
+async fn live_pilot_gateway_downloads_and_prepares_zip_and_sevenzip() {
+    use crate::sds::packages::{prepare_package, PackageLimits};
+    use std::sync::atomic::AtomicBool;
+    let email = std::env::var("SDS_PROVIDER_EMAIL").expect("pilot email required");
+    let password = std::env::var("SDS_PROVIDER_PASSWORD").expect("pilot password required");
+    let session = Arc::new(SessionService::new(
+        Environment::Development,
+        Some(StoreProfile::new("http://127.0.0.1:8080/skm", Environment::Development).unwrap()),
+        Arc::new(ReqwestTransport::new().unwrap()),
+        Arc::new(VolatileVault),
+    ));
+    session.login(&email, &password).await.unwrap();
+    let client = StoreClient::new(session.clone());
+    let taxonomy = client.taxonomy().await.unwrap();
+    assert!(taxonomy.sources.iter().any(|s| s.id == "desktop-pilot"));
+    let page = client
+        .search(CatalogQuery {
+            q: "SDS Pilot".into(),
+            source_id: Some("desktop-pilot".into()),
+            ..Default::default()
+        })
+        .await
+        .unwrap();
+    assert!(page.total_items >= 2);
+    let root = tempfile::tempdir().unwrap();
+    let mut fingerprints = Vec::new();
+    for (skill, release_id) in [
+        ("1", "8b523c68-f7e5-4ea6-a1a2-cdfd4593c105"),
+        ("2", "94de5a6f-5e44-4770-9e86-6a8da12d7fe5"),
+    ] {
+        let detail = client.detail(skill).await.unwrap();
+        assert_eq!(detail.summary.metadata.id, skill);
+        let release = client.release(skill, release_id).await.unwrap();
+        let archive = root.path().join(format!("{skill}.archive"));
+        client
+            .download(&release, &archive, &AtomicBool::new(false))
+            .await
+            .unwrap();
+        let artifact = prepare_package(
+            &archive,
+            &release,
+            &root.path().join(format!("stage-{skill}")),
+            &PackageLimits::default(),
+        )
+        .unwrap();
+        assert!(artifact.root.join("SKILL.md").is_file());
+        fingerprints.push(artifact.fingerprint);
+    }
+    assert_eq!(fingerprints[0], fingerprints[1]);
+    session.logout().await.unwrap();
+}
 fn fixture(name: &str) -> serde_json::Value {
     serde_json::from_str(match name {
         "login" => include_str!("../../../../contracts/sds-desktop/v1/fixtures/auth-login.json"),
