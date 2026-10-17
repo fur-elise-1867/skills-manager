@@ -12,7 +12,7 @@
 
 Trạng thái: **Người dùng đồng ý các khuyến nghị review và yêu cầu bắt đầu Phase 0–1 ngày 2026-10-17 (Asia/Saigon).** Thực thi Native, tuần tự trong chat hiện tại theo phương án đã khuyến nghị. Checkbox chỉ đánh dấu theo bằng chứng thực tế.
 
-Checkpoint phát triển: [Phase0 runtime/shell và bằng chứng cài debug](../evidence/phase0-runtime.md). A00 có baseline failures được phân tích; A01 đã có source/tests; A02 có shell và debug installer smoke, còn release/native acceptance trước khi đóng phase. A03–A10/S01–S04 chưa thực hiện. SDS dùng binary riêng `sds-skills-manager` và tắt default CLI feature qua Cargo runner args; CLI upstream giữ default feature riêng.
+Checkpoint phát triển mới nhất: [Windows pilot và acceptance ledger](../evidence/phase1-pilot.md), [Store thật và additive audit](../evidence/store-pilot.md). A01–A09 đã có implementation và bằng chứng tests/native; S01–S04 đã kiểm chứng provider thật, ZIP/7z, consumer và bộ cài development. A10 đã kiểm chứng gỡ ZIP sau xác nhận của người dùng và có kết quả đầy đủ hai suite Rust, với ba lỗi setup upstream được phân tích cụ thể; chỉ còn nghiệm thu AIPro thực khi người dùng chuẩn bị xong. Checkbox chi tiết lịch sử không thay thế acceptance ledger. SDS dùng binary riêng `sds-skills-manager`, tắt default CLI feature qua Cargo runner args; CLI upstream giữ default feature riêng. Các thành phần tiến trình/kết quả cài được hợp nhất trong `OperationFlow.tsx`; kiểm thử đăng nhập nằm trong `SdsApp.test.tsx` và session tests tương ứng.
 
 ## Review amendments — 2026-10-17
 
