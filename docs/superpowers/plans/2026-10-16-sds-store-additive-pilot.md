@@ -49,7 +49,7 @@
 
 - [ ] Viết tests 401, q+source AND, ACL trước count/page, visibility parity với SkillAccessHelper, skill chưa release→latestRelease null, 400 invalid filter, 422 unavailable mode. Chạy thấy RED do facade thiếu.
 - [ ] Implement read-only upstream access trong package mới. Sources thuộc desktop mapping, không tự đồng nhất category. Trending/Hot unavailable theo contract.
-- [ ] All Time: trước S02 cần quyết định thứ tự cụ thể. Đề xuất pilot alphabetical name case-insensitive + skillId tie-break, ghi rõ không phải leaderboard. Nếu chưa được chấp thuận khi tới S02, giữ mode unavailable và yêu cầu quyết định nghiệp vụ; không tự giả ranking từ updatedAt/download count.
+- [ ] All Time: người dùng đã chấp thuận ngày2026-10-17 thứ tự tên A–Z và skillId khi trùng tên, áp dụng tạm cho pilot. Triển khai name case-insensitive ascending + skillId ascending trước pagination; ghi rõ đây không phải leaderboard. Không suy ra ranking từ updatedAt/download count. Trending/Hot vẫn unavailable cho đến khi có công thức được chốt.
 - [ ] Normalize userId/userName ở gateway app; không sửa LoginResponse để thêm expiresIn/user object.
 - [ ] Run focused tests GREEN; consumer/provider fixture parity và server HTTP thật giữ context `/skm`. Ghi limitations/ranking decision trong evidence.
 
