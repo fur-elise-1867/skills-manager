@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { CatalogQuery, Page, ProfileInfo, SessionView, SkillDetail, SkillSummary, StoreProfile, Taxonomy } from "./contracts";
+import type { CatalogQuery, Page, ProfileInfo, SessionView, SkillDetail, SkillSummary, StoreProfile, Taxonomy, TargetSettings } from "./contracts";
 
 export const getRuntimeProfile = () => invoke<ProfileInfo>("runtime_profile");
 export const signIn = (email: string, password: string) => invoke<SessionView>("sds_login", { email, password });
@@ -10,3 +10,5 @@ export const saveConnection = (baseUrl: string) => invoke<StoreProfile>("sds_set
 export const getCatalogTaxonomy = () => invoke<Taxonomy>("sds_catalog_taxonomy");
 export const searchCatalog = (query: CatalogQuery) => invoke<Page<SkillSummary>>("sds_catalog_search", { query });
 export const getSkillDetail = (skillId: string) => invoke<SkillDetail>("sds_skill_detail", { skillId });
+export const getTargetSettings = () => invoke<TargetSettings>("sds_get_target_settings");
+export const saveTargetOverride = (overrideRoot: string | null) => invoke<TargetSettings>("sds_set_target_override", { overrideRoot });

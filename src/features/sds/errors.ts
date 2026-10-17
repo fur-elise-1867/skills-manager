@@ -14,7 +14,9 @@ const messages: Record<string, string> = {
   NOT_FOUND: "This skill is unavailable or you no longer have access to it.",
   RELEASE_WITHDRAWN: "This release has been withdrawn from the Store.",
   RELEASE_CHANGED: "The release changed. Reload its details before installing.",
-  SETTINGS_SAVE_FAILED: "Your Store connection could not be saved. Try again.",
+  SETTINGS_SAVE_FAILED: "Your settings could not be read or saved. Try saving them again.",
+  TARGET_NOT_READY: "AIPro is not ready. Open AIPro first or select an existing skills folder in Settings.",
+  UNSAFE_TARGET: "This destination cannot be used. Select a local folder without directory links or path aliases.",
 };
 
 export function storeErrorMessage(error: unknown): string {

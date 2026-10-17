@@ -29,6 +29,7 @@ export interface Release {
 }
 export interface SkillDetail { summary: SkillSummary; storePageUrl: string | null; latestRelease: Release | null }
 export interface Target { agentKey: string; workspaceId: string; path: string }
+export interface TargetSettings { overrideRoot: string | null; target: Target | null; error: { code: string } | null; locked: boolean }
 export interface McpReport { state: "notRequired" | "unknown" | "configured" | "missing" | "unverifiable"; missing: string[]; reason: string | null; checkedAt: string }
 export interface PreparedOperation {
   id: string; kind: "install" | "remove"; release: Release; target: Target; expectedFingerprint: string | null;

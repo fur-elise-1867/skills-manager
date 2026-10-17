@@ -5,6 +5,7 @@ import { SdsThemeContext } from "./theme";
 import { useSdsSession } from "./session/context";
 import SignIn from "./session/SignIn";
 import ConnectionSettings from "./settings/ConnectionSettings";
+import TargetSettings from "./settings/TargetSettings";
 import CatalogPage from "./catalog/CatalogPage";
 
 export default function SdsShell({ profile }: { profile: ProfileInfo }) {
@@ -32,7 +33,7 @@ export default function SdsShell({ profile }: { profile: ProfileInfo }) {
       {profile.fixtureMode && <p role="status" className="sds-fixture">Development fixtures — sample data and isolated targets. Sample account: employee@example.invalid · Password: synthetic-password. Search __empty, __slow or __unavailable to inspect states.</p>}
       <div className="sds-page-heading"><div><p className="sds-eyebrow">INTERNAL WORKSPACE</p><h1>{settings ? "Settings" : "Skills Store"}</h1><p>Find and manage skills from your internal Skills Store.</p></div><span className="sds-badge" data-status={account.session?.status}>{account.session?.status === "authenticated" ? "Signed in" : account.session?.status === "offline" ? "Offline" : account.session?.status === "expired" ? "Session expired" : account.connection ? "Connection configured" : "Setup required"}</span></div>
       {account.error && <p role="alert" className="sds-error">{account.error}</p>}
-      {settings ? <ConnectionSettings key={account.connection?.id ?? "new"} current={account.connection ?? null} environment={profile.environment} locked={profile.fixtureMode} onSaved={(connection) => { account.connectionSaved(connection); setPage("store"); }} />
+      {settings ? <><ConnectionSettings key={account.connection?.id ?? "new"} current={account.connection ?? null} environment={profile.environment} locked={profile.fixtureMode} onSaved={(connection) => { account.connectionSaved(connection); setPage("store"); }} /><TargetSettings /></>
         : !account.connection || !account.session ? <p role="status">Checking your Store connection…</p>
         : account.session.status === "signedOut" || account.session.status === "expired" ? <SignIn key={account.connection.id} onSignedIn={account.signedIn} />
         : null}

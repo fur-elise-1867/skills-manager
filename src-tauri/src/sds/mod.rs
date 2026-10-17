@@ -4,10 +4,12 @@ pub mod credentials;
 pub mod error;
 #[cfg(debug_assertions)]
 pub mod fixtures;
+pub mod mcp;
 pub mod profile;
 pub mod runtime;
 pub mod session;
 pub mod store_client;
+pub mod targets;
 
 #[tauri::command]
 pub fn runtime_profile() -> Result<profile::ProfileInfo, error::SdsError> {

@@ -12,6 +12,7 @@ beforeEach(() => {
     if (command === "runtime_profile") return { kind: "sds", environment: "internal", fixtureMode: false } as never;
     if (command === "sds_get_connection") return null as never;
     if (command === "sds_session_status") return { status: "signedOut", user: null } as never;
+    if (command === "sds_get_target_settings") return { overrideRoot: null, target: null, error: { code: "TARGET_NOT_READY" }, locked: false } as never;
     throw new Error(`Unexpected upstream command: ${command}`);
   });
 });
@@ -26,7 +27,8 @@ test("rejects_runtime_profile_mismatch", async () => {
 test("does_not_mount_upstream_context", async () => {
   render(<SdsApp />);
   await screen.findByRole("navigation");
-  await waitFor(() => expect(vi.mocked(invoke).mock.calls.map(([command]) => command).sort()).toEqual(["runtime_profile", "sds_get_connection", "sds_session_status"]));
+  await screen.findByRole("heading", { name: "AIPro destination" });
+  await waitFor(() => expect(vi.mocked(invoke).mock.calls.map(([command]) => command).sort()).toEqual(["runtime_profile", "sds_get_connection", "sds_get_target_settings", "sds_session_status"]));
 });
 
 test("configures a real Store profile and signs in through the SDS shell", async () => {
@@ -36,6 +38,7 @@ test("configures a real Store profile and signs in through the SDS shell", async
     if (command === "runtime_profile") return { kind: "sds", environment: "internal", fixtureMode: false } as never;
     if (command === "sds_get_connection") return connection as never;
     if (command === "sds_session_status") return session as never;
+    if (command === "sds_get_target_settings") return { overrideRoot: null, target: null, error: { code: "TARGET_NOT_READY" }, locked: false } as never;
     if (command === "sds_set_connection") { connection = { id: "profile-one", baseUrl: "https://store.example.invalid/skm", environment: "internal" }; return connection as never; }
     if (command === "sds_login") { session = { status: "authenticated", user: { id: "1001", displayName: "Example Employee" } }; return session as never; }
     if (command === "sds_catalog_taxonomy") return taxonomy.data as never;

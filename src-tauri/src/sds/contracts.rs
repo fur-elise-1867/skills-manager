@@ -189,3 +189,38 @@ pub struct SkillDetail {
     pub store_page_url: Option<String>,
     pub latest_release: Option<Release>,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct Target {
+    pub agent_key: String,
+    pub workspace_id: String,
+    pub path: std::path::PathBuf,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TargetSettings {
+    pub override_root: Option<std::path::PathBuf>,
+    pub target: Option<Target>,
+    pub error: Option<super::error::SdsError>,
+    pub locked: bool,
+}
+
+#[derive(Debug, Copy, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub enum McpState {
+    NotRequired,
+    Unknown,
+    Configured,
+    Missing,
+    Unverifiable,
+}
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct McpReport {
+    pub state: McpState,
+    pub missing: Vec<String>,
+    pub reason: Option<String>,
+    pub checked_at: String,
+}

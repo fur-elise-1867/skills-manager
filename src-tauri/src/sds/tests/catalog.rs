@@ -335,5 +335,15 @@ async fn debug_fixture_services_are_loopback_locked_ephemeral_and_do_not_persist
         restarted.session.status().await.unwrap().status,
         crate::sds::contracts::SessionStatus::SignedOut
     );
-    assert_eq!(std::fs::read_dir(root.path()).unwrap().count(), 0);
+    let entries: Vec<_> = std::fs::read_dir(root.path())
+        .unwrap()
+        .map(|entry| entry.unwrap().file_name())
+        .collect();
+    assert_eq!(entries, [std::ffi::OsString::from("agent-home")]);
+    assert_eq!(
+        std::fs::read_dir(root.path().join("agent-home/.aipro"))
+            .unwrap()
+            .count(),
+        0
+    );
 }

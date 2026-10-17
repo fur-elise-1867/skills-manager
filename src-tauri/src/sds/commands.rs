@@ -7,6 +7,7 @@ use super::{
     profile::Environment,
     session::SessionService,
     store_client::{ReqwestTransport, StoreClient},
+    targets::TargetService,
 };
 use std::{
     path::{Path, PathBuf},
@@ -17,6 +18,7 @@ use tokio::sync::Mutex;
 pub struct SdsServices {
     pub session: Arc<SessionService>,
     pub store: StoreClient,
+    pub targets: Arc<TargetService>,
     data_root: PathBuf,
     settings_gate: Mutex<()>,
     connection_error: Mutex<Option<SdsError>>,
@@ -36,6 +38,11 @@ impl SdsServices {
         ));
         Ok(Self {
             store: StoreClient::new(session.clone()),
+            targets: Arc::new(TargetService::new(
+                &dirs::home_dir()
+                    .ok_or_else(|| SdsError::invalid("User home directory is unavailable"))?,
+                data_root,
+            )),
             session,
             data_root: data_root.into(),
             settings_gate: Mutex::new(()),
@@ -72,6 +79,7 @@ impl SdsServices {
         ));
         Ok(Self {
             store: StoreClient::new(session.clone()),
+            targets: Arc::new(TargetService::fixture(data_root)?),
             session,
             data_root: data_root.into(),
             settings_gate: Mutex::new(()),
@@ -205,4 +213,24 @@ pub async fn sds_skill_detail(
     skill_id: String,
 ) -> Result<SkillDetail, SdsError> {
     state.store.detail(&skill_id).await
+}
+
+#[tauri::command]
+pub async fn sds_get_target_settings(
+    state: tauri::State<'_, SdsServices>,
+) -> Result<super::contracts::TargetSettings, SdsError> {
+    let targets = state.targets.clone();
+    tokio::task::spawn_blocking(move || targets.settings())
+        .await
+        .map_err(|_| save_error())?
+}
+#[tauri::command]
+pub async fn sds_set_target_override(
+    state: tauri::State<'_, SdsServices>,
+    override_root: Option<PathBuf>,
+) -> Result<super::contracts::TargetSettings, SdsError> {
+    let targets = state.targets.clone();
+    tokio::task::spawn_blocking(move || targets.set_override(override_root.as_deref()))
+        .await
+        .map_err(|_| save_error())?
 }
