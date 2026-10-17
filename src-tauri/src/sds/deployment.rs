@@ -20,11 +20,15 @@ impl super::contracts::ReviewedRoot {
             Err(error) if error.kind() == std::io::ErrorKind::NotFound => false,
             Err(_) => return Err(conflict()),
         };
-        let anchor = if root_existed {
+        let mut anchor = if root_existed {
             root
         } else {
             root.parent().ok_or_else(conflict)?
         };
+        while matches!(std::fs::symlink_metadata(anchor),Err(error) if error.kind()==std::io::ErrorKind::NotFound)
+        {
+            anchor = anchor.parent().ok_or_else(conflict)?;
+        }
         let pins = DirectoryPins::acquire(anchor)?;
         Ok(Self {
             anchor: anchor.into(),
@@ -33,9 +37,13 @@ impl super::contracts::ReviewedRoot {
         })
     }
     pub(crate) fn validate_shape(&self, root: &Path) -> Result<(), SdsError> {
-        validate_directory_path(&self.anchor)?;
+        super::targets::validate_directory_shape(&self.anchor)?;
         if (self.root_existed && self.anchor != root)
-            || (!self.root_existed && Some(self.anchor.as_path()) != root.parent())
+            || (!self.root_existed
+                && !root
+                    .ancestors()
+                    .skip(1)
+                    .any(|ancestor| ancestor == self.anchor))
             || self.identity.file_id.len() != 32
             || !self.identity.file_id.bytes().all(|b| b.is_ascii_hexdigit())
         {
@@ -45,6 +53,7 @@ impl super::contracts::ReviewedRoot {
     }
     pub(crate) fn pin(&self, root: &Path) -> Result<DirectoryPins, SdsError> {
         self.validate_shape(root)?;
+        validate_directory_path(root)?;
         let pins = DirectoryPins::acquire(&self.anchor)?;
         if super::journal::identity(pins.leaf())? != self.identity {
             return Err(conflict());

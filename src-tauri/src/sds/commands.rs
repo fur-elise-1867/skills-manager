@@ -298,3 +298,149 @@ pub async fn sds_library_preview(
         ))
     }
 }
+
+#[tauri::command]
+pub async fn sds_prepare_install(
+    state: tauri::State<'_, SdsServices>,
+    request: super::contracts::InstallRequest,
+) -> Result<super::contracts::PreparedOperation, SdsError> {
+    #[cfg(feature = "sds")]
+    {
+        state.operations.prepare_install(request).await
+    }
+    #[cfg(not(feature = "sds"))]
+    {
+        let _ = (state, request);
+        Err(profile_mismatch())
+    }
+}
+#[tauri::command]
+pub async fn sds_prepare_remove(
+    state: tauri::State<'_, SdsServices>,
+    deployment_id: String,
+) -> Result<super::contracts::PreparedOperation, SdsError> {
+    #[cfg(feature = "sds")]
+    {
+        state.operations.prepare_remove(&deployment_id).await
+    }
+    #[cfg(not(feature = "sds"))]
+    {
+        let _ = (state, deployment_id);
+        Err(profile_mismatch())
+    }
+}
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct StartedOperation {
+    operation_id: String,
+}
+#[tauri::command]
+pub async fn sds_execute(
+    app: tauri::AppHandle,
+    state: tauri::State<'_, SdsServices>,
+    operation_id: String,
+    ack_mcp: bool,
+) -> Result<StartedOperation, SdsError> {
+    #[cfg(feature = "sds")]
+    {
+        use tauri::Emitter;
+        let operations = state.operations.clone();
+        let plan = operations.saved_plan(&operation_id)?;
+        let initial = operations.status(&operation_id)?;
+        if initial.state == super::contracts::OperationState::RecoveryRequired {
+            return Err(SdsError::new(
+                "RECOVERY_REQUIRED",
+                "Restart SDS to reconcile the interrupted operation before trying again.",
+                false,
+            ));
+        }
+        let id = operation_id.clone();
+        tauri::async_runtime::spawn(async move {
+            log::info!(
+                "operation={} kind={} skill={} release={} stage=starting",
+                id,
+                plan.kind,
+                plan.release.skill_id,
+                plan.release.id
+            );
+            let worker = operations.execute(&id, ack_mcp);
+            tokio::pin!(worker);
+            let mut interval = tokio::time::interval(std::time::Duration::from_millis(250));
+            let mut previous = String::new();
+            let final_result = loop {
+                tokio::select! {
+                    result=&mut worker=>break result,
+                    _=interval.tick()=>{
+                        if let Ok(status)=operations.status(&id){
+                            let snapshot=serde_json::to_string(&status).unwrap_or_default();
+                            if snapshot!=previous{let _=app.emit("sds:operation",&status);previous=snapshot;}
+                        }
+                    }
+                }
+            };
+            let result = match final_result {
+                Ok(result) => Ok(result),
+                Err(error) => operations.record_dispatch_failure(&id, error),
+            };
+            if let Ok(result) = result {
+                log::info!(
+                    "operation={} kind={} stage={} result={:?} code={}",
+                    id,
+                    plan.kind,
+                    result.stage,
+                    result.state,
+                    result
+                        .error
+                        .as_ref()
+                        .map(|error| error.code.as_str())
+                        .unwrap_or("none")
+                );
+                let _ = app.emit("sds:operation", result);
+            }
+        });
+        Ok(StartedOperation { operation_id })
+    }
+    #[cfg(not(feature = "sds"))]
+    {
+        let _ = (app, state, operation_id, ack_mcp);
+        Err(profile_mismatch())
+    }
+}
+#[tauri::command]
+pub async fn sds_cancel(
+    state: tauri::State<'_, SdsServices>,
+    operation_id: String,
+) -> Result<super::contracts::OperationResult, SdsError> {
+    #[cfg(feature = "sds")]
+    {
+        state.operations.cancel(&operation_id)
+    }
+    #[cfg(not(feature = "sds"))]
+    {
+        let _ = (state, operation_id);
+        Err(profile_mismatch())
+    }
+}
+#[tauri::command]
+pub async fn sds_operation_status(
+    state: tauri::State<'_, SdsServices>,
+    operation_id: String,
+) -> Result<super::contracts::OperationResult, SdsError> {
+    #[cfg(feature = "sds")]
+    {
+        state.operations.status(&operation_id)
+    }
+    #[cfg(not(feature = "sds"))]
+    {
+        let _ = (state, operation_id);
+        Err(profile_mismatch())
+    }
+}
+#[cfg(not(feature = "sds"))]
+fn profile_mismatch() -> SdsError {
+    SdsError::new(
+        "PROFILE_MISMATCH",
+        "Open the SDS desktop runtime to manage its Library.",
+        false,
+    )
+}

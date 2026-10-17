@@ -1,5 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import {createHash} from 'node:crypto';
 import { startFixtureStore } from './sds-fixtures.mjs';
 
 test('explicit fixture HTTP Store accepts only its sample account and serves real desktop envelopes', async () => {
@@ -16,6 +17,13 @@ test('explicit fixture HTTP Store accepts only its sample account and serves rea
     assert.equal(page.data.totalItems,1); assert.equal(page.data.items[0].name,'Jira Weekly Report');
     const detail = await (await fetch(`${fixture.baseUrl}/api/v1/desktop/skills/skill-123`,{headers})).json();
     assert.equal(detail.data.latestRelease.skillId,'skill-123'); assert.deepEqual(detail.data.latestRelease.requiredMcps,['jira-mcp']);
+    const metadata=await (await fetch(`${fixture.baseUrl}/api/v1/desktop/skills/skill-123/releases/rel-003`,{headers})).json();
+    const download=await fetch(`${fixture.baseUrl}${metadata.data.package.downloadPath}`,{headers});
+    assert.equal(download.status,200);
+    const bytes=Buffer.from(await download.arrayBuffer());
+    assert.equal(bytes.length,metadata.data.package.sizeBytes);
+    assert.equal(createHash('sha256').update(bytes).digest('hex'),metadata.data.package.sha256);
+    assert.equal((await fetch(`${fixture.baseUrl}${metadata.data.package.downloadPath}`)).status,401);
     assert.equal((await fetch(`${fixture.baseUrl}/api/v1/desktop/skills?mode=hot`,{headers})).status,422);
     assert.equal((await fetch(`${fixture.baseUrl}/api/v1/desktop/skills?q=__unavailable`,{headers})).status,503);
     const empty = await (await fetch(`${fixture.baseUrl}/api/v1/desktop/skills?q=__empty`,{headers})).json(); assert.equal(empty.data.totalItems,0);

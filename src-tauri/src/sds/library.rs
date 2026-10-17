@@ -54,7 +54,7 @@ fn cache_status(repository: &Repository, entry: &LibraryEntry) -> CacheStatus {
         Err(_) => CacheStatus::Unverifiable,
     }
 }
-fn inspect_deployment(deployment: &Deployment) -> LibraryDeployment {
+pub(crate) fn inspect_deployment(deployment: &Deployment) -> LibraryDeployment {
     let status = (|| {
         validate_directory_path(&deployment.target.path)
             .map_err(|_| DeploymentStatus::Unverifiable)?;

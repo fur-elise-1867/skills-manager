@@ -253,6 +253,8 @@ pub struct ReviewedRoot {
 pub struct PreparedOperation {
     pub id: String,
     pub kind: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub deployment_id: Option<String>,
     pub release: Release,
     pub target: Target,
     pub reviewed_root: ReviewedRoot,

@@ -16,7 +16,7 @@ test("shows independent cache and target status locally, searches paths and prev
     render(<LibraryPage/>);
     await screen.findByRole("heading",{name:"jira-weekly-report"});
     expect(screen.getByText(item.deployments[0].target.path)).toBeInTheDocument();
-    expect(screen.getByText("Installed")).toBeInTheDocument();
+    expect(screen.getByText("Installed",{selector:"span"})).toBeInTheDocument();
     expect(screen.getByText(/MCP at installation: Missing/)).toBeInTheDocument();
     fireEvent.change(screen.getByRole("searchbox",{name:"Search Library"}),{target:{value:"not-in-library"}});
     expect(screen.getByText("No matching releases.")).toBeInTheDocument();

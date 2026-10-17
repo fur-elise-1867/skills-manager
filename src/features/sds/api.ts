@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import type {OperationRequest,OperationResult,PreparedOperation} from "./contracts";
 import type { CatalogQuery, LibraryItem, Page, ProfileInfo, SessionView, SkillDetail, SkillSummary, StoreProfile, Taxonomy, TargetSettings } from "./contracts";
 
 export const getRuntimeProfile = () => invoke<ProfileInfo>("runtime_profile");
@@ -14,3 +15,7 @@ export const getTargetSettings = () => invoke<TargetSettings>("sds_get_target_se
 export const saveTargetOverride = (overrideRoot: string | null) => invoke<TargetSettings>("sds_set_target_override", { overrideRoot });
 export const getLibrary = () => invoke<LibraryItem[]>("sds_library");
 export const getLibraryPreview = (releaseKey: string) => invoke<string>("sds_library_preview", { releaseKey });
+export const prepareOperation = (request:OperationRequest) => request.kind === "install" ? invoke<PreparedOperation>("sds_prepare_install",{request:{skillId:request.skillId,releaseId:request.releaseId}}) : invoke<PreparedOperation>("sds_prepare_remove",{deploymentId:request.deploymentId});
+export const executeOperation = (operationId:string,ackMcp:boolean) => invoke<{operationId:string}>("sds_execute",{operationId,ackMcp});
+export const cancelOperation = (operationId:string) => invoke<OperationResult>("sds_cancel",{operationId});
+export const getOperationStatus = (operationId:string) => invoke<OperationResult>("sds_operation_status",{operationId});

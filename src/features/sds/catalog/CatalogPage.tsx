@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
 import { getCatalogTaxonomy } from "../api";
-import type { CatalogQuery, Taxonomy } from "../contracts";
+import type { CatalogQuery, Release, Taxonomy } from "../contracts";
 import { storeErrorMessage } from "../errors";
 import { useSdsSession } from "../session/context";
 import SkillDetailPanel, { Compatibility } from "./SkillDetailPanel";
 import useCatalog from "./useCatalog";
 
-export default function CatalogPage() {
+export default function CatalogPage({onInstall}:{onInstall?:(release:Release)=>void}) {
   const account = useSdsSession();
   const [query,setQuery] = useState<CatalogQuery>({q:"",mode:"all_time",sourceId:null,page:1,pageSize:20});
   const [draft,setDraft] = useState("");
@@ -26,7 +26,7 @@ export default function CatalogPage() {
     return ()=>clearTimeout(pending);
   },[draft]);
   const retry = () => setRevision(revision+1);
-  if (selected) return <SkillDetailPanel skillId={selected} onBack={()=>setSelected(undefined)} />;
+  if (selected) return <SkillDetailPanel skillId={selected} onBack={()=>setSelected(undefined)} onInstall={onInstall} />;
   return <section className="sds-catalog" aria-label="Skills catalog">
     <div className="sds-store-tabs"><span aria-current="page">Store</span><button disabled title="Available in a later release">Local Install</button></div>
     <div className="sds-catalog-toolbar">

@@ -18,6 +18,10 @@ pub mod packages;
 pub mod profile;
 #[cfg(feature = "sds")]
 pub mod repository;
+#[cfg(feature = "sds")]
+pub mod removal;
+#[cfg(feature = "sds")]
+mod removal_cleanup;
 pub mod runtime;
 pub mod session;
 pub mod store_client;

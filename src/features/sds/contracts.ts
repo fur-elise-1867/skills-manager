@@ -39,3 +39,6 @@ export type CacheStatus = "verified" | "corrupt" | "missing" | "unverifiable";
 export type DeploymentStatus = "installed" | "modified" | "missing" | "unverifiable";
 export interface LibraryDeployment { id: string; target: Target; status: DeploymentStatus; mcp: McpReport; installedAt: string; reason: string | null }
 export interface LibraryItem { id: string; profileId: string; release: Release; cachedAt: string; cacheStatus: CacheStatus; deployments: LibraryDeployment[] }
+export type OperationState = "prepared" | "downloading" | "validating" | "staging" | "committing" | "completed" | "failed" | "cancelled" | "recoveryRequired";
+export interface OperationResult { operationId: string; state: OperationState; stage: string; error: {code: string; message: string; operationId?: string | null} | null }
+export type OperationRequest = {kind:"install";skillId:string;releaseId:string} | {kind:"remove";deploymentId:string};

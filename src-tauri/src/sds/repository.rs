@@ -15,6 +15,7 @@ use std::{
     path::{Path, PathBuf},
     sync::Mutex,
 };
+mod removals;
 
 pub struct Repository {
     root: PathBuf,
@@ -249,6 +250,9 @@ impl Repository {
     ) -> Result<(), SdsError> {
         use super::journal::{target_key, Deployment};
         intent.validate(plan)?;
+        if plan.kind != "install" {
+            return Err(operation_error());
+        }
         if cached.key != intent.release_key
             || cached.artifact.fingerprint != intent.fingerprint
             || serde_json::to_value(&cached.release).map_err(|_| operation_error())?
@@ -839,6 +843,12 @@ fn release_changed() -> SdsError {
 pub(crate) fn validate_operation(plan: &PreparedOperation) -> Result<(), SdsError> {
     if uuid::Uuid::parse_str(&plan.id).is_err()
         || !["install", "remove"].contains(&plan.kind.as_str())
+        || (plan.kind == "install" && plan.deployment_id.is_some())
+        || (plan.kind == "remove"
+            && !plan
+                .deployment_id
+                .as_ref()
+                .is_some_and(|id| uuid::Uuid::parse_str(id).is_ok()))
         || plan.runtime_epoch.is_empty()
         || plan.runtime_epoch.len() > 256
         || plan.context.account_id.is_empty()
@@ -856,7 +866,11 @@ pub(crate) fn validate_operation(plan: &PreparedOperation) -> Result<(), SdsErro
     if plan.release.install_name.contains('/') {
         return Err(operation_error());
     }
-    validate_directory_path(&plan.target.path)?;
+    if plan.kind == "remove" {
+        super::targets::validate_directory_shape(&plan.target.path)?;
+    } else {
+        validate_directory_path(&plan.target.path)?;
+    }
     plan.reviewed_root
         .validate_shape(plan.target.path.parent().ok_or_else(operation_error)?)?;
     if plan.target.path.file_name().and_then(|name| name.to_str())

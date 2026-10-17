@@ -72,6 +72,31 @@ impl OperationService {
     pub fn status(&self, id: &str) -> Result<OperationResult, SdsError> {
         self.repository.operation_status(id)
     }
+    pub(crate) fn record_dispatch_failure(
+        &self,
+        id: &str,
+        mut error: SdsError,
+    ) -> Result<OperationResult, SdsError> {
+        let status = self.status(id)?;
+        if error.code == "OPERATION_BUSY" {
+            return Ok(status);
+        }
+        if status.state != OperationState::Prepared {
+            return Ok(status);
+        }
+        error.operation_id = Some(id.into());
+        let result = OperationResult {
+            operation_id: id.into(),
+            state: OperationState::Failed,
+            stage: "review-required".into(),
+            error: Some(error),
+        };
+        self.repository.record_result(&result)?;
+        Ok(result)
+    }
+    pub(crate) fn saved_plan(&self, id: &str) -> Result<PreparedOperation, SdsError> {
+        self.repository.load_operation(id)
+    }
     pub async fn library(&self) -> Result<Vec<super::contracts::LibraryItem>, SdsError> {
         let repository = self.repository.clone();
         blocking(move || super::library::load(&repository)).await
@@ -79,6 +104,15 @@ impl OperationService {
     pub async fn preview(&self, id: &str) -> Result<String, SdsError> {
         let (repository, id) = (self.repository.clone(), id.to_string());
         blocking(move || super::library::preview(&repository, &id)).await
+    }
+    pub async fn prepare_remove(&self, deployment_id: &str) -> Result<PreparedOperation, SdsError> {
+        self.ensure_ready()?;
+        let (repository, epoch, id) = (
+            self.repository.clone(),
+            self.epoch.clone(),
+            deployment_id.to_string(),
+        );
+        blocking(move || super::removal::prepare(&repository, &epoch, &id)).await
     }
     pub fn cancel(&self, id: &str) -> Result<OperationResult, SdsError> {
         self.ensure_ready()?;
@@ -129,8 +163,17 @@ impl OperationService {
                 cancel,
             }
         };
-        let plan = self.reviewed_install(id, ack_mcp).await?;
-        match self.run_install(&plan, job.cancel.clone()).await {
+        let plan = if self.repository.load_operation(id)?.kind == "remove" {
+            self.reviewed_remove(id).await?
+        } else {
+            self.reviewed_install(id, ack_mcp).await?
+        };
+        let outcome = if plan.kind == "remove" {
+            self.run_remove(&plan, job.cancel.clone()).await
+        } else {
+            self.run_install(&plan, job.cancel.clone()).await
+        };
+        match outcome {
             Ok(()) => self.status(id),
             Err(mut error) => {
                 error.operation_id = Some(id.into());
@@ -169,6 +212,55 @@ impl OperationService {
             stage: stage.into(),
             error: None,
         })
+    }
+    async fn reviewed_remove(&self, id: &str) -> Result<PreparedOperation, SdsError> {
+        let (repository, id, epoch) = (self.repository.clone(), id.to_string(), self.epoch.clone());
+        blocking(move || {
+            let plan = repository.load_operation(&id)?;
+            if plan.runtime_epoch != epoch
+                || repository.operation_status(&id)?.state != OperationState::Prepared
+            {
+                return Err(review());
+            }
+            let deployment = super::removal::reviewed_deployment(&repository, &plan)?;
+            let _root = plan
+                .reviewed_root
+                .pin(plan.target.path.parent().ok_or_else(review)?)
+                .map_err(|_| review())?;
+            let status = super::library::inspect_deployment(&deployment).status;
+            if (plan.expected_fingerprint.is_some()
+                && status != super::contracts::DeploymentStatus::Installed)
+                || (plan.expected_fingerprint.is_none()
+                    && status != super::contracts::DeploymentStatus::Missing)
+            {
+                return Err(review());
+            }
+            Ok(plan)
+        })
+        .await
+    }
+    async fn run_remove(
+        &self,
+        plan: &PreparedOperation,
+        cancel: Arc<AtomicBool>,
+    ) -> Result<(), SdsError> {
+        check_cancel(&cancel)?;
+        self.progress(&plan.id, OperationState::Validating, "checking-destination")?;
+        let (repository, frozen) = (self.repository.clone(), plan.clone());
+        if plan.expected_fingerprint.is_none() {
+            return blocking(move || {
+                check_cancel(&cancel)?;
+                super::removal::remove_missing(&repository, &frozen)
+            })
+            .await;
+        }
+        let intent = blocking(move || super::removal::stage_remove(&repository, &frozen)).await?;
+        let (repository, frozen) = (self.repository.clone(), plan.clone());
+        blocking(move || {
+            check_cancel(&cancel)?;
+            super::removal::commit_remove(&repository, &frozen, &intent)
+        })
+        .await
     }
     async fn run_install(
         &self,
@@ -349,6 +441,7 @@ impl OperationService {
         let mut plan = PreparedOperation {
             id: uuid::Uuid::new_v4().to_string(),
             kind: "install".into(),
+            deployment_id: None,
             release,
             target,
             reviewed_root,

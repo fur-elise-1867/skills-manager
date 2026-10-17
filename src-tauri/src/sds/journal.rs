@@ -105,7 +105,8 @@ impl CommitIntent {
     pub fn validate(&self, plan: &PreparedOperation) -> Result<(), SdsError> {
         if self.operation_id != plan.id
             || uuid::Uuid::parse_str(&self.operation_id).is_err()
-            || plan.kind != "install"
+            || !["install", "remove"].contains(&plan.kind.as_str())
+            || (plan.kind == "remove" && plan.deployment_id.is_none())
             || plan.target.path.parent() != Some(self.target_root.as_path())
             || self.target_root.parent().is_none()
             || plan.target.path.file_name().and_then(|name| name.to_str())
@@ -121,9 +122,15 @@ impl CommitIntent {
         {
             return Err(review());
         }
-        validate_directory_path(&self.target_root)?;
-        validate_directory_path(&plan.target.path)?;
-        validate_directory_path(&self.stage_path())?;
+        if plan.kind == "install" {
+            validate_directory_path(&self.target_root)?;
+            validate_directory_path(&plan.target.path)?;
+            validate_directory_path(&self.stage_path())?;
+        } else {
+            super::targets::validate_directory_shape(&self.target_root)?;
+            super::targets::validate_directory_shape(&plan.target.path)?;
+            super::targets::validate_directory_shape(&self.stage_path())?;
+        }
         Ok(())
     }
 }
@@ -193,6 +200,9 @@ impl PreparedInstallCommit {
         intent: &CommitIntent,
     ) -> Result<Self, SdsError> {
         intent.validate(plan)?;
+        if plan.kind != "install" {
+            return Err(review());
+        }
         let pins = DirectoryPins::acquire(&intent.target_root)?;
         if identity(pins.leaf())? != intent.root_identity {
             return Err(review());
@@ -283,6 +293,9 @@ pub fn recover_pending(
     let mut results = Vec::new();
     for (plan, intent) in repository.pending_intents()? {
         let outcome = (|| {
+            if plan.kind == "remove" {
+                return super::removal::recover(repository, &plan, &intent);
+            }
             intent.validate(&plan)?;
             let pins = DirectoryPins::acquire(&intent.target_root)?;
             if identity(pins.leaf())? != intent.root_identity {
@@ -442,7 +455,11 @@ pub(crate) fn confirm_existing(
     }
     repository.complete_existing(plan, &deployment)
 }
-fn target_lock(repository: &Repository, root: &FileIdentity, name: &str) -> Result<File, SdsError> {
+pub(crate) fn target_lock(
+    repository: &Repository,
+    root: &FileIdentity,
+    name: &str,
+) -> Result<File, SdsError> {
     let directory = repository.root().join("locks");
     let _pins = DirectoryPins::create(&directory)?;
     let mut options = OpenOptions::new();
@@ -503,11 +520,11 @@ pub(crate) fn identity(file: &File) -> Result<FileIdentity, SdsError> {
         })
     }
 }
-struct RenameGuard {
-    file: File,
+pub(crate) struct RenameGuard {
+    pub(crate) file: File,
 }
 impl RenameGuard {
-    fn open(path: &Path) -> Result<Self, SdsError> {
+    pub(crate) fn open(path: &Path) -> Result<Self, SdsError> {
         validate_directory_path(path)?;
         let mut options = OpenOptions::new();
         options.read(true);
@@ -527,7 +544,7 @@ impl RenameGuard {
         }
         Ok(Self { file })
     }
-    fn rename_to(&self, target: &Path) -> Result<(), SdsError> {
+    pub(crate) fn rename_to(&self, target: &Path) -> Result<(), SdsError> {
         #[cfg(windows)]
         {
             use std::os::windows::{ffi::OsStrExt, io::AsRawHandle};

@@ -6,6 +6,7 @@ mod operations;
 mod packages;
 mod profile;
 mod recovery;
+mod removal;
 mod session;
 mod support;
 mod targets;

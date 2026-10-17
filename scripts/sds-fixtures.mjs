@@ -13,6 +13,11 @@ export async function startFixtureStore() {
   const sample = readFixture('catalog').data.items[0];
   const release = readFixture('release').data;
   const detail = readFixture('detail').data;
+  const receipts=JSON.parse(readFileSync(new URL('../contracts/sds-desktop/v1/fixtures/packages/receipts.json',import.meta.url),'utf8'));
+  const zip=readFileSync(new URL('../contracts/sds-desktop/v1/fixtures/packages/sds-synthetic.zip',import.meta.url));
+  const receipt=receipts.find(item=>item.format==='zip');
+  release.package={...release.package,...receipt,downloadPath:'/api/v1/desktop/skills/skill-123/releases/rel-003/package'};
+  detail.latestRelease=release;
   const skills = [
     sample,
     ...['Meeting Notes','Code Review Checklist','Confluence Summary','Excel Status Report','Release Notes'].map((name,index)=>({
@@ -36,6 +41,9 @@ export async function startFixtureStore() {
       if(req.method !== 'GET') return send(405,error('INVALID_REQUEST'));
       if(!['Bearer synthetic-access-one','Bearer synthetic-access-two'].includes(req.headers.authorization)) return send(401,error('SESSION_EXPIRED'));
       if(path === '/skm/api/v1/desktop/taxonomy') return send(200,taxonomy);
+      if(path==='/skm/api/v1/desktop/skills/skill-123/releases/rel-003/package'){
+        res.writeHead(200,{'content-type':'application/zip','content-length':zip.length,'cache-control':'no-store'});res.end(zip);return;
+      }
       if(path === '/skm/api/v1/desktop/skills') {
         const mode = url.searchParams.get('mode') ?? 'all_time';
         if(!['all_time','trending','hot'].includes(mode)) return send(400,error('INVALID_REQUEST'));

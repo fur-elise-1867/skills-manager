@@ -1,0 +1,13 @@
+# A08 removal and A09 connected flow checkpoint
+
+2026-10-17; isolated SDS worktree; source checkpoint, not Phase 1 acceptance.
+
+Scoped removal accepts a saved deployment ID, freezes its reviewed ownership and fingerprint, and operates locally without Store authentication. Changed files block removal. A missing target can retire only its deployment row. Healthy removal writes a durable intent before moving the owned target to a sibling quarantine, commits the selected deployment removal, then deletes only unchanged manifest entries by Windows file handles. Library cache, other destinations and MCP configuration remain. Changed/new quarantine files are retained with an explicit cleanup warning. Recovery resumes committed partial cleanup; it restores a changed pre-commit target without overwriting any newly created destination.
+
+Verification: `a09-connected-rust.log` records 104 SDS tests passed, zero failed and three ignored helpers/opt-in vault tests. Parent tests actually spawn and terminate the owned install/removal helpers: removal covers before rename, after rename, after database commit, during cleanup and after cleanup. Tests cover SQL deletion failure, corrupt cache with intact local deployment, cancellation, edits introduced at commit boundaries and preserving another destination. All writes use temporary test roots.
+
+The same frontend operation flow now connects Store and Library preparation, MCP review, execute, cancel and results to real Tauri commands. Execute schedules background work and returns its ID; events trigger authoritative status reads, with polling when events are missed. Duplicate confirmations and stale preparation responses are guarded. Static error messages avoid displaying raw backend data. Local Library search, filters, cards and the installed-location table follow the mapped Stitch W07 structure; remove review follows W13.
+
+Verification: 32 frontend tests passed in `a09-connected-ui.log`; lint and SDS frontend build passed in `a09-connected-lint.log` and `a09-connected-build.log`. `node scripts/test-sds-contracts.mjs` passed schema fixtures, invalid/missing metadata checks and actual Rust serde-to-TypeScript parity in `a09-contract-green.log`. The explicit debug fixture server serves the real checked-in ZIP with its correct digest over its authenticated route. Installer builds cannot enable fixtures.
+
+Still required: independent review of this checkpoint, native Tauri flow and visual checks (including minimum window/focus/reveal controls), real additive Store S01–S04, and A10 installer/AIPro acceptance. No actual AIPro recognition or production Store integration is claimed. The user will prepare AIPro on this machine before A10.

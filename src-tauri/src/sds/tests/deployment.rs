@@ -274,6 +274,7 @@ fn frozen_operations_survive_restart_without_storing_credentials_and_terminal_re
     let operation = PreparedOperation {
         id: uuid::Uuid::new_v4().to_string(),
         kind: "install".into(),
+        deployment_id: None,
         release,
         target: Target {
             agent_key: "aipro".into(),

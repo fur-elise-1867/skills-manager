@@ -40,6 +40,7 @@ fn prepared_named(
     let plan = PreparedOperation {
         id: uuid::Uuid::new_v4().to_string(),
         kind: "install".into(),
+        deployment_id: None,
         target: Target {
             agent_key: "aipro".into(),
             workspace_id: "global".into(),

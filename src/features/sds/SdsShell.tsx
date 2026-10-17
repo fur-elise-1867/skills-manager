@@ -1,6 +1,6 @@
 import { useContext, useState } from "react";
 import { Box, Library, Settings, SunMoon } from "lucide-react";
-import type { ProfileInfo } from "./contracts";
+import type { ProfileInfo,OperationRequest,Release } from "./contracts";
 import { SdsThemeContext } from "./theme";
 import { useSdsSession } from "./session/context";
 import SignIn from "./session/SignIn";
@@ -8,11 +8,15 @@ import ConnectionSettings from "./settings/ConnectionSettings";
 import TargetSettings from "./settings/TargetSettings";
 import CatalogPage from "./catalog/CatalogPage";
 import LibraryPage from "./library/LibraryPage";
+import OperationFlow from "./install/OperationFlow";
 
 export default function SdsShell({ profile }: { profile: ProfileInfo }) {
   const { theme, toggle } = useContext(SdsThemeContext);
   const account = useSdsSession();
   const [page, setPage] = useState<"store" | "settings" | "library">("store");
+  const [operation,setOperation]=useState<OperationRequest|null>(null);
+  const [libraryRevision,setLibraryRevision]=useState(0);
+  const install=(release:Release)=>setOperation({kind:"install",skillId:release.skillId,releaseId:release.id});
   const library = page === "library";
   const settings = page === "settings" || page === "store" && account.connection === null;
   return <div className="sds-app">
@@ -35,11 +39,12 @@ export default function SdsShell({ profile }: { profile: ProfileInfo }) {
       {profile.fixtureMode && <p role="status" className="sds-fixture">Development fixtures — sample data and isolated targets. Sample account: employee@example.invalid · Password: synthetic-password. Search __empty, __slow or __unavailable to inspect states.</p>}
       <div className="sds-page-heading"><div><p className="sds-eyebrow">INTERNAL WORKSPACE</p><h1>{library ? "Library" : settings ? "Settings" : "Skills Store"}</h1><p>{library ? "Downloaded releases and their destinations on this computer." : "Find and manage skills from your internal Skills Store."}</p></div><span className="sds-badge" data-status={account.session?.status}>{library ? "Local Library" : account.session?.status === "authenticated" ? "Signed in" : account.session?.status === "offline" ? "Offline" : account.session?.status === "expired" ? "Session expired" : account.connection ? "Connection configured" : "Setup required"}</span></div>
       {account.error && <p role="alert" className="sds-error">{account.error}</p>}
-      {library ? <LibraryPage /> : settings ? <><ConnectionSettings key={account.connection?.id ?? "new"} current={account.connection ?? null} environment={profile.environment} locked={profile.fixtureMode} onSaved={(connection) => { account.connectionSaved(connection); setPage("store"); }} /><TargetSettings /></>
+      {library ? <LibraryPage key={libraryRevision} onInstall={install} onRemove={deploymentId=>setOperation({kind:"remove",deploymentId})} /> : settings ? <><ConnectionSettings key={account.connection?.id ?? "new"} current={account.connection ?? null} environment={profile.environment} locked={profile.fixtureMode} onSaved={(connection) => { account.connectionSaved(connection); setPage("store"); }} /><TargetSettings /></>
         : !account.connection || !account.session ? <p role="status">Checking your Store connection…</p>
         : account.session.status === "signedOut" || account.session.status === "expired" ? <SignIn key={account.connection.id} onSignedIn={account.signedIn} />
         : null}
-      {account.session?.user && account.session.status !== "expired" && <div hidden={settings || library}><CatalogPage key={`${account.connection?.id}:${account.session.user.id}:${account.generation}`} /></div>}
+      {account.session?.user && account.session.status !== "expired" && <div hidden={settings || library}><CatalogPage key={`${account.connection?.id}:${account.session.user.id}:${account.generation}`} onInstall={install} /></div>}
+      {operation && <OperationFlow key={JSON.stringify(operation)} request={operation} onClose={()=>setOperation(null)} onCompleted={()=>setLibraryRevision(value=>value+1)}/>}
     </main>
   </div>;
 }
