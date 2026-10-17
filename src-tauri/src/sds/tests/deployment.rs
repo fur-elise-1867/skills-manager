@@ -267,6 +267,7 @@ fn frozen_operations_survive_restart_without_storing_credentials_and_terminal_re
         generation: 17,
     };
     let request = InstallRequest {
+        target: Default::default(),
         skill_id: release.skill_id.clone(),
         release_id: release.id.clone(),
     };

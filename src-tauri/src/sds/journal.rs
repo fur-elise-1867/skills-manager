@@ -294,6 +294,17 @@ pub fn recover_pending(
     for (plan, intent) in repository.pending_intents()? {
         let outcome = (|| {
             if plan.kind == "remove" {
+                if repository.operation_status(&plan.id)?.state != OperationState::Completed
+                    && !approved_roots.iter().any(|root| {
+                        DirectoryPins::acquire(root)
+                            .ok()
+                            .and_then(|pins| identity(pins.leaf()).ok())
+                            .as_ref()
+                            == Some(&intent.root_identity)
+                    })
+                {
+                    return Err(recovery_error());
+                }
                 return super::removal::recover(repository, &plan, &intent);
             }
             intent.validate(&plan)?;

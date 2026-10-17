@@ -10,3 +10,10 @@ mod removal;
 mod session;
 mod support;
 mod targets;
+
+mod migrations;
+mod phase2_extra;
+mod phase2_lifecycle;
+mod replacement;
+mod snapshots;
+mod workspaces;

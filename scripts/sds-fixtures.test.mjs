@@ -3,6 +3,27 @@ import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import { startFixtureStore } from './sds-fixtures.mjs';
 
+test('fixture update metadata is authenticated, bounded and never discloses unknown releases', async () => {
+  const fixture = await startFixtureStore();
+  try {
+    const check = (items,authenticated=true) => fetch(`${fixture.baseUrl}/api/v1/desktop/updates/check`, {
+      method:'POST',headers:{'content-type':'application/json',...(authenticated?{authorization:'Bearer synthetic-access-one'}:{})},body:JSON.stringify({items}),
+    });
+    const known = {skillId:'skill-123',releaseId:'rel-003'};
+    assert.equal((await check([known],false)).status,401);
+    const response = await check([known,{skillId:'skill-123',releaseId:'unknown'},{skillId:'hidden',releaseId:'unknown'}]);
+    assert.equal(response.status,200);
+    const body=await response.json();
+    assert.deepEqual(body.data.items.map(item=>item.status),['up_to_date','unknown_release','unavailable']);
+    assert.equal(body.data.items[0].latestRelease.sequence,3);
+    assert.equal(body.data.items[1].latestRelease,null);
+    assert.equal(body.data.items[2].latestRelease,null);
+    assert.equal((await check([])).status,400);
+    assert.equal((await check([known,known])).status,400);
+    assert.equal((await check(Array.from({length:101},(_,i)=>({skillId:String(i),releaseId:'unknown'})))).status,400);
+  } finally { await fixture.close(); }
+});
+
 test('explicit fixture HTTP Store accepts only its sample account and serves real desktop envelopes', async () => {
   const fixture = await startFixtureStore();
   try {

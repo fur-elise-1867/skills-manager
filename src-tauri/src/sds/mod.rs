@@ -17,11 +17,11 @@ pub mod operations;
 pub mod packages;
 pub mod profile;
 #[cfg(feature = "sds")]
-pub mod repository;
-#[cfg(feature = "sds")]
 pub mod removal;
 #[cfg(feature = "sds")]
 mod removal_cleanup;
+#[cfg(feature = "sds")]
+pub mod repository;
 pub mod runtime;
 pub mod session;
 pub mod store_client;
@@ -42,3 +42,26 @@ pub fn runtime_profile() -> Result<profile::ProfileInfo, error::SdsError> {
 
 #[cfg(all(test, feature = "sds"))]
 mod tests;
+#[cfg(feature = "sds")]
+pub mod updates_metadata;
+
+#[cfg(feature = "sds")]
+pub mod workspaces;
+
+#[cfg(feature = "sds")]
+pub mod snapshots;
+
+#[cfg(feature = "sds")]
+pub mod lifecycle;
+
+#[cfg(feature = "sds")]
+pub mod replacement;
+
+#[cfg(feature = "sds")]
+pub mod updates;
+
+#[cfg(feature = "sds")]
+pub mod offline;
+
+#[cfg(feature = "sds")]
+pub mod cache_cleanup;

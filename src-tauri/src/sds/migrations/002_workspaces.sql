@@ -1,0 +1,1 @@
+CREATE TABLE workspaces(id TEXT PRIMARY KEY,root TEXT NOT NULL,identity_json TEXT NOT NULL, UNIQUE(identity_json)); PRAGMA user_version=2;

@@ -38,6 +38,18 @@ export async function startFixtureStore() {
         if(path.endsWith('/refresh')) return send(['synthetic-refresh-one','synthetic-refresh-two'].includes(data.refreshToken) ? 200 : 401, ['synthetic-refresh-one','synthetic-refresh-two'].includes(data.refreshToken) ? refresh : error('SESSION_EXPIRED'));
         if(path.endsWith('/logout')) return send(200,success(null));
       }
+      if(path === '/skm/api/v1/desktop/updates/check' && req.method === 'POST') {
+        if(!['Bearer synthetic-access-one','Bearer synthetic-access-two'].includes(req.headers.authorization)) return send(401,error('SESSION_EXPIRED'));
+        let body=''; for await(const chunk of req) { body+=chunk; if(Buffer.byteLength(body)>65536) return send(413,error('INVALID_REQUEST')); }
+        const {items}=JSON.parse(body || '{}');
+        if(!Array.isArray(items) || items.length<1 || items.length>100 || items.some(item=>!item || ['skillId','releaseId'].some(key=>typeof item[key]!=='string' || !item[key].length || item[key].length>256))
+          || new Set(items.map(item=>JSON.stringify([item.skillId,item.releaseId]))).size!==items.length) return send(400,error('INVALID_REQUEST'));
+        return send(200,success({checkedAt:new Date().toISOString(),items:items.map(item=>({
+          skillId:item.skillId,currentReleaseId:item.releaseId,
+          status:item.skillId!==release.skillId ? 'unavailable' : item.releaseId!==release.id ? 'unknown_release' : 'up_to_date',
+          latestRelease:item.skillId===release.skillId && item.releaseId===release.id ? {id:release.id,sequence:release.sequence,version:release.version} : null,
+        }))}));
+      }
       if(req.method !== 'GET') return send(405,error('INVALID_REQUEST'));
       if(!['Bearer synthetic-access-one','Bearer synthetic-access-two'].includes(req.headers.authorization)) return send(401,error('SESSION_EXPIRED'));
       if(path === '/skm/api/v1/desktop/taxonomy') return send(200,taxonomy);

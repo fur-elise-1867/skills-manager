@@ -1,0 +1,1 @@
+CREATE TABLE update_selections(id TEXT PRIMARY KEY,selection_json TEXT NOT NULL); PRAGMA user_version=5;

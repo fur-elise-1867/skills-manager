@@ -354,10 +354,7 @@ impl SessionService {
             if state.generation != context.generation
                 || state.profile.as_ref().map(|profile| &profile.id) != Some(&context.profile_id)
                 || state.user.as_ref().map(|user| &user.id) != Some(&context.account_id)
-                || matches!(
-                    state.status,
-                    SessionStatus::SignedOut | SessionStatus::Expired
-                )
+                || state.status != SessionStatus::Authenticated
             {
                 return Err(stale_context());
             }
@@ -373,6 +370,30 @@ impl SessionService {
                 false,
             )
         })?
+    }
+    #[cfg(feature = "sds")]
+    pub(crate) async fn commit_cached_for<T: Send + 'static>(
+        self: &Arc<Self>,
+        context: &SessionContext,
+        publish: impl FnOnce() -> Result<T, SdsError> + Send + 'static,
+    ) -> Result<T, SdsError> {
+        let session = self.clone();
+        let context = context.clone();
+        tokio::task::spawn_blocking(move || {
+            let state = session.state.blocking_lock();
+            if state.status != SessionStatus::Offline
+                || state.generation != context.generation
+                || state.profile.as_ref().map(|p| &p.id) != Some(&context.profile_id)
+                || state.user.as_ref().map(|u| &u.id) != Some(&context.account_id)
+            {
+                return Err(stale_context());
+            }
+            let result = publish();
+            drop(state);
+            result
+        })
+        .await
+        .map_err(|_| stale_context())?
     }
     pub async fn download_for(
         &self,

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
-import { getConnection, getSession, signOut } from "../api";
+import { getCatalogTaxonomy, getConnection, getSession, signOut } from "../api";
 import type { SessionView, StoreProfile } from "../contracts";
 import { storeErrorMessage } from "../errors";
 import { SdsSessionContext } from "./context";
@@ -36,6 +36,14 @@ export default function SessionProvider({ children }: { children: ReactNode }) {
     try { const view = await getSession(); if (epoch.current === started) setSession(view); }
     catch (failure) { if (epoch.current === started) setError(storeErrorMessage(failure)); }
   }, []);
-  const value = useMemo(() => ({ session, connection, generation, error, signedIn, connectionSaved, logout, refreshStatus }), [session, connection, generation, error, signedIn, connectionSaved, logout, refreshStatus]);
+  const retrying=useRef(false);
+  const retryConnection=useCallback(async()=>{
+    if(retrying.current)return;
+    retrying.current=true;const started=epoch.current;
+    try{await getCatalogTaxonomy();if(epoch.current===started){setError("");await refreshStatus();}}
+    catch(failure){if(epoch.current===started){setError(storeErrorMessage(failure));await refreshStatus();}}
+    finally{retrying.current=false;}
+  },[refreshStatus]);
+  const value = useMemo(() => ({ session, connection, generation, error, signedIn, connectionSaved, logout, refreshStatus, retryConnection }), [session, connection, generation, error, signedIn, connectionSaved, logout, refreshStatus, retryConnection]);
   return <SdsSessionContext.Provider value={value}>{children}</SdsSessionContext.Provider>;
 }

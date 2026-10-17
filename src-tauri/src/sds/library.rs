@@ -118,7 +118,7 @@ pub(crate) fn inspect_deployment(deployment: &Deployment) -> LibraryDeployment {
         })
     })()
     .unwrap_or_else(|status| status);
-    LibraryDeployment{id:deployment.id.clone(),target:deployment.target.clone(),status,mcp:deployment.mcp.clone(),installed_at:deployment.installed_at.clone(),reason:match status{
+    LibraryDeployment{expected_fingerprint: if matches!(status,DeploymentStatus::Installed|DeploymentStatus::Modified){fingerprint_tree(&deployment.target.path).ok().map(|(_,f)|f)}else{None},id:deployment.id.clone(),target:deployment.target.clone(),status,mcp:deployment.mcp.clone(),installed_at:deployment.installed_at.clone(),reason:match status{
         DeploymentStatus::Installed=>None,
         DeploymentStatus::Modified=>Some("Local contents have changed. Keep these files; force removal is unavailable in the pilot.".into()),
         DeploymentStatus::Missing=>Some("The installed folder is missing.".into()),

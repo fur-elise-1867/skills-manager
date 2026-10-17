@@ -33,11 +33,34 @@ pub(crate) fn deployment(repository: &Repository, id: &str) -> Result<Deployment
             )
         })
 }
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RemoveRequest {
+    pub deployment_id: String,
+    pub backup: bool,
+    pub acknowledge_local_edits: bool,
+}
 pub(crate) fn prepare(
     repository: &Repository,
     epoch: &str,
     id: &str,
 ) -> Result<PreparedOperation, SdsError> {
+    prepare_request(
+        repository,
+        epoch,
+        &RemoveRequest {
+            deployment_id: id.into(),
+            backup: false,
+            acknowledge_local_edits: false,
+        },
+    )
+}
+pub(crate) fn prepare_request(
+    repository: &Repository,
+    epoch: &str,
+    request: &RemoveRequest,
+) -> Result<PreparedOperation, SdsError> {
+    let id = request.deployment_id.as_str();
     let deployment = deployment(repository, id)?;
     let release = repository
         .list_library()?
@@ -48,7 +71,8 @@ pub(crate) fn prepare(
     let can_execute = matches!(
         observation.status,
         DeploymentStatus::Installed | DeploymentStatus::Missing
-    );
+    ) || (observation.status == DeploymentStatus::Modified
+        && request.acknowledge_local_edits);
     let reviewed_root = ReviewedRoot::capture(deployment.target.path.parent().ok_or_else(review)?)?;
     let plan = PreparedOperation {
         id: uuid::Uuid::new_v4().to_string(),
@@ -57,8 +81,7 @@ pub(crate) fn prepare(
         release: release.release,
         target: deployment.target,
         reviewed_root,
-        expected_fingerprint: (observation.status == DeploymentStatus::Installed)
-            .then_some(deployment.fingerprint),
+        expected_fingerprint: observation.expected_fingerprint.clone(),
         mcp: deployment.mcp,
         requires_mcp_ack: false,
         can_execute,
@@ -81,6 +104,20 @@ pub(crate) fn prepare(
             error: None,
         },
     )?;
+    let observed_manifest = if plan.expected_fingerprint.is_some() {
+        Some(fingerprint_tree(&plan.target.path)?.0)
+    } else {
+        None
+    };
+    repository.save_options(
+        &plan.id,
+        &super::lifecycle::LifecycleOptions {
+            backup: request.backup,
+            acknowledge_local_edits: request.acknowledge_local_edits,
+            observed_manifest,
+            ..Default::default()
+        },
+    )?;
     Ok(plan)
 }
 pub(crate) fn reviewed_deployment(
@@ -101,10 +138,11 @@ pub(crate) fn reviewed_deployment(
                 &plan.release.skill_id,
                 &plan.release.id,
             )?
-        || plan
+        || (plan
             .expected_fingerprint
             .as_ref()
-            .is_some_and(|fingerprint| fingerprint != &deployment.fingerprint)
+            .is_some_and(|f| f != &deployment.fingerprint)
+            && !repository.options(plan)?.acknowledge_local_edits)
     {
         return Err(review());
     }
@@ -158,7 +196,7 @@ fn removal_intent(
     plan: &PreparedOperation,
     deployment: &Deployment,
 ) -> Result<CommitIntent, SdsError> {
-    if plan.expected_fingerprint.as_deref() != Some(&deployment.fingerprint) {
+    if plan.expected_fingerprint.is_none() {
         return Err(review());
     }
     let intent = CommitIntent {
@@ -166,7 +204,7 @@ fn removal_intent(
         target_root: plan.target.path.parent().ok_or_else(review)?.into(),
         root_identity: deployment.root_identity.clone(),
         stage_identity: deployment.identity.clone(),
-        fingerprint: deployment.fingerprint.clone(),
+        fingerprint: plan.expected_fingerprint.clone().ok_or_else(review)?,
         release_key: deployment.release_key.clone(),
     };
     intent.validate(plan)?;
@@ -191,6 +229,17 @@ pub(crate) fn stage_remove(
         &plan.release.install_name,
     )?;
     check_owned_target(plan, &intent)?;
+    let options = repository.options(plan)?;
+    if options.backup {
+        super::snapshots::SnapshotService::new(std::sync::Arc::new(Repository::open(
+            repository.root(),
+        )?))
+        .capture_locked(
+            &deployment,
+            &intent.fingerprint,
+            super::snapshots::SnapshotReason::BeforeRemove,
+        )?;
+    }
     repository.removal_manifest(plan, &intent)?;
     let parent = intent
         .stage_path()

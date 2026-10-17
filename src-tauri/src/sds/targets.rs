@@ -68,7 +68,10 @@ impl TargetService {
         commit: impl FnOnce() -> Result<T, SdsError>,
     ) -> Result<T, SdsError> {
         let _gate = self.gate.lock().map_err(|_| settings_error())?;
-        let root = resolve_aipro_global(&self.home, self.read_override()?.as_deref())?;
+        let root = self.resolve_unlocked(&super::contracts::TargetSelection {
+            agent_key: expected.agent_key.clone(),
+            workspace_id: expected.workspace_id.clone(),
+        })?;
         if root.agent_key != expected.agent_key
             || root.workspace_id != expected.workspace_id
             || expected.path.parent() != Some(root.path.as_path())
@@ -76,6 +79,76 @@ impl TargetService {
             return Err(super::journal::review());
         }
         commit()
+    }
+    #[cfg(feature = "sds")]
+    fn workspace_service(&self) -> Result<super::workspaces::WorkspaceService, SdsError> {
+        Ok(super::workspaces::WorkspaceService::new(
+            std::sync::Arc::new(super::repository::Repository::open(
+                &self.settings_root.join("pilot"),
+            )?),
+        ))
+    }
+    #[cfg(feature = "sds")]
+    pub fn add_workspace(&self, root: &Path) -> Result<super::contracts::WorkspaceRef, SdsError> {
+        let _g = self.gate.lock().map_err(|_| settings_error())?;
+        self.workspace_service()?.add(root)
+    }
+    #[cfg(feature = "sds")]
+    pub fn list_workspaces(&self) -> Result<Vec<super::contracts::WorkspaceRef>, SdsError> {
+        self.workspace_service()?.list()
+    }
+    #[cfg(feature = "sds")]
+    pub fn remove_workspace(&self, id: &str) -> Result<(), SdsError> {
+        let _g = self.gate.lock().map_err(|_| settings_error())?;
+        self.workspace_service()?.remove(id)
+    }
+    #[cfg(feature = "sds")]
+    pub fn resolve(
+        &self,
+        selection: &super::contracts::TargetSelection,
+    ) -> Result<Target, SdsError> {
+        let _g = self.gate.lock().map_err(|_| settings_error())?;
+        self.resolve_unlocked(selection)
+    }
+    #[cfg(feature = "sds")]
+    fn resolve_unlocked(
+        &self,
+        selection: &super::contracts::TargetSelection,
+    ) -> Result<Target, SdsError> {
+        if selection.agent_key != "aipro" {
+            return Err(SdsError::invalid("Unknown agent"));
+        }
+        if selection.workspace_id == "global" {
+            return resolve_aipro_global(&self.home, self.read_override()?.as_deref());
+        }
+        let workspace = self
+            .workspace_service()?
+            .verified(&selection.workspace_id)?;
+        let path = workspace.root.join(".aipro/skills");
+        validate_directory_path(&path).map_err(|_| super::journal::review())?;
+        Ok(Target {
+            agent_key: "aipro".into(),
+            workspace_id: workspace.id,
+            path,
+        })
+    }
+    #[cfg(feature = "sds")]
+    pub(crate) fn approved_roots(&self) -> Vec<std::path::PathBuf> {
+        let mut roots = self
+            .settings()
+            .ok()
+            .and_then(|s| s.target)
+            .map(|t| vec![t.path])
+            .unwrap_or_default();
+        for w in self.list_workspaces().unwrap_or_default() {
+            if let Ok(t) = self.resolve(&super::contracts::TargetSelection {
+                agent_key: "aipro".into(),
+                workspace_id: w.id,
+            }) {
+                roots.push(t.path);
+            }
+        }
+        roots
     }
     fn view(
         &self,

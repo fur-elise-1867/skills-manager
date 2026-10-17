@@ -19,7 +19,7 @@ mod removals;
 
 pub struct Repository {
     root: PathBuf,
-    connection: Mutex<Connection>,
+    pub(crate) connection: Mutex<Connection>,
     _db_pin: File,
     _pins: DirectoryPins,
 }
@@ -93,7 +93,7 @@ impl Repository {
             .transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)
             .map_err(|_| repository_error())?;
         let stale = {
-            let mut query=tx.prepare("SELECT operation_id,CASE WHEN length(CAST(result_json AS BLOB))<=65536 THEN result_json ELSE NULL END FROM operations WHERE runtime_epoch<>?1 AND intent_json IS NULL").map_err(|_|repository_error())?;
+            let mut query=tx.prepare("SELECT operation_id,CASE WHEN length(CAST(result_json AS BLOB))<=65536 THEN result_json ELSE NULL END FROM operations WHERE runtime_epoch<>?1 AND intent_json IS NULL AND operation_id NOT IN (SELECT operation_id FROM replacement_intents WHERE committed<>2)").map_err(|_|repository_error())?;
             let rows = query
                 .query_map([epoch], |row| {
                     Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
@@ -221,7 +221,7 @@ impl Repository {
             .lock()
             .map_err(|_| repository_error())?
             .query_row(
-                "SELECT intent_json IS NOT NULL FROM operations WHERE operation_id=?1",
+                "SELECT intent_json IS NOT NULL OR EXISTS(SELECT 1 FROM replacement_intents WHERE operation_id=?1 AND committed<>2) FROM operations WHERE operation_id=?1",
                 [id],
                 |row| row.get(0),
             )
@@ -507,17 +507,30 @@ impl Repository {
         let version: u32 = connection
             .pragma_query_value(None, "user_version", |row| row.get(0))
             .map_err(|_| repository_error())?;
-        if version > 1 {
+        let migrations = [
+            include_str!("migrations/001_pilot.sql"),
+            include_str!("migrations/002_workspaces.sql"),
+            include_str!("migrations/003_snapshots.sql"),
+            include_str!("migrations/004_lifecycle_operations.sql"),
+            include_str!("migrations/005_update_selections.sql"),
+            include_str!("migrations/006_cache_cleanup.sql"),
+            include_str!("migrations/007_cache_access.sql"),
+        ];
+        if version as usize > migrations.len() {
             return Err(repository_error());
         }
-        if version == 0 {
+        for migration in migrations.iter().skip(version as usize) {
             connection
                 .execute_batch("BEGIN IMMEDIATE")
                 .map_err(|_| repository_error())?;
-            connection
-                .execute_batch(include_str!("migrations/001_pilot.sql"))
+            if connection
+                .execute_batch(migration)
                 .and_then(|_| connection.execute_batch("COMMIT"))
-                .map_err(|_| repository_error())?;
+                .is_err()
+            {
+                let _ = connection.execute_batch("ROLLBACK");
+                return Err(repository_error());
+            }
         }
         let cache = root.join("releases");
         let _cache_pins = DirectoryPins::create(&cache)?;
@@ -695,7 +708,7 @@ impl Repository {
             },
         })
     }
-    fn cache_lock(&self) -> Result<File, SdsError> {
+    pub(crate) fn cache_lock(&self) -> Result<File, SdsError> {
         self.exclusive_lock("cache.lock")
     }
     fn exclusive_lock(&self, name: &str) -> Result<File, SdsError> {
@@ -842,7 +855,7 @@ fn release_changed() -> SdsError {
 
 pub(crate) fn validate_operation(plan: &PreparedOperation) -> Result<(), SdsError> {
     if uuid::Uuid::parse_str(&plan.id).is_err()
-        || !["install", "remove"].contains(&plan.kind.as_str())
+        || !["install", "remove", "update", "restore"].contains(&plan.kind.as_str())
         || (plan.kind == "install" && plan.deployment_id.is_some())
         || (plan.kind == "remove"
             && !plan
@@ -853,7 +866,8 @@ pub(crate) fn validate_operation(plan: &PreparedOperation) -> Result<(), SdsErro
         || plan.runtime_epoch.len() > 256
         || plan.context.account_id.is_empty()
         || plan.target.agent_key != "aipro"
-        || plan.target.workspace_id != "global"
+        || (plan.target.workspace_id != "global"
+            && uuid::Uuid::parse_str(&plan.target.workspace_id).is_err())
     {
         return Err(operation_error());
     }

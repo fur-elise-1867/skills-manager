@@ -1,0 +1,1 @@
+CREATE TABLE cache_access(profile_id TEXT NOT NULL,account_id TEXT NOT NULL,release_key TEXT NOT NULL,authorized_at TEXT NOT NULL,PRIMARY KEY(profile_id,account_id,release_key)); PRAGMA user_version=7;

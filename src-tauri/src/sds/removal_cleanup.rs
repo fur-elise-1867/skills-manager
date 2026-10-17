@@ -19,7 +19,19 @@ pub(crate) fn cleanup(
     expected: &Manifest,
     mut after_entry: impl FnMut() -> Result<(), SdsError>,
 ) -> Result<(), SdsError> {
-    let root = intent.stage_path();
+    cleanup_tree(
+        &intent.stage_path(),
+        &intent.stage_identity,
+        expected,
+        &mut after_entry,
+    )
+}
+pub(crate) fn cleanup_tree(
+    root: &Path,
+    expected_identity: &super::contracts::FileIdentity,
+    expected: &Manifest,
+    mut after_entry: impl FnMut() -> Result<(), SdsError>,
+) -> Result<(), SdsError> {
     validate_directory_path(root.parent().ok_or_else(review)?)?;
     match std::fs::symlink_metadata(&root) {
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(()),
@@ -28,7 +40,7 @@ pub(crate) fn cleanup(
     }
     let _parent = DirectoryPins::acquire(root.parent().ok_or_else(review)?)?;
     let root_pins = DirectoryPins::acquire(&root)?;
-    if identity(root_pins.leaf())? != intent.stage_identity {
+    if identity(root_pins.leaf())? != *expected_identity {
         return Err(review());
     }
     // Deny additions or edits present before cleanup; never enumerate untrusted
@@ -92,7 +104,7 @@ pub(crate) fn cleanup(
     }
     drop(root_pins);
     let original = DeleteHandle::open(&root, true)?;
-    if identity(&original.file)? != intent.stage_identity {
+    if identity(&original.file)? != *expected_identity {
         return Err(review());
     }
     if std::fs::read_dir(&root)

@@ -314,19 +314,25 @@ pub async fn sds_prepare_install(
         Err(profile_mismatch())
     }
 }
+#[cfg(feature = "sds")]
 #[tauri::command]
 pub async fn sds_prepare_remove(
     state: tauri::State<'_, SdsServices>,
-    deployment_id: String,
+    deployment_id: Option<String>,
+    request: Option<super::removal::RemoveRequest>,
 ) -> Result<super::contracts::PreparedOperation, SdsError> {
-    #[cfg(feature = "sds")]
-    {
-        state.operations.prepare_remove(&deployment_id).await
-    }
-    #[cfg(not(feature = "sds"))]
-    {
-        let _ = (state, deployment_id);
-        Err(profile_mismatch())
+    match request {
+        Some(request) => state.operations.prepare_remove_request(request).await,
+        None => {
+            state
+                .operations
+                .prepare_remove(
+                    deployment_id
+                        .as_deref()
+                        .ok_or_else(|| SdsError::invalid("Choose a deployment"))?,
+                )
+                .await
+        }
     }
 }
 #[derive(serde::Serialize)]
@@ -493,4 +499,188 @@ fn profile_mismatch() -> SdsError {
         "Open the SDS desktop runtime to manage its Library.",
         false,
     )
+}
+
+#[cfg(feature = "sds")]
+#[tauri::command]
+pub async fn sds_list_workspaces(
+    state: tauri::State<'_, SdsServices>,
+) -> Result<Vec<super::contracts::WorkspaceRef>, SdsError> {
+    let targets = state.targets.clone();
+    super::operations::blocking(move || targets.list_workspaces()).await
+}
+#[cfg(feature = "sds")]
+#[tauri::command]
+pub async fn sds_add_workspace(
+    state: tauri::State<'_, SdsServices>,
+    root: PathBuf,
+) -> Result<super::contracts::WorkspaceRef, SdsError> {
+    let targets = state.targets.clone();
+    super::operations::blocking(move || targets.add_workspace(&root)).await
+}
+#[cfg(feature = "sds")]
+#[tauri::command]
+pub async fn sds_remove_workspace(
+    state: tauri::State<'_, SdsServices>,
+    workspace_id: String,
+) -> Result<(), SdsError> {
+    let operations = state.operations.clone();
+    let targets = state.targets.clone();
+    super::operations::blocking(move || {
+        if operations
+            .repository
+            .deployments()?
+            .iter()
+            .any(|d| d.target.workspace_id == workspace_id)
+            || operations.repository.workspace_pending(&workspace_id)?
+        {
+            return Err(SdsError::new(
+                "WORKSPACE_IN_USE",
+                "Remove deployments and reconcile pending operations first.",
+                false,
+            ));
+        }
+        targets.remove_workspace(&workspace_id)
+    })
+    .await
+}
+#[cfg(feature = "sds")]
+#[tauri::command]
+pub async fn sds_resolve_target(
+    state: tauri::State<'_, SdsServices>,
+    selection: super::contracts::TargetSelection,
+) -> Result<super::contracts::Target, SdsError> {
+    let targets = state.targets.clone();
+    super::operations::blocking(move || targets.resolve(&selection)).await
+}
+#[cfg(feature = "sds")]
+#[tauri::command]
+pub async fn sds_snapshots(
+    state: tauri::State<'_, SdsServices>,
+) -> Result<Vec<super::snapshots::SnapshotRecord>, SdsError> {
+    let operations = state.operations.clone();
+    super::operations::blocking(move || operations.snapshots()).await
+}
+#[cfg(feature = "sds")]
+#[tauri::command]
+pub async fn sds_verify_snapshot(
+    state: tauri::State<'_, SdsServices>,
+    snapshot_id: String,
+) -> Result<super::snapshots::SnapshotRecord, SdsError> {
+    state.operations.ensure_ready()?;
+    let repository=state.operations.repository.clone();
+    super::operations::blocking(move || super::snapshots::SnapshotService::new(repository).verify(&snapshot_id)).await
+}
+#[cfg(feature = "sds")]
+#[tauri::command]
+pub async fn sds_capture_snapshot(
+    state: tauri::State<'_, SdsServices>,
+    deployment_id: String,
+    expected_fingerprint: String,
+    reason: super::snapshots::SnapshotReason,
+) -> Result<super::snapshots::SnapshotRecord, SdsError> {
+    state
+        .operations
+        .capture_snapshot(deployment_id, expected_fingerprint, reason)
+        .await
+}
+#[cfg(feature = "sds")]
+#[tauri::command]
+pub async fn sds_prepare_restore(
+    state: tauri::State<'_, SdsServices>,
+    snapshot_id: String,
+    deployment_id: String,
+    protect_current: bool,
+) -> Result<super::contracts::PreparedOperation, SdsError> {
+    state
+        .operations
+        .prepare_restore(&snapshot_id, &deployment_id, protect_current)
+        .await
+}
+#[cfg(feature = "sds")]
+#[tauri::command]
+pub async fn sds_check_updates(
+    state: tauri::State<'_, SdsServices>,
+) -> Result<super::updates_metadata::UpdateCheck, SdsError> {
+    state.operations.check_updates().await
+}
+#[cfg(feature = "sds")]
+#[tauri::command]
+pub async fn sds_prepare_update(
+    state: tauri::State<'_, SdsServices>,
+    request: super::updates::UpdateRequest,
+) -> Result<super::contracts::PreparedOperation, SdsError> {
+    state.operations.prepare_update(request).await
+}
+#[cfg(feature = "sds")]
+#[tauri::command]
+pub async fn sds_prepare_updates(
+    state: tauri::State<'_, SdsServices>,
+    requests: Vec<super::updates::UpdateRequest>,
+) -> Result<super::updates::PreparedUpdateSelection, SdsError> {
+    state.operations.prepare_updates(requests).await
+}
+#[cfg(feature = "sds")]
+#[tauri::command]
+pub async fn sds_execute_updates(
+    state: tauri::State<'_, SdsServices>,
+    selection_id: String,
+    acknowledged_operation_ids: Vec<String>,
+) -> Result<super::updates::PreparedUpdateSelection, SdsError> {
+    let selection = state.operations.selection(&selection_id)?;
+    let operations = state.operations.clone();
+    let id = selection_id.clone();
+    tauri::async_runtime::spawn(async move {
+        if let Err(error) = operations
+            .execute_updates(&id, acknowledged_operation_ids)
+            .await
+        {
+            log::error!("update_selection={} code={}", id, error.code);
+        }
+    });
+    Ok(selection)
+}
+#[cfg(feature = "sds")]
+#[tauri::command]
+pub async fn sds_update_selection_status(
+    state: tauri::State<'_, SdsServices>,
+    selection_id: String,
+) -> Result<super::updates::UpdateSelectionResult, SdsError> {
+    state.operations.update_selection_status(&selection_id)
+}
+#[cfg(feature = "sds")]
+#[tauri::command]
+pub async fn sds_cancel_update_selection(
+    state: tauri::State<'_, SdsServices>,
+    selection_id: String,
+) -> Result<super::updates::UpdateSelectionResult, SdsError> {
+    state.operations.cancel_update_selection(&selection_id)
+}
+#[cfg(feature = "sds")]
+#[tauri::command]
+pub async fn sds_prepare_cache_delete(
+    state: tauri::State<'_, SdsServices>,
+    release_key: String,
+) -> Result<super::cache_cleanup::CacheDeletePlan, SdsError> {
+    state.operations.prepare_cache_delete(release_key).await
+}
+#[cfg(feature = "sds")]
+#[tauri::command]
+pub async fn sds_execute_cache_delete(
+    state: tauri::State<'_, SdsServices>,
+    plan_id: String,
+) -> Result<super::contracts::OperationResult, SdsError> {
+    state.operations.execute_cache_delete(plan_id).await
+}
+#[cfg(feature = "sds")]
+#[tauri::command]
+pub async fn sds_prepare_cached_install(
+    state: tauri::State<'_, SdsServices>,
+    release_key: String,
+    target: super::contracts::TargetSelection,
+) -> Result<super::contracts::PreparedOperation, SdsError> {
+    state
+        .operations
+        .prepare_cached_install(&release_key, target)
+        .await
 }

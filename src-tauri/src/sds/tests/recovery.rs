@@ -10,7 +10,7 @@ use crate::sds::{
 };
 use std::path::Path;
 
-fn prepared(root: &Path) -> (Repository, PreparedOperation, VerifiedArtifact) {
+pub(super) fn prepared(root: &Path) -> (Repository, PreparedOperation, VerifiedArtifact) {
     prepared_named(root, "agent-skills")
 }
 fn prepared_named(

@@ -1,0 +1,1 @@
+CREATE TABLE snapshots(id TEXT PRIMARY KEY,record_json TEXT NOT NULL); PRAGMA user_version=3;

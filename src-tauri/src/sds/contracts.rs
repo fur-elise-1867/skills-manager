@@ -229,6 +229,8 @@ pub struct McpReport {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct InstallRequest {
+    #[serde(default)]
+    pub target: TargetSelection,
     pub skill_id: String,
     pub release_id: String,
 }
@@ -312,6 +314,7 @@ pub enum DeploymentStatus {
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct LibraryDeployment {
+    pub expected_fingerprint: Option<String>,
     pub id: String,
     pub target: Target,
     pub status: DeploymentStatus,
@@ -328,4 +331,25 @@ pub struct LibraryItem {
     pub cached_at: String,
     pub cache_status: CacheStatus,
     pub deployments: Vec<LibraryDeployment>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct TargetSelection {
+    pub agent_key: String,
+    pub workspace_id: String,
+}
+impl Default for TargetSelection {
+    fn default() -> Self {
+        Self {
+            agent_key: "aipro".into(),
+            workspace_id: "global".into(),
+        }
+    }
+}
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct WorkspaceRef {
+    pub id: String,
+    pub root: std::path::PathBuf,
 }

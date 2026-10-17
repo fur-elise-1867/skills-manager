@@ -10,6 +10,7 @@ export interface SdsSessionState {
   connectionSaved: (profile: StoreProfile) => void;
   logout: () => Promise<void>;
   refreshStatus: () => Promise<void>;
+  retryConnection?: () => Promise<void>;
 }
 export const SdsSessionContext = createContext<SdsSessionState | null>(null);
 export function useSdsSession() {

@@ -1,0 +1,2 @@
+CREATE TABLE lifecycle_options(operation_id TEXT PRIMARY KEY REFERENCES operations(operation_id),options_json TEXT NOT NULL);
+CREATE TABLE replacement_intents(operation_id TEXT PRIMARY KEY REFERENCES operations(operation_id),intent_json TEXT NOT NULL,committed INTEGER NOT NULL DEFAULT 0); PRAGMA user_version=4;

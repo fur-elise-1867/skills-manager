@@ -1,0 +1,1 @@
+CREATE TABLE cache_cleanup(id TEXT PRIMARY KEY,plan_json TEXT NOT NULL,intent_json TEXT,committed INTEGER NOT NULL DEFAULT 0); PRAGMA user_version=6;

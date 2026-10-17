@@ -28,3 +28,15 @@ test("a fresh MCP report changes the review but never claims the server is opera
   expect(screen.getByRole("alert")).toHaveTextContent("unmanaged files");
   expect(screen.getByRole("button",{name:"Install anyway"})).toBeDisabled();
 });
+
+test("new-release MCP acknowledgement expires when an update is prepared again",()=>{
+  const confirm=vi.fn();const props={pending:false,onConfirm:confirm,onCancel:vi.fn(),onCheckAgain:vi.fn()};
+  const view=render(<InstallReview {...props} operation={{...operation,kind:"update",release:{...operation.release,changelog:"Adds blocked-task summaries"}}}/>);
+  expect(screen.getByText("Adds blocked-task summaries")).toBeInTheDocument();
+  expect(screen.getByRole("button",{name:"Back up and update"})).toBeDisabled();
+  fireEvent.click(screen.getByLabelText("I acknowledge the MCP warnings for this operation"));
+  fireEvent.click(screen.getByRole("button",{name:"Back up and update"}));
+  expect(confirm).toHaveBeenCalledWith("operation-one",true);
+  view.rerender(<InstallReview {...props} operation={{...operation,id:"new-review",kind:"update"}}/>);
+  expect(screen.getByRole("button",{name:"Back up and update"})).toBeDisabled();
+});

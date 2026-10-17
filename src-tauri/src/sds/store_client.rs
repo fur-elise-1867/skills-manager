@@ -286,6 +286,65 @@ impl StoreClient {
     pub fn new(session: Arc<SessionService>) -> Self {
         Self { session }
     }
+    #[cfg(feature = "sds")]
+    pub async fn check_updates(
+        &self,
+        items: &[super::updates_metadata::KnownRelease],
+    ) -> Result<super::updates_metadata::UpdateCheck, SdsError> {
+        use super::updates_metadata::{invalid_response, KnownRelease, UpdateCheck, UpdateStatus};
+        use std::collections::{HashMap, HashSet};
+        // Capture one account/profile generation for the entire chunked request.
+        // A response from an earlier account cannot become authoritative metadata.
+        let mut seen = HashSet::new();
+        let mut unique = Vec::new();
+        for item in items {
+            if [&item.skill_id, &item.release_id].iter().any(|id| {
+                id.is_empty() || id.len() > 256 || id.chars().any(char::is_control)
+            }) {
+                return Err(SdsError::new("INVALID_REQUEST", "Invalid release identifier", false));
+            }
+            if seen.insert(item.clone()) { unique.push(item.clone()); }
+        }
+        let mut result = UpdateCheck { checked_at: chrono::Utc::now().to_rfc3339(), items: Vec::new() };
+        if unique.is_empty() { return Ok(result); }
+        let (profile, context) = self.session.scope().await?;
+        let url = join_api(&profile.base_url, "api/v1/desktop/updates/check")?;
+        for chunk in unique.chunks(100) {
+            let response = self.session.request_for(&context, HttpRequest::post(url.clone(),
+                serde_json::json!({"items": chunk}))).await?;
+            #[derive(Deserialize)]
+            struct Envelope { success: bool, data: UpdateCheck }
+            let envelope: Envelope = serde_json::from_slice(&response.body).map_err(|_| invalid_response())?;
+            let check = envelope.data;
+            if !envelope.success || chrono::DateTime::parse_from_rfc3339(&check.checked_at).is_err()
+                || check.items.len() != chunk.len() {
+                return Err(invalid_response());
+            }
+            let expected: HashSet<_> = chunk.iter().cloned().collect();
+            let mut by_pair = HashMap::new();
+            for item in check.items {
+                let pair = KnownRelease { skill_id: item.skill_id.clone(), release_id: item.current_release_id.clone() };
+                if !expected.contains(&pair) || by_pair.contains_key(&pair) { return Err(invalid_response()); }
+                match item.status {
+                    UpdateStatus::UpdateAvailable | UpdateStatus::UpToDate => {
+                        let latest = item.latest_release.as_ref().ok_or_else(invalid_response)?;
+                        if latest.id.is_empty() || latest.id.len() > 256 || latest.id.chars().any(char::is_control)
+                            || latest.sequence == 0 || latest.version.trim().is_empty()
+                            || (item.status == UpdateStatus::UpdateAvailable && latest.id == item.current_release_id) {
+                            return Err(invalid_response());
+                        }
+                    }
+                    UpdateStatus::Unavailable | UpdateStatus::UnknownRelease => {
+                        if item.latest_release.is_some() { return Err(invalid_response()); }
+                    }
+                }
+                by_pair.insert(pair, item);
+            }
+            for pair in chunk { result.items.push(by_pair.remove(pair).ok_or_else(invalid_response)?); }
+            result.checked_at = check.checked_at;
+        }
+        self.session.with_current_context(&context, || Ok(result)).await
+    }
     pub async fn download(
         &self,
         release: &Release,

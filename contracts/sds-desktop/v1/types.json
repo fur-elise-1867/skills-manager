@@ -97,6 +97,38 @@
         }
       } }
     },
+    "updates-request": {
+      "type": "object", "required": ["items"],
+      "properties": { "items": {
+        "type": "array", "minItems": 1, "maxItems": 100, "uniqueItems": true,
+        "items": { "type": "object", "required": ["skillId", "releaseId"], "additionalProperties": false,
+          "properties": { "skillId": {"type":"string","minLength":1,"maxLength":256}, "releaseId": {"type":"string","minLength":1,"maxLength":256} }
+        }
+      } }
+    },
+    "update-item": {
+      "type": "object", "required": ["skillId", "currentReleaseId", "status"],
+      "properties": {
+        "skillId": {"type":"string","minLength":1,"maxLength":256},
+        "currentReleaseId": {"type":"string","minLength":1,"maxLength":256},
+        "status": {"enum":["update_available","up_to_date","unavailable","unknown_release"]},
+        "latestRelease": {"anyOf":[{"$ref":"#/definitions/release-ref"},{"type":"null"}]}
+      },
+      "allOf": [
+        {"if":{"properties":{"status":{"enum":["unavailable","unknown_release"]}}},
+         "then":{"properties":{"latestRelease":{"type":"null"}}},
+         "else":{"required":["latestRelease"],"properties":{"latestRelease":{"$ref":"#/definitions/release-ref"}}}}
+      ]
+    },
+    "updates": {
+      "type":"object", "required":["success","data"],
+      "properties":{"success":{"const":true},"data":{
+        "type":"object","required":["checkedAt","items"],"properties":{
+          "checkedAt":{"type":"string","format":"date-time"},
+          "items":{"type":"array","maxItems":100,"items":{"$ref":"#/definitions/update-item"}}
+        }
+      }}
+    },
     "auth-refresh": {
       "type": "object",
       "required": ["success", "data"],

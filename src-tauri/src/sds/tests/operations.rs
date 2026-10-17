@@ -20,6 +20,7 @@ fn fixture(name: &str) -> serde_json::Value {
 }
 pub(super) fn request() -> InstallRequest {
     InstallRequest {
+        target: Default::default(),
         skill_id: "skill-123".into(),
         release_id: "rel-003".into(),
     }

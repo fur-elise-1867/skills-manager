@@ -21,11 +21,11 @@ use std::{
 type Jobs = Arc<Mutex<HashMap<String, Arc<AtomicBool>>>>;
 
 pub struct OperationService {
-    session: Arc<SessionService>,
-    store: StoreClient,
-    targets: Arc<TargetService>,
-    repository: Arc<Repository>,
-    epoch: String,
+    pub(crate) session: Arc<SessionService>,
+    pub(crate) store: StoreClient,
+    pub(crate) targets: Arc<TargetService>,
+    pub(crate) repository: Arc<Repository>,
+    pub(crate) epoch: String,
     jobs: Jobs,
     _coordinator: Option<std::fs::File>,
     startup_error: Option<SdsError>,
@@ -39,14 +39,11 @@ impl OperationService {
         let epoch = uuid::Uuid::new_v4().to_string();
         let (coordinator, startup_error) = match repository.coordinator_lock() {
             Ok(lock) => {
-                let roots = targets
-                    .settings()
-                    .ok()
-                    .and_then(|settings| settings.target)
-                    .map(|target| vec![target.path])
-                    .unwrap_or_default();
+                let roots = targets.approved_roots();
                 let error = super::journal::recover_pending(&repository, &roots)
+                    .and_then(|_| super::replacement::recover_pending(&repository, &roots))
                     .and_then(|_| repository.expire_precommit(&epoch))
+                    .and_then(|_| super::cache_cleanup::recover_pending(&repository))
                     .err();
                 (Some(lock), error)
             }
@@ -63,7 +60,7 @@ impl OperationService {
             startup_error,
         }
     }
-    fn ensure_ready(&self) -> Result<(), SdsError> {
+    pub(crate) fn ensure_ready(&self) -> Result<(), SdsError> {
         match &self.startup_error {
             Some(error) => Err(error.clone()),
             None => Ok(()),
@@ -149,6 +146,14 @@ impl OperationService {
         );
         blocking(move || super::removal::prepare(&repository, &epoch, &id)).await
     }
+    pub async fn prepare_remove_request(
+        &self,
+        request: super::removal::RemoveRequest,
+    ) -> Result<PreparedOperation, SdsError> {
+        self.ensure_ready()?;
+        let (repo, epoch) = (self.repository.clone(), self.epoch.clone());
+        blocking(move || super::removal::prepare_request(&repo, &epoch, &request)).await
+    }
     pub fn cancel(&self, id: &str) -> Result<OperationResult, SdsError> {
         self.ensure_ready()?;
         let jobs = self.jobs.lock().map_err(|_| review())?;
@@ -198,13 +203,30 @@ impl OperationService {
                 cancel,
             }
         };
-        let plan = if self.repository.load_operation(id)?.kind == "remove" {
+        let saved = self.repository.load_operation(id)?;
+        let options = self.repository.options(&saved)?;
+        let plan = if saved.kind == "remove" {
             self.reviewed_remove(id).await?
+        } else if saved.kind == "restore"
+            || saved.kind == "update"
+            || matches!(
+                options.operation_context,
+                Some(super::lifecycle::OperationContext::Cached { .. })
+            )
+        {
+            self.reviewed_lifecycle(id, ack_mcp).await?
         } else {
             self.reviewed_install(id, ack_mcp).await?
         };
         let outcome = if plan.kind == "remove" {
             self.run_remove(&plan, job.cancel.clone()).await
+        } else if plan.kind == "restore" {
+            self.run_restore(&plan, job.cancel.clone()).await
+        } else if matches!(
+            options.operation_context,
+            Some(super::lifecycle::OperationContext::Cached { .. })
+        ) {
+            self.run_cached(&plan, job.cancel.clone()).await
         } else {
             self.run_install(&plan, job.cancel.clone()).await
         };
@@ -240,7 +262,12 @@ impl OperationService {
             }
         }
     }
-    fn progress(&self, id: &str, state: OperationState, stage: &str) -> Result<(), SdsError> {
+    pub(crate) fn progress(
+        &self,
+        id: &str,
+        state: OperationState,
+        stage: &str,
+    ) -> Result<(), SdsError> {
         self.repository.record_result(&OperationResult {
             operation_id: id.into(),
             state,
@@ -250,6 +277,7 @@ impl OperationService {
     }
     async fn reviewed_remove(&self, id: &str) -> Result<PreparedOperation, SdsError> {
         let (repository, id, epoch) = (self.repository.clone(), id.to_string(), self.epoch.clone());
+        let targets = self.targets.clone();
         blocking(move || {
             let plan = repository.load_operation(&id)?;
             if plan.runtime_epoch != epoch
@@ -257,16 +285,15 @@ impl OperationService {
             {
                 return Err(review());
             }
+            targets.with_current_target(&plan.target, || Ok(()))?;
             let deployment = super::removal::reviewed_deployment(&repository, &plan)?;
             let _root = plan
                 .reviewed_root
                 .pin(plan.target.path.parent().ok_or_else(review)?)
                 .map_err(|_| review())?;
-            let status = super::library::inspect_deployment(&deployment).status;
-            if (plan.expected_fingerprint.is_some()
-                && status != super::contracts::DeploymentStatus::Installed)
-                || (plan.expected_fingerprint.is_none()
-                    && status != super::contracts::DeploymentStatus::Missing)
+            let observation = super::library::inspect_deployment(&deployment);
+            if observation.expected_fingerprint != plan.expected_fingerprint
+                || observation.status == super::contracts::DeploymentStatus::Unverifiable
             {
                 return Err(review());
             }
@@ -283,17 +310,23 @@ impl OperationService {
         self.progress(&plan.id, OperationState::Validating, "checking-destination")?;
         let (repository, frozen) = (self.repository.clone(), plan.clone());
         if plan.expected_fingerprint.is_none() {
+            let targets = self.targets.clone();
             return blocking(move || {
                 check_cancel(&cancel)?;
-                super::removal::remove_missing(&repository, &frozen)
+                targets.with_current_target(&frozen.target, || {
+                    super::removal::remove_missing(&repository, &frozen)
+                })
             })
             .await;
         }
         let intent = blocking(move || super::removal::stage_remove(&repository, &frozen)).await?;
         let (repository, frozen) = (self.repository.clone(), plan.clone());
+        let targets = self.targets.clone();
         blocking(move || {
             check_cancel(&cancel)?;
-            super::removal::commit_remove(&repository, &frozen, &intent)
+            targets.with_current_target(&frozen.target, || {
+                super::removal::commit_remove(&repository, &frozen, &intent)
+            })
         })
         .await
     }
@@ -365,6 +398,7 @@ impl OperationService {
             .authorized_release(
                 &plan.context,
                 &InstallRequest {
+                    target: Default::default(),
                     skill_id: plan.release.skill_id.clone(),
                     release_id: plan.release.id.clone(),
                 },
@@ -375,11 +409,19 @@ impl OperationService {
         {
             return Err(release_changed());
         }
-        if self.destination(&plan.release)? != plan.target {
+        if self.destination(
+            &plan.release,
+            &super::contracts::TargetSelection {
+                agent_key: plan.target.agent_key.clone(),
+                workspace_id: plan.target.workspace_id.clone(),
+            },
+        )? != plan.target
+        {
             return Err(review());
         }
         check_cancel(&cancel)?;
-        if plan.expected_fingerprint.is_some() {
+        self.repository.grant_cache(&plan.context, &cached.key)?;
+        if plan.kind == "install" && plan.expected_fingerprint.is_some() {
             let (repo, targets, frozen) =
                 (self.repository.clone(), self.targets.clone(), plan.clone());
             return self
@@ -392,6 +434,9 @@ impl OperationService {
                     })
                 })
                 .await;
+        }
+        if plan.kind == "update" {
+            return self.run_replacement(plan, cached.artifact, cancel).await;
         }
         self.progress(&plan.id, OperationState::Staging, "staging")?;
         let (repo, frozen) = (self.repository.clone(), plan.clone());
@@ -425,23 +470,62 @@ impl OperationService {
             })
             .await
     }
-    async fn authorized_release(
+    pub(crate) async fn authorized_release(
         &self,
         context: &SessionContext,
         request: &InstallRequest,
     ) -> Result<Release, SdsError> {
-        let detail = self.store.detail_for(context, &request.skill_id).await?;
+        let detail = match self.store.detail_for(context, &request.skill_id).await {
+            Ok(detail) => detail,
+            Err(error) => {
+                if [
+                    "ACCESS_DENIED",
+                    "FORBIDDEN",
+                    "NOT_FOUND",
+                    "GONE",
+                    "RELEASE_WITHDRAWN",
+                    "DOWNLOAD_FORBIDDEN",
+                ]
+                .contains(&error.code.as_str())
+                {
+                    self.repository
+                        .revoke_cache_skill(context, &request.skill_id)?;
+                }
+                return Err(error);
+            }
+        };
         if !detail.summary.metadata.can_download {
+            self.repository
+                .revoke_cache_skill(context, &request.skill_id)?;
             return Err(SdsError::new(
                 "DOWNLOAD_FORBIDDEN",
                 "Your account cannot download this skill.",
                 false,
             ));
         }
-        let release = self
+        let release = match self
             .store
             .release_for(context, &request.skill_id, &request.release_id)
-            .await?;
+            .await
+        {
+            Ok(release) => release,
+            Err(error) => {
+                if [
+                    "ACCESS_DENIED",
+                    "FORBIDDEN",
+                    "NOT_FOUND",
+                    "GONE",
+                    "RELEASE_WITHDRAWN",
+                    "DOWNLOAD_FORBIDDEN",
+                ]
+                .contains(&error.code.as_str())
+                {
+                    self.repository
+                        .revoke_cache_skill(context, &request.skill_id)?;
+                }
+                return Err(error);
+            }
+        };
         super::deployment::validate_relative(&release.install_name)?;
         if release.install_name.contains('/') {
             return Err(SdsError::invalid("Invalid skill installation folder"));
@@ -450,11 +534,12 @@ impl OperationService {
             .with_current_context(context, || Ok(release))
             .await
     }
-    fn destination(&self, release: &Release) -> Result<Target, SdsError> {
-        let settings = self.targets.settings()?;
-        let mut target = settings
-            .target
-            .ok_or_else(|| settings.error.unwrap_or_else(review))?;
+    pub(crate) fn destination(
+        &self,
+        release: &Release,
+        selection: &super::contracts::TargetSelection,
+    ) -> Result<Target, SdsError> {
+        let mut target = self.targets.resolve(selection)?;
         target.path = target.path.join(&release.install_name);
         Ok(target)
     }
@@ -465,7 +550,7 @@ impl OperationService {
         self.ensure_ready()?;
         let (_, context) = self.session.scope().await?;
         let release = self.authorized_release(&context, &request).await?;
-        let target = self.destination(&release)?;
+        let target = self.destination(&release, &request.target)?;
         let reviewed_root = ReviewedRoot::capture(target.path.parent().ok_or_else(review)?)?;
         let exists = match std::fs::symlink_metadata(&target.path) {
             Ok(_) => true,
@@ -548,6 +633,7 @@ impl OperationService {
             .authorized_release(
                 &plan.context,
                 &InstallRequest {
+                    target: Default::default(),
                     skill_id: plan.release.skill_id.clone(),
                     release_id: plan.release.id.clone(),
                 },
@@ -562,7 +648,14 @@ impl OperationService {
                 false,
             ));
         }
-        if self.destination(&plan.release)? != plan.target {
+        if self.destination(
+            &plan.release,
+            &super::contracts::TargetSelection {
+                agent_key: plan.target.agent_key.clone(),
+                workspace_id: plan.target.workspace_id.clone(),
+            },
+        )? != plan.target
+        {
             return Err(review());
         }
         check_mcp(&self.targets, &plan)?;
@@ -602,7 +695,7 @@ impl Drop for Job {
         }
     }
 }
-fn check_cancel(cancel: &AtomicBool) -> Result<(), SdsError> {
+pub(crate) fn check_cancel(cancel: &AtomicBool) -> Result<(), SdsError> {
     if cancel.load(Ordering::Acquire) {
         Err(SdsError::new(
             "CANCELLED",
@@ -627,7 +720,7 @@ fn release_changed() -> SdsError {
         false,
     )
 }
-fn check_mcp(targets: &TargetService, plan: &PreparedOperation) -> Result<(), SdsError> {
+pub(crate) fn check_mcp(targets: &TargetService, plan: &PreparedOperation) -> Result<(), SdsError> {
     let current = targets.inspect_mcp(plan.release.required_mcps.as_deref());
     if current.state != plan.mcp.state
         || current.missing != plan.mcp.missing
@@ -637,7 +730,7 @@ fn check_mcp(targets: &TargetService, plan: &PreparedOperation) -> Result<(), Sd
     }
     Ok(())
 }
-async fn blocking<T: Send + 'static>(
+pub(crate) async fn blocking<T: Send + 'static>(
     action: impl FnOnce() -> Result<T, SdsError> + Send + 'static,
 ) -> Result<T, SdsError> {
     tokio::task::spawn_blocking(action)

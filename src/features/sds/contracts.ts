@@ -28,17 +28,41 @@ export interface Release {
   publishedAt: string; changelog: string; compatibleAgents: string[] | null; requiredMcps: string[] | null; package: PackageInfo;
 }
 export interface SkillDetail { summary: SkillSummary; storePageUrl: string | null; latestRelease: Release | null }
+export interface WorkspaceRef { id: string; root: string }
+export interface TargetSelection { agentKey: "aipro"; workspaceId: string }
 export interface Target { agentKey: string; workspaceId: string; path: string }
 export interface TargetSettings { overrideRoot: string | null; target: Target | null; error: { code: string } | null; locked: boolean }
 export interface McpReport { state: "notRequired" | "unknown" | "configured" | "missing" | "unverifiable"; missing: string[]; reason: string | null; checkedAt: string }
 export interface PreparedOperation {
-  id: string; kind: "install" | "remove"; release: Release; target: Target; expectedFingerprint: string | null;
+  id: string; kind: "install" | "remove" | "update" | "restore" | "cached"; release: Release; target: Target; expectedFingerprint: string | null;
   mcp: McpReport; requiresMcpAck: boolean; canExecute: boolean; conflict: string | null;
+  reviewedRoot?: ReviewedRoot | null; context?: SessionContext | null; runtimeEpoch?: string; deploymentId?: string | null;
 }
+export interface FileIdentity { volume:number; fileId:string }
+export interface ReviewedRoot { anchor:string; identity:FileIdentity; rootExisted:boolean }
+export interface SessionContext { profileId:string; accountId:string; generation:number }
 export type CacheStatus = "verified" | "corrupt" | "missing" | "unverifiable";
 export type DeploymentStatus = "installed" | "modified" | "missing" | "unverifiable";
-export interface LibraryDeployment { id: string; target: Target; status: DeploymentStatus; mcp: McpReport; installedAt: string; reason: string | null }
+export interface LibraryDeployment { id: string; target: Target; status: DeploymentStatus; mcp: McpReport; installedAt: string; reason: string | null; expectedFingerprint?: string | null }
 export interface LibraryItem { id: string; profileId: string; release: Release; cachedAt: string; cacheStatus: CacheStatus; deployments: LibraryDeployment[] }
 export type OperationState = "prepared" | "downloading" | "validating" | "staging" | "committing" | "completed" | "failed" | "cancelled" | "recoveryRequired";
 export interface OperationResult { operationId: string; state: OperationState; stage: string; error: {code: string; message: string; operationId?: string | null} | null }
-export type OperationRequest = {kind:"install";skillId:string;releaseId:string} | {kind:"remove";deploymentId:string};
+export interface SdsError { code: string; message: string; operationId?: string | null }
+export interface Manifest { entries: {path:string;sizeBytes:number;sha256:string|null}[] }
+export type SnapshotReason = "manual" | "beforeUpdate" | "beforeRestore" | "beforeRemove";
+export interface SnapshotRecord {
+  id:string; deploymentId:string; profileId:string; release:Release; target:Target; capturedAt:string; reason:SnapshotReason;
+  contentManifest:Manifest; contentFingerprint:string; baselineManifest:Manifest; baselineFingerprint:string;
+  rootIdentity?: FileIdentity;
+}
+export interface UpdateCheck { checkedAt:string; items:{skillId:string;currentReleaseId:string;status:"update_available"|"up_to_date"|"unavailable"|"unknown_release";latestRelease?:ReleaseRef|null}[] }
+export interface UpdateRequest { deploymentId:string; releaseId:string; localEdits:"keep"|"backupAndReplace" }
+export interface PreparedUpdateSelection { selectionId:string; items:{deploymentId:string;operationId?:string|null;operation?:PreparedOperation|null;error?:SdsError|null}[] }
+export interface UpdateSelectionResult { selectionId:string; items:{deploymentId:string;operationId?:string|null;result?:OperationResult|null;preflightError?:SdsError|null}[] }
+export interface CacheDeletePlan { id:string;releaseKey:string;expectedFingerprint:string;runtimeEpoch:string }
+export type OperationRequest =
+  | {kind:"install";skillId:string;releaseId:string;target?:TargetSelection}
+  | {kind:"remove";deploymentId:string;backup?:boolean;acknowledgeLocalEdits?:boolean}
+  | {kind:"restore";snapshotId:string;deploymentId:string;protectCurrent:boolean}
+  | {kind:"update";deploymentId:string;releaseId:string;localEdits:"keep"|"backupAndReplace"}
+  | {kind:"cached";releaseKey:string;target?:TargetSelection};

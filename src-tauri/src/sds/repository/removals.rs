@@ -19,6 +19,12 @@ impl Repository {
         if plan.kind != "remove" {
             return Err(operation_error());
         }
+        if let Some(manifest) = self.options(plan)?.observed_manifest {
+            if super::super::deployment::manifest_fingerprint(&manifest)? != intent.fingerprint {
+                return Err(operation_error());
+            }
+            return Ok(manifest);
+        }
         let stored = self
             .stored(
                 &plan.context.profile_id,
@@ -55,7 +61,7 @@ impl Repository {
         }
         if let Some(intent) = intent {
             intent.validate(plan)?;
-            if intent.fingerprint != deployment.fingerprint
+            if Some(&intent.fingerprint) != plan.expected_fingerprint.as_ref()
                 || intent.stage_identity != deployment.identity
                 || intent.root_identity != deployment.root_identity
             {

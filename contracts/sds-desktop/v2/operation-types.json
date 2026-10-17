@@ -1,0 +1,581 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:sds:desktop:v2",
+  "definitions": {
+    "target-selection": {
+      "type": "object",
+      "required": [
+        "agentKey",
+        "workspaceId"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "agentKey": {
+          "const": "aipro"
+        },
+        "workspaceId": {
+          "anyOf": [
+            {
+              "const": "global"
+            },
+            {
+              "type": "string",
+              "format": "uuid"
+            }
+          ]
+        }
+      }
+    },
+    "workspace": {
+      "type": "object",
+      "required": [
+        "id",
+        "root"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "root": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "target": {
+      "type": "object",
+      "required": [
+        "agentKey",
+        "workspaceId",
+        "path"
+      ],
+      "properties": {
+        "agentKey": {
+          "const": "aipro"
+        },
+        "workspaceId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "manifest": {
+      "type": "object",
+      "required": [
+        "entries"
+      ],
+      "properties": {
+        "entries": {
+          "type": "array",
+          "maxItems": 10000,
+          "items": {
+            "type": "object",
+            "required": [
+              "path",
+              "sizeBytes",
+              "sha256"
+            ],
+            "properties": {
+              "path": {
+                "type": "string",
+                "minLength": 1
+              },
+              "sizeBytes": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "sha256": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{64}$"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "fingerprint": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "snapshot": {
+      "type": "object",
+      "required": [
+        "id",
+        "deploymentId",
+        "profileId",
+        "release",
+        "target",
+        "capturedAt",
+        "reason",
+        "contentManifest",
+        "contentFingerprint",
+        "baselineManifest",
+        "baselineFingerprint"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "deploymentId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "profileId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "release": {
+          "$ref": "urn:sds:desktop:v1#/definitions/release-data"
+        },
+        "target": {
+          "$ref": "#/definitions/target"
+        },
+        "capturedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "reason": {
+          "enum": [
+            "manual",
+            "beforeUpdate",
+            "beforeRestore",
+            "beforeRemove"
+          ]
+        },
+        "contentManifest": {
+          "$ref": "#/definitions/manifest"
+        },
+        "contentFingerprint": {
+          "$ref": "#/definitions/fingerprint"
+        },
+        "baselineManifest": {
+          "$ref": "#/definitions/manifest"
+        },
+        "baselineFingerprint": {
+          "$ref": "#/definitions/fingerprint"
+        }
+      }
+    },
+    "error": {
+      "type": "object",
+      "required": [
+        "code",
+        "message",
+        "retryable"
+      ],
+      "properties": {
+        "code": {
+          "type": "string",
+          "minLength": 1
+        },
+        "message": {
+          "type": "string"
+        },
+        "retryable": {
+          "type": "boolean"
+        },
+        "operationId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "operation-result": {
+      "type": "object",
+      "required": [
+        "operationId",
+        "state",
+        "stage",
+        "error"
+      ],
+      "properties": {
+        "operationId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "state": {
+          "enum": [
+            "prepared",
+            "downloading",
+            "validating",
+            "staging",
+            "committing",
+            "completed",
+            "failed",
+            "cancelled",
+            "recoveryRequired"
+          ]
+        },
+        "stage": {
+          "type": "string",
+          "minLength": 1
+        },
+        "error": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/error"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "cache-delete": {
+      "type": "object",
+      "required": [
+        "id",
+        "releaseKey",
+        "expectedFingerprint",
+        "runtimeEpoch"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "releaseKey": {
+          "$ref": "#/definitions/fingerprint"
+        },
+        "expectedFingerprint": {
+          "$ref": "#/definitions/fingerprint"
+        },
+        "runtimeEpoch": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "prepared-selection": {
+      "type": "object",
+      "required": [
+        "selectionId",
+        "items"
+      ],
+      "properties": {
+        "selectionId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "items": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 1000,
+          "items": {
+            "type": "object",
+            "required": [
+              "deploymentId"
+            ],
+            "properties": {
+              "deploymentId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "operationId": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "error": {
+                "anyOf": [
+                  {
+                    "$ref": "#/definitions/error"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "operation": {
+                "anyOf": [
+                  {
+                    "$ref": "#/definitions/prepared-operation"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "oneOf": [
+              {
+                "required": [
+                  "operationId",
+                  "operation"
+                ],
+                "properties": {
+                  "operationId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "error": {
+                    "type": "null"
+                  },
+                  "operation": {
+                    "allOf": [
+                      {
+                        "$ref": "#/definitions/prepared-operation"
+                      },
+                      {
+                        "properties": {
+                          "kind": {
+                            "const": "update"
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "required": [
+                  "error"
+                ],
+                "properties": {
+                  "error": {
+                    "$ref": "#/definitions/error"
+                  },
+                  "operationId": {
+                    "type": "null"
+                  },
+                  "operation": {
+                    "type": "null"
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    "selection-result": {
+      "type": "object",
+      "required": [
+        "selectionId",
+        "items"
+      ],
+      "properties": {
+        "selectionId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "items": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 1000,
+          "items": {
+            "type": "object",
+            "required": [
+              "deploymentId"
+            ],
+            "properties": {
+              "deploymentId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "operationId": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "result": {
+                "anyOf": [
+                  {
+                    "$ref": "#/definitions/operation-result"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "preflightError": {
+                "anyOf": [
+                  {
+                    "$ref": "#/definitions/error"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "install-request": {
+      "type": "object",
+      "required": [
+        "skillId",
+        "releaseId"
+      ],
+      "properties": {
+        "skillId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "releaseId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "target": {
+          "$ref": "#/definitions/target-selection"
+        }
+      }
+    },
+    "update-request": {
+      "type": "object",
+      "required": [
+        "deploymentId",
+        "releaseId",
+        "localEdits"
+      ],
+      "properties": {
+        "deploymentId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "releaseId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "localEdits": {
+          "enum": [
+            "keep",
+            "backupAndReplace"
+          ]
+        }
+      }
+    },
+    "remove-request": {
+      "type": "object",
+      "required": [
+        "deploymentId",
+        "backup",
+        "acknowledgeLocalEdits"
+      ],
+      "properties": {
+        "deploymentId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "backup": {
+          "type": "boolean"
+        },
+        "acknowledgeLocalEdits": {
+          "type": "boolean"
+        }
+      }
+    },
+    "prepared-operation": {
+      "type": "object",
+      "required": [
+        "id",
+        "kind",
+        "release",
+        "target",
+        "expectedFingerprint",
+        "mcp",
+        "requiresMcpAck",
+        "canExecute",
+        "conflict"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "kind": {
+          "enum": [
+            "install",
+            "remove",
+            "update",
+            "restore"
+          ]
+        },
+        "release": {
+          "$ref": "urn:sds:desktop:v1#/definitions/release-data"
+        },
+        "target": {
+          "$ref": "#/definitions/target"
+        },
+        "expectedFingerprint": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/fingerprint"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "mcp": {
+          "type": "object",
+          "required": [
+            "state",
+            "missing",
+            "reason",
+            "checkedAt"
+          ],
+          "properties": {
+            "state": {
+              "enum": [
+                "notRequired",
+                "unknown",
+                "configured",
+                "missing",
+                "unverifiable"
+              ]
+            },
+            "missing": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "reason": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "checkedAt": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        },
+        "requiresMcpAck": {
+          "type": "boolean"
+        },
+        "canExecute": {
+          "type": "boolean"
+        },
+        "conflict": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    }
+  }
+}

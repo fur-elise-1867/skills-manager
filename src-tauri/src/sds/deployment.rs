@@ -152,7 +152,7 @@ fn walk(
     let _pins = DirectoryPins::acquire(directory)?;
     for entry in std::fs::read_dir(directory).map_err(|_| conflict())? {
         let path = entry.map_err(|_| conflict())?.path();
-        if manifest.entries.len() >= limits.entries * limits.depth {
+        if manifest.entries.len() >= limits.entries {
             return Err(conflict());
         }
         let metadata = std::fs::symlink_metadata(&path).map_err(|_| conflict())?;
@@ -181,7 +181,7 @@ fn walk(
             let mut file = open_content_file(&path)?;
             let mut hash = Sha256::new();
             let mut size = 0u64;
-            let mut buffer = [0u8; 65_536];
+            let mut buffer = vec![0u8; 65_536];
             loop {
                 let n = file.read(&mut buffer).map_err(|_| conflict())?;
                 if n == 0 {

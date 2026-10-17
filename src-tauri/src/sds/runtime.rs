@@ -3,6 +3,23 @@ use tauri::Manager;
 
 pub const COMMANDS: &[&str] = &[
     "runtime_profile",
+    "sds_list_workspaces",
+    "sds_add_workspace",
+    "sds_remove_workspace",
+    "sds_resolve_target",
+    "sds_snapshots",
+    "sds_verify_snapshot",
+    "sds_capture_snapshot",
+    "sds_prepare_restore",
+    "sds_check_updates",
+    "sds_prepare_update",
+    "sds_prepare_updates",
+    "sds_execute_updates",
+    "sds_update_selection_status",
+    "sds_cancel_update_selection",
+    "sds_prepare_cache_delete",
+    "sds_execute_cache_delete",
+    "sds_prepare_cached_install",
     "sds_get_connection",
     "sds_set_connection",
     "sds_session_status",
@@ -38,6 +55,7 @@ pub fn run_mismatch(context: tauri::Context<tauri::Wry>) {
         .expect("Cannot show desktop profile mismatch");
 }
 
+#[cfg(feature = "sds")]
 pub fn run() {
     let profile = SdsProfile::resolve().expect("Invalid SDS build profile");
     std::fs::create_dir_all(profile.data_root()).expect("Cannot create SDS data directory");
@@ -70,6 +88,23 @@ pub fn run() {
         )
         .invoke_handler(tauri::generate_handler![
             super::runtime_profile,
+            super::commands::sds_list_workspaces,
+            super::commands::sds_add_workspace,
+            super::commands::sds_remove_workspace,
+            super::commands::sds_resolve_target,
+            super::commands::sds_snapshots,
+            super::commands::sds_verify_snapshot,
+            super::commands::sds_capture_snapshot,
+            super::commands::sds_prepare_restore,
+            super::commands::sds_check_updates,
+            super::commands::sds_prepare_update,
+            super::commands::sds_prepare_updates,
+            super::commands::sds_execute_updates,
+            super::commands::sds_update_selection_status,
+            super::commands::sds_cancel_update_selection,
+            super::commands::sds_prepare_cache_delete,
+            super::commands::sds_execute_cache_delete,
+            super::commands::sds_prepare_cached_install,
             super::commands::sds_get_connection,
             super::commands::sds_set_connection,
             super::commands::sds_session_status,
@@ -92,4 +127,9 @@ pub fn run() {
         ])
         .run(tauri::generate_context!())
         .expect("Error running SDS desktop");
+}
+
+#[cfg(not(feature = "sds"))]
+pub fn run() {
+    run_mismatch(tauri::generate_context!())
 }
