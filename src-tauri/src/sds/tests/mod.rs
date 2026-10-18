@@ -17,3 +17,5 @@ mod phase2_lifecycle;
 mod replacement;
 mod snapshots;
 mod workspaces;
+mod access_denial_review;
+mod cache_reference_race;

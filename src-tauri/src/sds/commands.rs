@@ -238,7 +238,14 @@ pub async fn sds_skill_detail(
     state: tauri::State<'_, SdsServices>,
     skill_id: String,
 ) -> Result<SkillDetail, SdsError> {
-    state.store.detail(&skill_id).await
+    #[cfg(feature = "sds")]
+    {
+        state.operations.skill_detail(&skill_id).await
+    }
+    #[cfg(not(feature = "sds"))]
+    {
+        state.store.detail(&skill_id).await
+    }
 }
 
 #[tauri::command]

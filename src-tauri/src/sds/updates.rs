@@ -95,10 +95,19 @@ impl OperationService {
         let repo = self.repository.clone();
         let targets = self.targets.clone();
         blocking(move || {
-            let d = super::removal::deployment(&repo, &id)?;
-            targets.with_current_target(&d.target, || {
-                SnapshotService::new(repo.clone()).capture(&id, &expected, reason)
-            })
+            let result = (|| {
+                let d = super::removal::deployment(&repo, &id)?;
+                targets.with_current_target(&d.target, || {
+                    SnapshotService::new(repo.clone()).capture(&id, &expected, reason)
+                })
+            })();
+            if let Err(error) = &result {
+                log::warn!(
+                    "snapshot deployment={id:?} result=failed code={:?}",
+                    error.code
+                );
+            }
+            result
         })
         .await
     }

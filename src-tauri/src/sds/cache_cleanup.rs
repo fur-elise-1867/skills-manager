@@ -43,16 +43,22 @@ fn references(repository: &Repository, key: &str) -> Result<bool, SdsError> {
     }
     let c = repository.connection.lock().map_err(|_| review())?;
     let mut q = c
-        .prepare("SELECT frozen_json,result_json FROM operations")
+        .prepare("SELECT frozen_json,result_json,intent_json IS NOT NULL OR EXISTS(SELECT 1 FROM replacement_intents r WHERE r.operation_id=operations.operation_id AND r.committed<>2) FROM operations")
         .map_err(|_| review())?;
     let rows = q
-        .query_map([], |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?)))
+        .query_map([], |r| {
+            Ok((
+                r.get::<_, String>(0)?,
+                r.get::<_, String>(1)?,
+                r.get::<_, bool>(2)?,
+            ))
+        })
         .map_err(|_| review())?;
     for row in rows {
-        let (p, s) = row.map_err(|_| review())?;
+        let (p, s, durable_intent) = row.map_err(|_| review())?;
         let p: PreparedOperation = serde_json::from_str(&p).map_err(|_| review())?;
         let s: OperationResult = serde_json::from_str(&s).map_err(|_| review())?;
-        if !s.state.terminal()
+        if (!s.state.terminal() || durable_intent)
             && super::repository::cache_key(
                 &p.context.profile_id,
                 &p.release.skill_id,
@@ -63,6 +69,34 @@ fn references(repository: &Repository, key: &str) -> Result<bool, SdsError> {
         }
     }
     Ok(false)
+}
+/// Called while owning the publication lease. A crashed pre-database deletion
+/// still owns the original artifact, possibly renamed to its tombstone; do not
+/// reserve or republish that key until recovery reconciles the durable intent.
+/// After its DB commit, cleanup only owns the old tombstone, so a new cache or
+/// snapshot-backed deployment with the same release key can be published safely.
+pub(crate) fn ensure_reference_allowed(repository: &Repository, key: &str) -> Result<(), SdsError> {
+    let c = repository.connection.lock().map_err(|_| review())?;
+    let mut q = c
+        .prepare(
+            "SELECT plan_json FROM cache_cleanup WHERE intent_json IS NOT NULL AND committed=0",
+        )
+        .map_err(|_| review())?;
+    let rows = q
+        .query_map([], |r| r.get::<_, String>(0))
+        .map_err(|_| review())?;
+    for row in rows {
+        let saved: Saved =
+            serde_json::from_str(&row.map_err(|_| review())?).map_err(|_| review())?;
+        if saved.plan.release_key == key {
+            return Err(SdsError::new(
+                "OPERATION_BUSY",
+                "An interrupted cache deletion must be reconciled before using this release.",
+                true,
+            ));
+        }
+    }
+    Ok(())
 }
 fn in_use() -> SdsError {
     SdsError::new(
@@ -76,7 +110,7 @@ pub fn prepare(
     epoch: &str,
     key: &str,
 ) -> Result<CacheDeletePlan, SdsError> {
-    let _lock = repository.cache_lock()?;
+    let _lock = repository.cache_cleanup_lock()?;
     if references(repository, key)? {
         return Err(in_use());
     }
@@ -135,7 +169,7 @@ fn execute_inner(
     if uuid::Uuid::parse_str(id).is_err() {
         return Err(review());
     }
-    let _cache = repository.cache_lock()?;
+    let _cache = repository.cache_cleanup_lock()?;
     let parent = repository.root().join("releases");
     let _pins = DirectoryPins::acquire(&parent)?;
     let (body, intent, committed): (String, Option<String>, u32) = repository
@@ -165,7 +199,7 @@ fn execute_inner(
     if epoch.is_some_and(|e| e != saved.plan.runtime_epoch) && intent.is_none() {
         return Err(review());
     }
-    if references(repository, &saved.plan.release_key)? {
+    if committed == 0 && references(repository, &saved.plan.release_key)? {
         return Err(in_use());
     }
     let original = parent.join(&saved.plan.release_key);

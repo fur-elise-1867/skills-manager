@@ -13,13 +13,14 @@ use std::{
     fs::{File, OpenOptions},
     io::{Read, Write},
     path::{Path, PathBuf},
-    sync::Mutex,
+    sync::{Arc, Mutex, Weak},
 };
 mod removals;
 
 pub struct Repository {
     root: PathBuf,
     pub(crate) connection: Mutex<Connection>,
+    cache_publication: Mutex<Weak<File>>,
     _db_pin: File,
     _pins: DirectoryPins,
 }
@@ -36,7 +37,7 @@ pub(crate) struct PreparedCache {
     insert: bool,
     copied: Option<PathBuf>,
     _temporary: Option<tempfile::TempDir>,
-    _lock: File,
+    _lock: Arc<File>,
     _pins: DirectoryPins,
 }
 impl PreparedCache {
@@ -130,6 +131,7 @@ impl Repository {
         plan: &PreparedOperation,
         intent: &super::journal::CommitIntent,
     ) -> Result<(), SdsError> {
+        let _cache = self.cache_reference_lock(plan)?;
         intent.validate(plan)?;
         let current = self.load_operation(&plan.id)?;
         if serde_json::to_vec(&current).map_err(|_| operation_error())?
@@ -249,6 +251,7 @@ impl Repository {
         cached: &CachedRelease,
     ) -> Result<(), SdsError> {
         use super::journal::{target_key, Deployment};
+        let _cache = self.cache_reference_lock(plan)?;
         intent.validate(plan)?;
         if plan.kind != "install" {
             return Err(operation_error());
@@ -414,6 +417,7 @@ impl Repository {
         plan: &PreparedOperation,
         initial: &OperationResult,
     ) -> Result<(), SdsError> {
+        let _cache = self.cache_reference_lock(plan)?;
         validate_operation(plan)?;
         if initial.operation_id != plan.id || initial.state != OperationState::Prepared {
             return Err(operation_error());
@@ -537,6 +541,7 @@ impl Repository {
         Ok(Self {
             root: root.into(),
             connection: Mutex::new(connection),
+            cache_publication: Mutex::new(Weak::new()),
             _db_pin: db_pin,
             _pins: pins,
         })
@@ -559,6 +564,7 @@ impl Repository {
         let pins = DirectoryPins::acquire(&self.root.join("releases"))?;
         let lock = self.cache_lock()?;
         let key = cache_key(profile_id, &release.skill_id, &release.id)?;
+        super::cache_cleanup::ensure_reference_allowed(self, &key)?;
         let body = serde_json::to_string(release).map_err(|_| repository_error())?;
         if let Some(stored) = self.stored(profile_id, &release.skill_id, &release.id)? {
             if serde_json::to_string(&stored.release).map_err(|_| repository_error())? != body
@@ -708,7 +714,46 @@ impl Repository {
             },
         })
     }
-    pub(crate) fn cache_lock(&self) -> Result<File, SdsError> {
+    /// Cache preparation owns an exclusive publication lease. Reference writes
+    /// on this handle may retain that lease, including across an async caller's
+    /// thread migration; another repository handle still contends on the file.
+    /// Cache publishers themselves never reuse a lease: their filesystem work
+    /// must remain exclusive even when they share this Repository instance.
+    pub(crate) fn cache_lock(&self) -> Result<Arc<File>, SdsError> {
+        let mut publication = self
+            .cache_publication
+            .lock()
+            .map_err(|_| repository_error())?;
+        let lock = Arc::new(self.exclusive_lock("cache.lock")?);
+        *publication = Arc::downgrade(&lock);
+        Ok(lock)
+    }
+    fn cache_reference_lock(&self, plan: &PreparedOperation) -> Result<Arc<File>, SdsError> {
+        let lock = {
+            let mut publication = self
+                .cache_publication
+                .lock()
+                .map_err(|_| repository_error())?;
+            if let Some(lock) = publication.upgrade() {
+                lock
+            } else {
+                let lock = Arc::new(self.exclusive_lock("cache.lock")?);
+                *publication = Arc::downgrade(&lock);
+                lock
+            }
+        };
+        let key = cache_key(
+            &plan.context.profile_id,
+            &plan.release.skill_id,
+            &plan.release.id,
+        )?;
+        super::cache_cleanup::ensure_reference_allowed(self, &key)?;
+        // Do not require cached bytes: online prepare precedes download, and a
+        // self-contained snapshot may restore a release whose cache was deleted.
+        Ok(lock)
+    }
+    /// Cleanup must never borrow a publication lease, even on the same handle.
+    pub(crate) fn cache_cleanup_lock(&self) -> Result<File, SdsError> {
         self.exclusive_lock("cache.lock")
     }
     fn exclusive_lock(&self, name: &str) -> Result<File, SdsError> {

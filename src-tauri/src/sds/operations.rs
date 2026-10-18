@@ -66,6 +66,41 @@ impl OperationService {
             None => Ok(()),
         }
     }
+    /// Publish detail and observed access denial under the requesting account's context.
+    pub async fn skill_detail(
+        &self,
+        skill_id: &str,
+    ) -> Result<super::contracts::SkillDetail, SdsError> {
+        let (_, context) = self.session.scope().await?;
+        let detail = match self.store.detail_for(&context, skill_id).await {
+            Ok(detail) => detail,
+            Err(error) => {
+                if denies_cached_access(&error) {
+                    self.revoke_cached_access(&context, skill_id).await?;
+                }
+                return Err(error);
+            }
+        };
+        self.session
+            .with_current_context(&context, || {
+                if !detail.summary.metadata.can_download {
+                    self.repository.revoke_cache_skill(&context, skill_id)?;
+                }
+                Ok(detail)
+            })
+            .await
+    }
+    async fn revoke_cached_access(
+        &self,
+        context: &SessionContext,
+        skill_id: &str,
+    ) -> Result<(), SdsError> {
+        self.session
+            .with_current_context(context, || {
+                self.repository.revoke_cache_skill(context, skill_id)
+            })
+            .await
+    }
     pub fn status(&self, id: &str) -> Result<OperationResult, SdsError> {
         let jobs = self.jobs.lock().map_err(|_| operation_failed())?;
         self.status_for(id, jobs.contains_key(id))
@@ -478,25 +513,14 @@ impl OperationService {
         let detail = match self.store.detail_for(context, &request.skill_id).await {
             Ok(detail) => detail,
             Err(error) => {
-                if [
-                    "ACCESS_DENIED",
-                    "FORBIDDEN",
-                    "NOT_FOUND",
-                    "GONE",
-                    "RELEASE_WITHDRAWN",
-                    "DOWNLOAD_FORBIDDEN",
-                ]
-                .contains(&error.code.as_str())
-                {
-                    self.repository
-                        .revoke_cache_skill(context, &request.skill_id)?;
+                if denies_cached_access(&error) {
+                    self.revoke_cached_access(context, &request.skill_id).await?;
                 }
                 return Err(error);
             }
         };
         if !detail.summary.metadata.can_download {
-            self.repository
-                .revoke_cache_skill(context, &request.skill_id)?;
+            self.revoke_cached_access(context, &request.skill_id).await?;
             return Err(SdsError::new(
                 "DOWNLOAD_FORBIDDEN",
                 "Your account cannot download this skill.",
@@ -510,18 +534,8 @@ impl OperationService {
         {
             Ok(release) => release,
             Err(error) => {
-                if [
-                    "ACCESS_DENIED",
-                    "FORBIDDEN",
-                    "NOT_FOUND",
-                    "GONE",
-                    "RELEASE_WITHDRAWN",
-                    "DOWNLOAD_FORBIDDEN",
-                ]
-                .contains(&error.code.as_str())
-                {
-                    self.repository
-                        .revoke_cache_skill(context, &request.skill_id)?;
+                if denies_cached_access(&error) {
+                    self.revoke_cached_access(context, &request.skill_id).await?;
                 }
                 return Err(error);
             }
@@ -705,6 +719,17 @@ pub(crate) fn check_cancel(cancel: &AtomicBool) -> Result<(), SdsError> {
     } else {
         Ok(())
     }
+}
+fn denies_cached_access(error: &SdsError) -> bool {
+    matches!(
+        error.code.as_str(),
+        "ACCESS_DENIED"
+            | "FORBIDDEN"
+            | "NOT_FOUND"
+            | "GONE"
+            | "RELEASE_WITHDRAWN"
+            | "DOWNLOAD_FORBIDDEN"
+    )
 }
 fn operation_failed() -> SdsError {
     SdsError::new(
