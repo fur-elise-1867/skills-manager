@@ -224,10 +224,10 @@ async fn install_name_changes_are_explicit_and_selected_success_is_not_replayed(
     assert_eq!(s.downloads.load(Ordering::SeqCst), count);
 }
 #[tokio::test]
-async fn modified_removal_backup_then_cache_delete_then_restore_without_cache_preserves_baseline() {
+async fn cache_missing_after_snapshot_restore_store_install_downloads_verified_copy() {
     let t = tempfile::tempdir().unwrap();
     let s = server().await;
-    let (_, repo, _, op, _) = setup(t.path(), &s).await;
+    let (session, repo, _, op, _) = setup(t.path(), &s).await;
     let p = install(&op, Default::default()).await;
     let baseline = fingerprint_tree(&p.target.path).unwrap().1;
     let key = repo.deployments().unwrap()[0].release_key.clone();
@@ -264,7 +264,7 @@ async fn modified_removal_backup_then_cache_delete_then_restore_without_cache_pr
     let snapshots = SnapshotService::new(repo.clone());
     let snapshot = snapshots.list().unwrap().pop().unwrap();
     assert_eq!(snapshot.content_fingerprint, edited);
-    let delete = op.prepare_cache_delete(key).await.unwrap();
+    let delete = op.prepare_cache_delete(key.clone()).await.unwrap();
     assert_eq!(
         op.execute_cache_delete(delete.id).await.unwrap().state,
         OperationState::Completed
@@ -283,6 +283,95 @@ async fn modified_removal_backup_then_cache_delete_then_restore_without_cache_pr
         crate::sds::library::inspect_deployment(&d).status,
         DeploymentStatus::Modified
     );
+    // Restore retains release metadata for the deployment, but not cached bytes.
+    assert_eq!(repo.list_library().unwrap().len(), 1);
+    assert!(!repo.root().join("releases").join(&key).exists());
+    let fresh_targets = Arc::new(TargetService::fixture(&t.path().join("fresh-global")).unwrap());
+    drop(op);
+    let fresh = OperationService::new(session.clone(), fresh_targets, repo.clone());
+    s.mode.store(1, Ordering::SeqCst);
+    assert!(fresh.check_updates().await.is_err());
+    assert_eq!(
+        session.status().await.unwrap().status,
+        SessionStatus::Offline
+    );
+    let requests = s.requests.load(Ordering::SeqCst);
+    assert!(fresh
+        .prepare_cached_install(&key, Default::default())
+        .await
+        .is_err());
+    assert_eq!(s.requests.load(Ordering::SeqCst), requests);
+    s.mode.store(0, Ordering::SeqCst);
+    let downloads = s.downloads.load(Ordering::SeqCst);
+    let plan = fresh
+        .prepare_install(InstallRequest {
+            skill_id: "skill-123".into(),
+            release_id: "rel-003".into(),
+            target: Default::default(),
+        })
+        .await
+        .unwrap();
+    assert_ne!(plan.target.path, d.target.path);
+    assert!(!plan.target.path.exists());
+    let result = fresh.execute(&plan.id, true).await.unwrap();
+    assert_eq!(result.state, OperationState::Completed, "{result:?}");
+    assert_eq!(s.downloads.load(Ordering::SeqCst), downloads + 1);
+    assert_eq!(fingerprint_tree(&plan.target.path).unwrap().1, baseline);
+    assert_eq!(fingerprint_tree(&d.target.path).unwrap().1, edited);
+    assert_eq!(
+        repo.cached_key(&key).unwrap().artifact.fingerprint,
+        baseline
+    );
+    assert_eq!(repo.deployments().unwrap().len(), 2);
+}
+
+#[tokio::test]
+async fn cache_missing_fix_keeps_tamper_and_offline_deploy_fail_closed() {
+    let t = tempfile::tempdir().unwrap();
+    let s = server().await;
+    let (session, repo, _, op, _) = setup(t.path(), &s).await;
+    let installed = install(&op, Default::default()).await;
+    let key = repo.deployments().unwrap()[0].release_key.clone();
+    let cache_root = repo.cached_key(&key).unwrap().artifact.root;
+    std::fs::write(cache_root.join("SKILL.md"), "# tampered cache").unwrap();
+    let fresh_targets = Arc::new(TargetService::fixture(&t.path().join("fresh-global")).unwrap());
+    drop(op);
+    let fresh = OperationService::new(session.clone(), fresh_targets, repo.clone());
+    let plan = fresh
+        .prepare_install(InstallRequest {
+            skill_id: "skill-123".into(),
+            release_id: "rel-003".into(),
+            target: Default::default(),
+        })
+        .await
+        .unwrap();
+    let downloads = s.downloads.load(Ordering::SeqCst);
+    let result = fresh.execute(&plan.id, true).await.unwrap();
+    assert_eq!(result.state, OperationState::Failed);
+    assert_eq!(result.error.unwrap().code, "CACHE_CORRUPT");
+    assert_eq!(s.downloads.load(Ordering::SeqCst), downloads);
+    assert!(!plan.target.path.exists());
+    assert!(installed.target.path.exists());
+    assert_eq!(repo.deployments().unwrap().len(), 1);
+    s.mode.store(1, Ordering::SeqCst);
+    assert!(fresh.check_updates().await.is_err());
+    assert_eq!(
+        session.status().await.unwrap().status,
+        SessionStatus::Offline
+    );
+    let requests = s.requests.load(Ordering::SeqCst);
+    // Unlike the snapshot restore case, this account still has its download grant.
+    assert!(fresh
+        .prepare_cached_install(&key, Default::default())
+        .await
+        .is_err());
+    std::fs::rename(&cache_root, t.path().join("quarantined-cache")).unwrap();
+    assert!(fresh
+        .prepare_cached_install(&key, Default::default())
+        .await
+        .is_err());
+    assert_eq!(s.requests.load(Ordering::SeqCst), requests);
+    assert!(!plan.target.path.exists());
 }
 #[test]
 fn cache_cleanup_restarts_after_each_boundary_without_deleting_newly_published_content() {

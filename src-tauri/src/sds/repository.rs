@@ -46,7 +46,7 @@ impl PreparedCache {
         if repository.root() != self.repository_root {
             return Err(repository_error());
         }
-        if self.insert {
+        if self.insert || self.copied.is_some() {
             let mut connection = repository
                 .connection
                 .lock()
@@ -59,7 +59,9 @@ impl PreparedCache {
                     .map_err(|_| repository_error())?;
             }
             let release = &self.cached.release;
-            tx.execute("INSERT INTO releases(cache_key,profile_id,skill_id,release_id,release_json,manifest_json,fingerprint,created_at) VALUES(?1,?2,?3,?4,?5,?6,?7,?8)",params![self.cached.key,self.cached.profile_id,release.skill_id,release.id,serde_json::to_string(release).map_err(|_|repository_error())?,serde_json::to_string(&self.cached.artifact.manifest).map_err(|_|repository_error())?,self.cached.artifact.fingerprint,chrono::Utc::now().to_rfc3339()]).map_err(|_|repository_error())?;
+            if self.insert {
+                tx.execute("INSERT INTO releases(cache_key,profile_id,skill_id,release_id,release_json,manifest_json,fingerprint,created_at) VALUES(?1,?2,?3,?4,?5,?6,?7,?8)",params![self.cached.key,self.cached.profile_id,release.skill_id,release.id,serde_json::to_string(release).map_err(|_|repository_error())?,serde_json::to_string(&self.cached.artifact.manifest).map_err(|_|repository_error())?,self.cached.artifact.fingerprint,chrono::Utc::now().to_rfc3339()]).map_err(|_|repository_error())?;
+            }
             tx.commit().map_err(|_| repository_error())?;
         }
         Ok(self.cached)
@@ -566,21 +568,25 @@ impl Repository {
         let key = cache_key(profile_id, &release.skill_id, &release.id)?;
         super::cache_cleanup::ensure_reference_allowed(self, &key)?;
         let body = serde_json::to_string(release).map_err(|_| repository_error())?;
+        let mut insert = true;
         if let Some(stored) = self.stored(profile_id, &release.skill_id, &release.id)? {
             if serde_json::to_string(&stored.release).map_err(|_| repository_error())? != body
                 || stored.fingerprint != artifact.fingerprint
             {
                 return Err(release_changed());
             }
-            return Ok(PreparedCache {
-                repository_root: self.root.clone(),
-                cached: self.materialize(stored)?,
-                insert: false,
-                copied: None,
-                _temporary: None,
-                _lock: lock,
-                _pins: pins,
-            });
+            insert = false;
+            if let Some(cached) = self.materialize_if_present(stored)? {
+                return Ok(PreparedCache {
+                    repository_root: self.root.clone(),
+                    cached,
+                    insert: false,
+                    copied: None,
+                    _temporary: None,
+                    _lock: lock,
+                    _pins: pins,
+                });
+            }
         }
         let (manifest, fingerprint) = fingerprint_tree(&artifact.root)?;
         if manifest != artifact.manifest
@@ -621,7 +627,7 @@ impl Repository {
                     fingerprint,
                 },
             },
-            insert: true,
+            insert,
             copied,
             _temporary: temporary,
             _lock: lock,
@@ -634,10 +640,11 @@ impl Repository {
         skill_id: &str,
         release_id: &str,
     ) -> Result<Option<CachedRelease>, SdsError> {
-        let _pins = DirectoryPins::acquire(&self.root)?;
-        self.stored(profile_id, skill_id, release_id)?
-            .map(|stored| self.materialize(stored))
-            .transpose()
+        let _pins = DirectoryPins::acquire(&self.root.join("releases"))?;
+        match self.stored(profile_id, skill_id, release_id)? {
+            Some(stored) => self.materialize_if_present(stored),
+            None => Ok(None),
+        }
     }
     pub fn list_library(&self) -> Result<Vec<LibraryEntry>, SdsError> {
         let connection = self.connection.lock().map_err(|_| repository_error())?;
@@ -696,6 +703,16 @@ impl Repository {
             })
         })
         .transpose()
+    }
+    fn materialize_if_present(&self, stored: Stored) -> Result<Option<CachedRelease>, SdsError> {
+        // Snapshot restore may retain verified metadata without restoring cache bytes.
+        // Only an absent tree is a miss; present invalid trees still fail closed.
+        match std::fs::symlink_metadata(self.root.join("releases").join(&stored.key)) {
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+            Err(_) => return Err(cache_corrupt()),
+            Ok(_) => (),
+        }
+        self.materialize(stored).map(Some)
     }
     fn materialize(&self, stored: Stored) -> Result<CachedRelease, SdsError> {
         let root = self.root.join("releases").join(&stored.key);
