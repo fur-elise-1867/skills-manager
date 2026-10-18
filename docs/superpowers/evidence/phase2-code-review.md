@@ -1,5 +1,7 @@
 # Phase 2 review checkpoint
 
+Current ruling: independent Standards/Spec review and cross-reviews completed; P1/P2 are fixed in ee3661f. The later cache-missing restore regression is fixed in0a9d094 with observed RED then168 scoped GREEN and an independent patch review finding no blocker. Actual installed global retest passed with hashes. Earlier unresolved/account-limit/build statements below are historical, superseded by their resolution sections and current acceptance report. One P3 duplicated workspace guard remains a nonblocking maintenance item.
+
 Fixed point: `be1cd179ca3cba957317a8a1c877716fcb44ad0c`. Review includes new untracked Phase2 source, not only tracked diff. Excludes pre-existing `.gitignore`, generated `dist-sds/`, and main-checkout user changes.
 
 The requested Matt Pocock workflow calls for separate Standards and Spec reviewers. Independent reviewer workers hit the account usage limit before delivering their reports. The checks below are a local integration review and do not claim that the independent two-axis gate has completed.

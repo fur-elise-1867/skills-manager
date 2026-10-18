@@ -18,4 +18,4 @@ Fault-return tests in `replacement.rs` also cover all six replacement boundaries
 
 `phase2_extra::competing_update_and_remove_have_only_one_commit_winner` runs four actual thread races with a barrier. Exactly one commit succeeds; winning update leaves one correct deployment, winning remove retires the target while the losing replacement retains verified stage content. `phase2_lifecycle::snapshot_failure_blocks_modified_removal_and_cache_plan_rechecks_new_reference` proves cache cleanup refuses a new pending reference created after review.
 
-Native interrupted-operation restart remains a separate open acceptance case. These isolated child-process results do not claim that the installed GUI was killed at each boundary.
+Native prepared-operation kill/restart now separately verified review expiry with unchanged target hashes; see phase2-native-acceptance.md. These isolated child-process results do not claim that the installed GUI was killed at each durable boundary.
