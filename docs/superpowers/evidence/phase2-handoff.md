@@ -1,6 +1,14 @@
-# Phase 2 execution checkpoint — G2 open
+# Phase 2 execution checkpoint — G2 achieved
 
 This is a continuation record, not a completion certificate. Source lives in `.worktrees/sds-phase0-1`, branch `feature/sds-phase-0-1`, baseline `be1cd17`. Main checkout documentation/user changes and worktree `.gitignore`, original `dist/` and `dist-sds/` remain separate.
+
+## Authoritative continuation checkpoint, 2026-10-18 15:08 Asia/Saigon
+
+Product HEAD is0fc8afe after the explicit Windows RenameGuard NUL termination correction. The repaired owned rollback completed through normal startup; no database or journal rewrite occurred. Fresh native grouped-update acceptance on an equivalent path prepared global operation0afb6f72-6082-4a85-a1a1-52d6b4ccf558 and project-b operation56ad94e9-4a81-40a0-a62d-03d27b0dc75c, acknowledged both MCP warnings, and completed both to1.0.3. Default global target has been restored (`targets.json` absent). The attempted missing-directory snapshot fault safely recreated its directory, so it is not counted as an isolation failure; the original snapshot tree and one new capture were merged back without deletion. The earlier marker-file native failure/retry and deterministic fault-hook matrix remain authoritative for that branch.
+
+Final full SDS cargo result is716 passed/3 failed/14 ignored in2083.21s. The failures are two Windows symlink privilege1314 tests and one upstream partial-clone fixture setup; no SDS lifecycle failure. Scoped current rename suite is172 passed/0failed/7ignored. Final internal installer receipt:6,369,885bytes, SHA25604cc6f053b3c42a2f196f2f12c415d5e03de323f52bf2076419fd185843d0104. Final development delivery receipt:6,374,219bytes, SHA256986faef08f67663e1cf88def4c5c1d14487dd86f28e83f6dd053d542cad270dd. Final launcher/bundle/fixture/installer suite passed12/12.
+
+Dedicated pilot PostgreSQL and Store were restarted only after the runtime reset and guarded identity check; they are currently running for the completed native observation. Native app is the owned installed development shell. The final native two-target fault-isolation case is now complete with owned release1.0.4: global `dcc59c09-8a0e-4d45-8686-1f40618cb483` completed, project-b `37fea467-8f27-48d3-95bb-15f7893c8b2d` failed before replacement against an owned snapshot-root file, and fresh project-only retry `a180efb2-4d16-458a-8735-b9b057294b34` completed without replaying global. Original snapshots were restored; default global configuration was restored (`targets.json` absent). Store source/schema audit after publication passed when generated `backend/target` output was excluded from both inventories. G2 evidence is complete; preserve existing user changes and do not push or merge.
 
 ## Authoritative continuation checkpoint, 2026-10-18 10:47 Asia/Saigon
 
@@ -20,7 +28,7 @@ Both human deletion approvals were received and used: project-a backup/remove an
 
 New native regression: after deleted-cache snapshot restore, Store installation of1.0.3 into fresh owned `native/global-skills` failed with cache-changed guidance, operation `2fb8e4e1-bd20-4e3b-952b-61cb3420a727`. No global target was installed. Worker Hume is implementing a deterministic regression and narrow fix; preserve offline fail-closed and tamper checks. Settings global override currently points at this owned global-skills root; prior value null is recorded in `native/global-settings-before-new-native-install.json`, and must be restored through Settings after acceptance. Global MCP was absent and must remain untouched.
 
-At approximately10:42 the tool/runtime environment reset: all old cargo/native/Store processes and sky bindings are absent, old worker IDs are gone. Full post-review session61483 is missing and its log ends mid-run without a terminal verdict; classify it INTERRUPTED, not passed or completed. Historical complete full suites remain default548/3failed/7ignored and SDS698/3failed/14ignored, same three upstream environment/setup failures. Do not reuse stale handles/window IDs. Recheck PostgreSQL/Store ports before restarting only owned services. Native denied/expired presentation, fresh-global positive acceptance, remaining keyboard/internal configuration checks and cache-missing fix remain open. G2 remains open.
+At approximately10:42 the tool/runtime environment reset: all old cargo/native/Store processes and sky bindings are absent, old worker IDs are gone. Full post-review session61483 is missing and its log ends mid-run without a terminal verdict; classify it INTERRUPTED, not passed or completed. Historical complete full suites remain default548/3failed/7ignored and SDS698/3failed/14ignored, same three upstream environment/setup failures. Do not reuse stale handles/window IDs. The outstanding native work named here was completed later by the authoritative checkpoint above.
 
 ## Historical checkpoint, 2026-10-18 01:30 Asia/Saigon
 

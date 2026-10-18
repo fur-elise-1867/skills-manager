@@ -50,3 +50,11 @@ The first owned candidate build overlay used an absolute Windows `frontendDist`.
 - Corrected development/internal artifacts built successfully. Native upgrade, selected update/MCP review, snapshot verification, manual/protected restore and prior-authorized offline deployment were observed. Light/dark Library/Backup were inspected at1440x860 and1100x640 client sizes. Remaining native cases and precise receipts are recorded in `phase2-native-acceptance.md`.
 - The snapshot-list gap was fixed after this review: explicit Verify snapshot now displays checking/verified-at/corrupt-or-missing/error states and blocks restore after verification failure. Its UI test was observed red then green; backend restore independently verifies again. Native Verify reported Verified and the subsequent restore succeeded.
 - Independent Standards/Spec reports and final G2 handoff remain open.
+
+## Windows rename termination regression, commit0fc8afe
+
+Native mixed-target acceptance exposed a retained rollback whose name contained garbage after `old`. Read-only inspection and saved pre-recovery DB/identity/hash proofs retained both trees. Same-bytes replacement and custom-global service tests passed, ruling out content equality alone; a held-reader regression separately verified safe intent retention/recovery.
+
+The focused real-Windows rename test then failed at destination UTF-16 length186, attempt0: actual directory name `old` plus garbage, expected exactly `old`. The buffer allocation had relied on rounded padding to provide a terminator. RenameGuard now copies an explicit terminating NUL while FileNameLength excludes it. This preserves handle identity and no-overwrite rules. Microsoft documents FileName as NUL-terminated: https://learn.microsoft.com/en-us/windows/win32/api/winbase/ns-winbase-file_rename_info .
+
+Focused GREEN verifies96 actual renames across four alignment cases with Unicode, exact name, preserved identity and content. Complete current scoped Rust172 passed/0failed/7ignored in22.21s, log rename-termination-green.log; actual RED is rename-termination-red.log. Independent read-only patch review found no blocker. No ignored native probe remains in product source. Native repair/retest and rebuilt artifact acceptance remain with the parent; do not infer these from the scoped GREEN.

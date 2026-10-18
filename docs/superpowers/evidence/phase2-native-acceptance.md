@@ -1,6 +1,6 @@
-# Phase 2 native acceptance — in progress
+# Phase 2 native acceptance — completed
 
-Observed on 2026-10-18, Asia/Saigon, using the fixture-free development installer and dedicated loopback Store/PostgreSQL pilot. This is partial acceptance; G2 remains open.
+Observed on 2026-10-18, Asia/Saigon, using the fixture-free development installer and dedicated loopback Store/PostgreSQL pilot. Earlier paragraphs record partial observations; the final status and closure evidence are recorded below.
 
 ## Selected update and protected restore
 
@@ -70,3 +70,25 @@ Owned loopback responder returned401 for a native protected catalog search and t
 Internal cache-fixed artifact6,372,990bytes/SHA256 e0fc89d0710e6daac19a33a54cdfb56ce19db513132f3f43a5e2512051afb1e8 was launched as its built executable. Header showed Internal; persisted development HTTP was rejected, Store navigation disabled and Settings required HTTPS with a trusted certificate. No connection setting was changed. Proof native/internal-https-ui.txt. Closed that exact owned binary and restored the installed development app. Settings global override was restored to its original null via Use default destination; no target files or MCP config were removed.
 
 Native restore dialog at1100x640 dark theme was inspected with long project path and scrollable content. Tab visibly focused Check again; Shift-Tab wrapped to Cancel within the dialog; Enter canceled without execution and returned visible focus to the originating Restore button. Together with earlier project-picker End/Return and light/dark Library/Backup checks, this is representative keyboard/layout acceptance rather than an exhaustive accessibility claim. W09/W10/W11/W13 design mapping was directly verified against the recorded Stitch HTML in phase2-plan-review.md.
+
+## Native rename-name corruption found and fixed
+
+Mixed-group execution retained the old global tree under `old` followed by garbage Unicode; both old and new trees were intact. Native restart advanced the new target but could not reconcile the unexpected rollback name, correctly leaving Recovery required rather than deleting unknown content. Pre-recovery SQLite backup and native/mixed-global-*.json retain the observed state. This was not a same-content fingerprint ambiguity: isolated same-content/global service tests passed.
+
+A Windows regression reproduced the exact malformed name at UTF-16 length186. Commit0fc8afe fixes RenameGuard buffer termination;172 scoped tests passed, including96 real exact-name renames across all alignment classes. A task-owned repair tool defaults to read-only and verifies the root/current/retained identities, all old/new manifest files and directories, no aliases, and the single retained candidate. Its read-only proof verified3 old files and3 new files. After installing the fix, parent may rename only this verified synthetic retained directory to the journal's exact `old` path, then use normal startup recovery. No data/DB/journal rewrite or broad automatic acceptance of unknown names is planned.
+
+### Recovery and final Windows rename retest
+
+The verified retained synthetic rollback directory was renamed only to the exact journalled `old` name. Normal startup recovery then completed operation `d108c3f9-4c64-4201-aedf-cc6fe102f2ff`; the target now contains the verified1.0.3 content. The repair neither rewrote the database nor removed unverified content.
+
+Using a newly installed1.0.1 global target with the same parent/path-length alignment as the original failure, native selected-update prepared frozen operations `0afb6f72-6082-4a85-a1a1-52d6b4ccf558` (global) and `56ad94e9-4a81-40a0-a62d-03d27b0dc75c` (modified project-b). Both required and received independent MCP acknowledgement. Both completed to release1.0.3 in the grouped UI; the global target has the expected three release-file SHA256 values. This is the native positive replacement retest of the explicit-NUL Windows fix.
+
+The first attempt to simulate a group snapshot failure by moving the owned snapshot root did not block capture because the service safely recreated the missing directory. It is therefore recorded only as a successful two-target update, not as failure isolation evidence. The original snapshot tree and the one newly captured snapshot were merged back without deletion; default global destination was restored and `targets.json` is absent. Native failure/retry coverage remains the earlier marker-file case above, with deterministic fault-hook/crash-matrix coverage in the Rust suite.
+
+The final internal artifact built after the rename correction is6,369,885bytes with SHA256 `04cc6f053b3c42a2f196f2f12c415d5e03de323f52bf2076419fd185843d0104`. The final development delivery installer is6,374,219bytes with SHA256 `986faef08f67663e1cf88def4c5c1d14487dd86f28e83f6dd053d542cad270dd`. All 12 launcher/bundle/fixture/installer checks passed against the final source. The final full SDS run completed716 passed,3 failed,14 ignored: both directory-symlink failures require unavailable Windows privilege (1314), and the remaining failure is the pre-existing partial-clone fixture setup; no SDS lifecycle test failed.
+
+### Native two-target fault isolation and retry, release1.0.4
+
+An owned immutable Store release `f7fef687-2996-4b08-992d-d0c4928c1407`, sequence5/version1.0.4, was published with the guarded pilot publisher and existing verified7z bytes. A clean global target and modified project-b were selected; their frozen plans were `dcc59c09-8a0e-4d45-8686-1f40618cb483` and `37fea467-8f27-48d3-95bb-15f7893c8b2d`, respectively. Both MCP warnings were acknowledged.
+
+The original snapshot directory was moved to a validated owned sibling and replaced with an owned regular file. The grouped execute ran: global completed, while project-b failed before replacement with the invalid-destination error. The original snapshot tree was restored without deletion. UI then exposed **Review failed targets again** only for project-b, generated fresh operation `a180efb2-4d16-458a-8735-b9b057294b34`, required a new MCP acknowledgement, and completed. The initial global operation stayed `dcc59c09…`; it was shown as already updated during retry and was not replayed. Project-b's local probe is present in its before-failure hash manifest and absent after the successful replacement. Machine-readable proof is `native/group-failure-{global-prepared,project-prepared,global-result,retry-prepared,retry-result,before,retry-hashes,snapshot-guard}.json`. Settings were returned to the default global destination; `targets.json` is absent.
