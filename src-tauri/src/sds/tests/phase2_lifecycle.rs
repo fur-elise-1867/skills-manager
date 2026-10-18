@@ -50,6 +50,7 @@ async fn server() -> Server {
     let http=TestServer::start(move|request|{let(m,d,n,old,new)=(m.clone(),d.clone(),n.clone(),old.clone(),new.clone());async move{
   n.fetch_add(1,Ordering::SeqCst);if request.path.ends_with("/auth/login"){return Response::json(200,json("login"));}
   let mode=m.load(Ordering::SeqCst);if mode==1{return Response::json(0,serde_json::Value::Null);}if [2,3,4].contains(&mode){return Response::json(if mode==2{403}else if mode==3{401}else{410},serde_json::json!({"success":false}));}
+  let new=if mode==8{old.clone()}else{new};
   let is_new=request.path.contains("rel-004");
   if request.path.contains("package"){d.fetch_add(1,Ordering::SeqCst);return Response::binary(if is_new{new}else{old});}
   if request.path.contains("/releases/"){let mut body=json("release");let bytes=if is_new{&new}else{&old};let r=&mut body["data"];r["package"]["format"]="zip".into();r["package"]["fileName"]="synthetic.zip".into();r["package"]["sha256"]=hex::encode(Sha256::digest(bytes)).into();r["package"]["sizeBytes"]=(bytes.len() as u64).into();if is_new{r["id"]="rel-004".into();r["sequence"]=4.into();r["requiredMcps"]=serde_json::json!(["new-mcp"]);r["package"]["downloadPath"]="/api/v1/desktop/skills/skill-123/releases/rel-004/package".into();}if mode==5{r["installName"]="changed-name".into();}return Response::json(200,body);}
@@ -112,6 +113,71 @@ fn request(id: &str) -> UpdateRequest {
         release_id: "rel-004".into(),
         local_edits: LocalEdits::BackupAndReplace,
     }
+}
+async fn same_bytes_custom_global_update(hold_reader: bool) {
+    let t = tempfile::tempdir().unwrap();
+    let s = server().await;
+    s.mode.store(8, Ordering::SeqCst);
+    let (session, repo, _, initial, _) = setup(t.path(), &s).await;
+    drop(initial);
+    let target_root = t.path().join("previous-pilot/a10-target");
+    std::fs::create_dir_all(&target_root).unwrap();
+    let home = t.path().join("agent-home");
+    let settings = t.path().join("target-settings");
+    TargetService::new(&home, &settings)
+        .set_override(Some(&target_root))
+        .unwrap();
+    let targets = Arc::new(TargetService::new(&home, &settings));
+    let op = OperationService::new(session, targets, repo.clone());
+    let installed = install(&op, Default::default()).await;
+    let old = repo.deployments().unwrap().pop().unwrap();
+    let update = op.prepare_update(request(&installed.id)).await.unwrap();
+    assert_eq!(update.target.path.parent(), Some(target_root.as_path()));
+    let reader = hold_reader
+        .then(|| crate::sds::deployment::DirectoryPins::acquire(&installed.target.path).unwrap());
+    let result = op.execute(&update.id, true).await.unwrap();
+    if hold_reader {
+        assert_eq!(result.state, OperationState::RecoveryRequired, "{result:?}");
+        assert_eq!(result.error.unwrap().code, "REVIEW_REQUIRED");
+        let (intent, committed) = repo.replacement(&update.id).unwrap().unwrap();
+        assert!(!committed);
+        assert!(update.target.path.exists());
+        assert!(intent.stage_path().exists());
+        assert!(!intent.rollback_path().exists());
+        assert_eq!(repo.deployments().unwrap()[0].identity, old.identity);
+        drop(reader);
+        crate::sds::replacement::recover_pending(&repo, &[target_root]).unwrap();
+    } else {
+        assert_eq!(result.state, OperationState::Completed, "{result:?}");
+    }
+    assert_eq!(
+        op.status(&update.id).unwrap().state,
+        OperationState::Completed
+    );
+    let (intent, committed) = repo.replacement(&update.id).unwrap().unwrap();
+    assert!(committed);
+    assert_eq!(
+        intent.old_fingerprint.as_ref(),
+        Some(&intent.new_fingerprint)
+    );
+    let updated = repo.deployments().unwrap().pop().unwrap();
+    assert_eq!(updated.id, old.id);
+    assert_ne!(updated.identity, old.identity);
+    assert_eq!(updated.fingerprint, old.fingerprint);
+    assert_eq!(
+        repo.cached_key(&updated.release_key).unwrap().release.id,
+        "rel-004"
+    );
+    assert!(!intent.stage_path().exists());
+    assert!(!intent.rollback_path().exists());
+}
+#[tokio::test]
+async fn same_bytes_global_update_through_saved_custom_root_completes() {
+    same_bytes_custom_global_update(false).await;
+}
+#[tokio::test]
+async fn same_bytes_global_update_reader_pin_retains_intent_then_recovers_after_release() {
+    same_bytes_custom_global_update(true).await;
 }
 #[tokio::test]
 async fn selected_update_changes_only_one_of_global_and_two_projects_with_new_mcp_review() {

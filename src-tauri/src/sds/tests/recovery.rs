@@ -10,6 +10,56 @@ use crate::sds::{
 };
 use std::path::Path;
 
+#[cfg(windows)]
+#[test]
+fn rename_guard_creates_exact_rollback_name_for_every_utf16_alignment() {
+    use std::os::windows::ffi::OsStrExt;
+    for length in [184usize, 185, 186, 187] {
+        for attempt in 0..24 {
+            let root = tempfile::Builder::new()
+                .prefix("rename-parity-")
+                .tempdir_in(std::env::current_dir().unwrap())
+                .unwrap();
+            let mut parent = root.path().join("unicode-\u{8d44}\u{6599}-\u{1f980}");
+            let current = parent.join("old").as_os_str().encode_wide().count();
+            assert!(current < length);
+            parent = parent.with_file_name(format!(
+                "{}{}",
+                parent.file_name().unwrap().to_str().unwrap(),
+                "x".repeat(length - current)
+            ));
+            std::fs::create_dir(&parent).unwrap();
+            let source = parent.join("source");
+            let target = parent.join("old");
+            assert_eq!(target.as_os_str().encode_wide().count(), length);
+            std::fs::create_dir(&source).unwrap();
+            std::fs::write(source.join("SKILL.md"), b"preserve exact rollback bytes").unwrap();
+            let rename = crate::sds::journal::RenameGuard::open(&source).unwrap();
+            let identity = crate::sds::journal::identity(&rename.file).unwrap();
+            rename.rename_to(&target).unwrap();
+            drop(rename);
+            let names: Vec<_> = std::fs::read_dir(&parent)
+                .unwrap()
+                .map(|entry| entry.unwrap().file_name())
+                .collect();
+            assert_eq!(
+                names,
+                vec![std::ffi::OsString::from("old")],
+                "UTF-16 length {length}, attempt {attempt}"
+            );
+            let pinned = crate::sds::deployment::DirectoryPins::acquire(&target).unwrap();
+            assert_eq!(
+                crate::sds::journal::identity(pinned.leaf()).unwrap(),
+                identity
+            );
+            assert_eq!(
+                std::fs::read(target.join("SKILL.md")).unwrap(),
+                b"preserve exact rollback bytes"
+            );
+        }
+    }
+}
+
 pub(super) fn prepared(root: &Path) -> (Repository, PreparedOperation, VerifiedArtifact) {
     prepared_named(root, "agent-skills")
 }

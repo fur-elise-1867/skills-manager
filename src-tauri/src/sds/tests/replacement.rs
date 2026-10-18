@@ -54,6 +54,61 @@ pub(super) fn fixture(
     (repo, plan, new)
 }
 #[test]
+fn clean_global_same_bytes_new_release_replacement_commits_distinct_stage_identity() {
+    let t = tempfile::tempdir().unwrap();
+    let (repo, install, artifact) = super::recovery::prepared(t.path());
+    let repo = Arc::new(repo);
+    let install_intent = CommitIntent::stage_install(&repo, &install, &artifact).unwrap();
+    commit_install(&repo, &install, &install_intent).unwrap();
+    let old = repo.deployments().unwrap().pop().unwrap();
+    let mut plan = install;
+    plan.id = uuid::Uuid::new_v4().to_string();
+    plan.kind = "update".into();
+    plan.deployment_id = Some(old.id.clone());
+    plan.release.id = "same-bytes-new-release".into();
+    plan.release.sequence += 1;
+    plan.expected_fingerprint = Some(artifact.fingerprint.clone());
+    plan.reviewed_root =
+        crate::sds::contracts::ReviewedRoot::capture(plan.target.path.parent().unwrap()).unwrap();
+    repo.cache_release(&plan.context.profile_id, &plan.release, &artifact)
+        .unwrap();
+    repo.create_operation(
+        &plan,
+        &OperationResult {
+            operation_id: plan.id.clone(),
+            state: OperationState::Prepared,
+            stage: "review".into(),
+            error: None,
+        },
+    )
+    .unwrap();
+    let intent = replacement::stage(&repo, &plan, &artifact).unwrap();
+    assert_eq!(plan.target.workspace_id, "global");
+    assert_eq!(
+        intent.old_fingerprint.as_ref(),
+        Some(&intent.new_fingerprint)
+    );
+    assert_ne!(
+        intent.old_identity.as_ref().unwrap(),
+        &intent.stage_identity
+    );
+    replacement::commit(&repo, &plan, &intent).unwrap();
+    assert_eq!(
+        repo.operation_status(&plan.id).unwrap().state,
+        OperationState::Completed
+    );
+    let updated = repo.deployments().unwrap().pop().unwrap();
+    assert_eq!(updated.id, old.id);
+    assert_eq!(updated.identity, intent.stage_identity);
+    assert_eq!(updated.fingerprint, old.fingerprint);
+    assert_eq!(
+        repo.cached_key(&updated.release_key).unwrap().release.id,
+        "same-bytes-new-release"
+    );
+    assert!(!intent.stage_path().exists());
+    assert!(!intent.rollback_path().exists());
+}
+#[test]
 fn replacement_reconciles_every_crash_boundary_and_second_restart_is_idempotent() {
     for point in [
         B::AfterIntent,

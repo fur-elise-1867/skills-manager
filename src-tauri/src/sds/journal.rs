@@ -562,15 +562,17 @@ impl RenameGuard {
             use windows_sys::Win32::Storage::FileSystem::{
                 FileRenameInfo, SetFileInformationByHandle, FILE_RENAME_INFO,
             };
-            let name: Vec<u16> = target.as_os_str().encode_wide().collect();
+            let name: Vec<u16> = target.as_os_str().encode_wide().chain(Some(0)).collect();
+            let name_bytes = (name.len() - 1) * 2;
             let offset = std::mem::offset_of!(FILE_RENAME_INFO, FileName);
             let length = offset + name.len() * 2;
             // u64 storage provides FILE_RENAME_INFO alignment; zero means no replacement and no root handle.
             let mut storage = vec![0u64; (length + 7) / 8];
             let info = storage.as_mut_ptr().cast::<FILE_RENAME_INFO>();
-            // SAFETY: aligned buffer contains the SDK fixed header followed by the exact UTF-16 bytes.
+            // SAFETY: aligned buffer contains the SDK header and NUL-terminated UTF-16 path.
+            // FileNameLength excludes the terminator; allocation/padding must not supply it by chance.
             unsafe {
-                (*info).FileNameLength = (name.len() * 2) as u32;
+                (*info).FileNameLength = name_bytes as u32;
                 std::ptr::copy_nonoverlapping(
                     name.as_ptr(),
                     (info.cast::<u8>().add(offset)).cast::<u16>(),
