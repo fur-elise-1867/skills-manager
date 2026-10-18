@@ -8,7 +8,7 @@ Use fixture-free development installer against the identity-verified dedicated S
 - [x] Edit selected target, choose Keep current and verify bytes; then choose Back up and update and verify snapshot and new release/MCP review.
 - [ ] Inject a snapshot destination failure; verify no target replacement and a clear retryable workflow after correcting the owned failure.
 - [x] Capture a manual snapshot, edit again and restore with current-content protection; verify original baseline still reports saved edits as Modified.
-- [ ] Remove a modified target with selected backup; verify other targets and Library cache; delete only an unreferenced cache and restore its independent snapshot.
+- [x] Remove a modified target with selected backup; verify other targets and Library cache; delete only an unreferenced cache and restore its independent snapshot.
 - [ ] Verify Store outage offers explicit Use cached copy for the prior authorized account; expired/sign-out/403 cannot use that path; reconnect triggers a real request.
 - [ ] Restart after an interrupted owned operation and verify authoritative status and retained evidence; do not clear foreign files to force success.
 - [ ] Inspect1440×860 and minimum1100×640, light/dark, keyboard focus, long paths, loading/empty/error/recovery messages, W09/W10/W11/W13 mapped layouts.
