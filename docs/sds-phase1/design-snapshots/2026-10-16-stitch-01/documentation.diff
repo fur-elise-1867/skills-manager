@@ -1,0 +1,287 @@
+diff --git "a/D:\\Documents\\Git Project\\skills-manager-app\\skills-manager\\docs\\sds-phase1\\design-snapshots\\2026-10-16-stitch-01\\before\\README.md" "b/D:\\Documents\\Git Project\\skills-manager-app\\skills-manager\\docs\\sds-phase1\\README.md"
+index 9edb7cb..a7b63fa 100644
+--- "a/D:\\Documents\\Git Project\\skills-manager-app\\skills-manager\\docs\\sds-phase1\\design-snapshots\\2026-10-16-stitch-01\\before\\README.md"	
++++ "b/D:\\Documents\\Git Project\\skills-manager-app\\skills-manager\\docs\\sds-phase1\\README.md"	
+@@ -1,6 +1,6 @@
+ # Samsung SDS Skills Manager — Phase 1
+ 
+-Ngày: 2026-10-16 · Phiên bản tài liệu: 0.2 · Trạng thái: **Draft for review**
++Ngày: 2026-10-16 · Phiên bản tài liệu: 0.3 · Trạng thái: **Draft for review**
+ 
+ Bộ tài liệu phân tích và thiết kế cho bản fork Windows phục vụ hơn 1.000 nhân viên Dev, BSE, TPM và PM. Chưa triển khai sản phẩm, chạy build hoặc testing. Kế hoạch là đầu vào cho giai đoạn phát triển sau khi review.
+ 
+@@ -14,7 +14,11 @@ Bộ tài liệu phân tích và thiết kế cho bản fork Windows phục vụ
+ 6. [Chỉ dẫn wireframe](WIREFRAME-GUIDE.md): danh mục màn hình, luồng review, ánh xạ yêu cầu.
+ 7. [Bản chuyển sang Google Stitch](STITCH-TRANSFER.md): project chỉnh sửa được, danh mục W01–W14 và giới hạn chuyển đổi.
+ 
+-Thay đổi mới nhất: [W02 — tab và tìm kiếm trên Stitch](W02-CHANGELOG.md).
++Thay đổi mới nhất: [Stitch revision 0.3 — W01–W14, before/after và review issues](STITCH-SYNC-2026-10-16.md). [Snapshot versioned: HTML, screenshots, metadata và Git diff](design-snapshots/2026-10-16-stitch-01/README.md). Lịch sử revision 0.2: [W02 — tab và tìm kiếm](W02-CHANGELOG.md).
++
++Revision 0.3 ghi nhận AX Portal và shell compact trong 14 screen IDs chính; project có thêm 14 biến thể và một ảnh tham chiếu. Mapping hiện tại được giữ vì không có timestamp riêng để chọn biến thể mới nhất. Các dòng C01–C14 dưới đây không đổi. Copy SSO, policy offline 72 giờ, retention 30 ngày và MCP blocking không trở thành business rules; xem R01–R10 trong báo cáo đồng bộ.
++
++wireframes.html vẫn là prototype baseline cục bộ trước revision 0.3; dùng screenshots/HTML trong snapshot để review giao diện Stitch mới. Không sửa prototype hoặc source sản phẩm trong lượt này.
+ 
+ Ảnh xem nhanh (revision 0.1, ảnh Store đã cũ; xem W02 mới trong HTML/Stitch): [Skills Store cũ](preview-store.png) · [Cảnh báo MCP AIPro](preview-mcp.png). Đã mở và xem hai bản render này để rà bố cục tài liệu; đây không phải kiểm thử sản phẩm. Wireframe đầy đủ có 14 màn hình, dùng nhãn English và dữ liệu minh họa.
+ 
+diff --git "a/D:\\Documents\\Git Project\\skills-manager-app\\skills-manager\\docs\\sds-phase1\\design-snapshots\\2026-10-16-stitch-01\\before\\SRS.md" "b/D:\\Documents\\Git Project\\skills-manager-app\\skills-manager\\docs\\sds-phase1\\SRS.md"
+index 8ac18dc..812a8e8 100644
+--- "a/D:\\Documents\\Git Project\\skills-manager-app\\skills-manager\\docs\\sds-phase1\\design-snapshots\\2026-10-16-stitch-01\\before\\SRS.md"	
++++ "b/D:\\Documents\\Git Project\\skills-manager-app\\skills-manager\\docs\\sds-phase1\\SRS.md"	
+@@ -1,8 +1,8 @@
+ # SRS — Samsung SDS Skills Manager
+ 
+-Version 0.2 · 2026-10-16 · Draft for review
++Version 0.3 · 2026-10-16 · Draft for review
+ 
+-Revision 0.2: đồng bộ W02 từ Stitch; xem [nguồn và phân biệt quyết định/đề xuất](W02-CHANGELOG.md).
++Revision 0.3: [đối chiếu Stitch W01–W14 và visual proposals](STITCH-SYNC-2026-10-16.md); giữ business rules C01–C14 và IDs yêu cầu. Lịch sử revision 0.2: [W02](W02-CHANGELOG.md).
+ Áp dụng quyết định C/P/V trong [README](README.md). Tiêu chí bên dưới mô tả kết quả sản phẩm cần đạt, không ghi nhận testing đã thực hiện.
+ 
+ ## 1. Vấn đề, mục tiêu và phạm vi
+@@ -114,6 +114,12 @@ Copy là mặc định theo P02. Mỗi target có baseline hash riêng; thay đ
+ - Mốc hiệu năng đề xuất: tương tác UI phản hồi trong 200 ms, trang catalog 20 mục trong 2 giây ở điều kiện mạng nội bộ được IT thống nhất. Đây là mục tiêu thiết kế, chưa đo hoặc xác nhận SLA.
+ - Hỗ trợ keyboard focus, label rõ, trạng thái ngoài màu sắc. English là mặc định; không tự dịch nội dung skill.
+ 
++### Tham chiếu giao diện Stitch revision 0.3
++
++Snapshot 2026-10-16 mô tả shell AX Portal với sidebar 225px/titlebar 32px, typography Inter/JetBrains Mono, controls/table compact; xem [tokens và bố cục từng màn](STITCH-SYNC-2026-10-16.md). Đây là đặc tả visual quan sát, chưa thay brand V04 hoặc baseline kích thước cửa sổ bên trên. Token prose/HTML chưa thống nhất cần R03.
++
++Các controls mới (Rescan, Scan folder, Reveal, quick search, copy path, overflow) được ghi nhận để review, không bổ sung command/API contract. Không suy ra SSO, TTL 14 ngày, offline 72 giờ, retention 30 ngày, telemetry hoặc MCP blocking từ fixture. AUTH/MCP/OFF/BAK/LOG và C07 vẫn là chuẩn hành vi; thiếu trạng thái trong screenshot không có nghĩa yêu cầu bị xóa. Local Install vẫn chờ P01.
++
+ ## 8. Điều kiện bàn giao cho phát triển
+ 
+ Review P01–P08, thống nhất API release/package/auth, xác minh đường dẫn và phiên bản agent, IT cung cấp deployment profile. Thiếu URL/CA thật không cản viết wireframe/spec, nhưng là phụ thuộc tích hợp thật. Kế hoạch [DEVELOPMENT-PLAN](DEVELOPMENT-PLAN.md) mô tả thứ tự. Testing không nằm trong hoạt động Phase 1 và không có kết quả kiểm thử sản phẩm trong tài liệu này.
+diff --git "a/D:\\Documents\\Git Project\\skills-manager-app\\skills-manager\\docs\\sds-phase1\\design-snapshots\\2026-10-16-stitch-01\\before\\stitch-transfer.json" "b/D:\\Documents\\Git Project\\skills-manager-app\\skills-manager\\docs\\sds-phase1\\stitch-transfer.json"
+index 102d9bb..aeef94a 100644
+--- "a/D:\\Documents\\Git Project\\skills-manager-app\\skills-manager\\docs\\sds-phase1\\design-snapshots\\2026-10-16-stitch-01\\before\\stitch-transfer.json"	
++++ "b/D:\\Documents\\Git Project\\skills-manager-app\\skills-manager\\docs\\sds-phase1\\stitch-transfer.json"	
+@@ -1,7 +1,24 @@
+ {
+   "projectId": "9226348915970684263",
+   "projectUrl": "https://stitch.withgoogle.com/projects/9226348915970684263",
+-  "visibility": "PRIVATE",
++  "visibility": "PUBLIC",
++  "visibilityAtInitialTransfer": "PRIVATE",
++  "latestDocumentationSync": {
++    "date": "2026-10-16",
++    "timezone": "Asia/Saigon",
++    "revision": "0.3",
++    "projectUpdateTime": "2026-10-16T15:14:10.500363Z",
++    "screenCount": 29,
++    "htmlCount": 28,
++    "screenshotCount": 29,
++    "primaryMappingPreserved": true,
++    "perScreenUpdateTimesAvailable": false,
++    "snapshot": "design-snapshots/2026-10-16-stitch-01",
++    "changeNote": "STITCH-SYNC-2026-10-16.md",
++    "stitchModified": false,
++    "businessRulesChanged": false,
++    "localPrototypeStatus": "Pre-0.3 baseline; use captured Stitch screenshots for current visual review"
++  },
+   "transferMethod": "Reconstructed editable Stitch screens from existing wireframe HTML; not direct HTML import",
+   "mainScreens": [
+     {
+diff --git "a/D:\\Documents\\Git Project\\skills-manager-app\\skills-manager\\docs\\sds-phase1\\design-snapshots\\2026-10-16-stitch-01\\before\\STITCH-TRANSFER.md" "b/D:\\Documents\\Git Project\\skills-manager-app\\skills-manager\\docs\\sds-phase1\\STITCH-TRANSFER.md"
+index 4244930..ae44f39 100644
+--- "a/D:\\Documents\\Git Project\\skills-manager-app\\skills-manager\\docs\\sds-phase1\\design-snapshots\\2026-10-16-stitch-01\\before\\STITCH-TRANSFER.md"	
++++ "b/D:\\Documents\\Git Project\\skills-manager-app\\skills-manager\\docs\\sds-phase1\\STITCH-TRANSFER.md"	
+@@ -4,7 +4,7 @@ Ngày: 2026-10-16 · Bộ nguồn: [wireframes.html](wireframes.html)
+ 
+ [Mở project Samsung SDS Skills Manager — Phase 1 Wireframes](https://stitch.withgoogle.com/projects/9226348915970684263)
+ 
+-Project ID: `9226348915970684263`. Visibility được API xác nhận là PRIVATE.
++Project ID: `9226348915970684263`. Visibility lúc bàn giao là PRIVATE; lần đọc MCP ngày 2026-10-16 hiện trả PUBLIC. Không thay đổi visibility trong lần đồng bộ. Xem R10 trong [báo cáo revision 0.3](STITCH-SYNC-2026-10-16.md).
+ 
+ ## Phương thức và phạm vi
+ 
+@@ -12,7 +12,7 @@ Kết nối Stitch hiện không có import HTML trực tiếp. Đã dùng HTML
+ 
+ ## Bộ chính W01–W14
+ 
+-Các màn hình chính có hậu tố `(#...)` trong tên, nằm trên hàng chính của canvas. Dùng các màn này khi chỉnh sửa và review.
++Giữ 14 screen IDs chính bên dưới làm mapping review. Không chọn theo hậu tố hoặc vị trí canvas: hiện có hai W08 cùng tên (#workspace). MCP không trả thời gian sửa từng screen để xác định bản thay thế.
+ 
+ | Screen | Stitch screen ID |
+ |---|---|
+@@ -33,17 +33,21 @@ Các màn hình chính có hậu tố `(#...)` trong tên, nằm trên hàng ch
+ 
+ ## Bản bổ sung
+ 
+-Tại thời điểm chuyển ban đầu project có thêm 5 màn W01–W05 không có hậu tố, do yêu cầu chuyển hàng loạt ban đầu hoàn thành muộn sau timeout. Không xóa tự động các bản này. Đây là các bản tham khảo, không phải thêm yêu cầu sản phẩm.
++Tại thời điểm chuyển ban đầu project có thêm 5 màn W01–W05 do yêu cầu chuyển hàng loạt hoàn thành muộn sau timeout. Lần đọc hiện tại có 14 screen phụ (mỗi W01–W14 một bản) và một image.png tham chiếu, tổng cộng 29 screens. Không xóa hoặc tự chọn chúng thay mapping chính. [Snapshot index](design-snapshots/2026-10-16-stitch-01/README.md) liệt kê ID, HTML và PNG của tất cả screens.
+ 
+ ## Đồng bộ ngược W02 — 2026-10-16
+ 
+ Đã đọc HTML asset `17399203032189606408` của W02 chính sau người dùng chỉnh. Đồng bộ tab và search sang bộ tài liệu revision 0.2; xem [W02-CHANGELOG](W02-CHANGELOG.md). Không sửa màn trên Stitch. Danh mục phía trên là mapping lúc bàn giao ban đầu; project hiện có thêm màn ngoài mapping, không tự xóa hoặc chọn chúng thay W02 chính.
+ 
++## Đồng bộ ngược W01–W14 revision 0.3 — 2026-10-16
++
++Đã đọc get_project/list_screens/get_screen/list_design_systems và lưu 28 HTML, 29 screenshots (14 PNG, 15 JPEG), metadata/theme cùng baseline cục bộ trước sửa. Project updateTime: 2026-10-16T15:14:10.500363Z. [Báo cáo before/after](STITCH-SYNC-2026-10-16.md) phân loại layout, navigation, components, tokens và states; C01–C14 được giữ nguyên. Bộ chính dùng AX Portal nhưng các biến thể vẫn có Skills Manager. Không gọi tool sửa project.
++
+ ## Rà độ trung thực
+ 
+ Đã xác nhận qua list_screens/get_project có đủ 14 màn chính và thành phần HTML/screenshot cho từng màn. Stitch tự bổ sung một số nhãn phiên bản, SSO, runtime và countdown ngoài nguồn. Đã gửi edit_screens trên 14 màn chính để loại các nhãn này; tool trả thành công cùng các DOM correction events. Các event được lưu tại [stitch-transfer.json](stitch-transfer.json).
+ 
+-Lưu ý: URL HTML xuất ban đầu vẫn trả asset cũ tại lần đối chiếu sau edit; chưa xác minh trực quan bản sửa trong canvas đăng nhập. Người dùng cần rà lại các nhãn này khi chỉnh trên Stitch. Các phiên bản skill thật trong wireframe (1.0.0/1.1.0/1.2.0/1.3.0) cần được giữ. Prototype navigation giữa các screen chưa được xác nhận; mục tiêu bàn giao hiện tại là các màn chỉnh sửa được.
++Lịch sử: URL HTML xuất ban đầu vẫn trả asset cũ tại lần đối chiếu sau edit. Revision 0.3 đã tải lại và đối chiếu screenshots/HTML hiện tại; các nhãn SSO, runtime, countdown và policy chưa được chốt vẫn tồn tại. Không coi DOM correction events cũ là bằng chứng chúng đã biến mất. Xem R01–R10; giữ release thực tế theo dữ liệu, không lấy version 3.4.x trong fixture làm contract. Prototype navigation giữa screen chưa được xác nhận.
+ 
+ Không sửa code sản phẩm hoặc thực hiện testing trong bước chuyển thiết kế này. Các file trong docs vẫn theo quy tắc ignore hiện có của repo.
+ 
+diff --git "a/D:\\Documents\\Git Project\\skills-manager-app\\skills-manager\\docs\\sds-phase1\\design-snapshots\\2026-10-16-stitch-01\\before\\W02-CHANGELOG.md" "b/D:\\Documents\\Git Project\\skills-manager-app\\skills-manager\\docs\\sds-phase1\\W02-CHANGELOG.md"
+index aee0ba2..d451425 100644
+--- "a/D:\\Documents\\Git Project\\skills-manager-app\\skills-manager\\docs\\sds-phase1\\design-snapshots\\2026-10-16-stitch-01\\before\\W02-CHANGELOG.md"	
++++ "b/D:\\Documents\\Git Project\\skills-manager-app\\skills-manager\\docs\\sds-phase1\\W02-CHANGELOG.md"	
+@@ -16,6 +16,12 @@ Nguồn: [project Stitch](https://stitch.withgoogle.com/projects/922634891597068
+ 
+ Card grid, metadata skill, agent badges, link detail và pagination vẫn hiện diện. Role/agent còn là metadata, không còn là bộ lọc hiển thị trên W02.
+ 
++## Đối chiếu tiếp revision 0.3 — 2026-10-16
++
++Screen chính vẫn là `e921a2c10a034eca80e4af20e760ad1f`; HTML asset hiện là `12548026123402487532`. [HTML và screenshot đã lưu](design-snapshots/2026-10-16-stitch-01/README.md). Tab/mode/Source/grid/pagination **Unchanged** so với revision 0.2. Shell/brand AX Portal, typography, tokens và density **Modified**. Nội dung disclosure empty/loading/offline **Modified**, vẫn chứa agent-filter/SSO copy ngoài phạm vi. Search public placeholder vẫn chưa được sửa trong export; tài liệu tiếp tục dùng “Search Skills Store...”.
++
++Không có HTML Stitch cũ đã lưu để diff byte; so sánh với changelog/local HTML. Bản W02 phụ cũng được lưu nhưng không thay mapping chính. P01/P09/V07 và các đề xuất bên dưới giữ nguyên. Xem [báo cáo toàn bộ](STITCH-SYNC-2026-10-16.md) cho before/after và review issues.
++
+ ## Ngữ nghĩa đề xuất để triển khai, chưa được xác nhận bằng wireframe
+ 
+ - Store là tab mặc định. Giữ keyword/chế độ/Source khi quay về từ detail hoặc Local Install; đổi điều kiện đưa pagination về trang 1. Đề xuất tìm khi Enter hoặc debounce 300 ms, chỉ hiển thị kết quả của request mới nhất.
+diff --git "a/D:\\Documents\\Git Project\\skills-manager-app\\skills-manager\\docs\\sds-phase1\\design-snapshots\\2026-10-16-stitch-01\\before\\WIREFRAME-GUIDE.md" "b/D:\\Documents\\Git Project\\skills-manager-app\\skills-manager\\docs\\sds-phase1\\WIREFRAME-GUIDE.md"
+index fe209da..bab1cc9 100644
+--- "a/D:\\Documents\\Git Project\\skills-manager-app\\skills-manager\\docs\\sds-phase1\\design-snapshots\\2026-10-16-stitch-01\\before\\WIREFRAME-GUIDE.md"	
++++ "b/D:\\Documents\\Git Project\\skills-manager-app\\skills-manager\\docs\\sds-phase1\\WIREFRAME-GUIDE.md"	
+@@ -1,12 +1,12 @@
+ # Wireframe review guide
+ 
+-Version 0.2 · 2026-10-16 · Draft for review
++Version 0.3 · 2026-10-16 · Draft for review
+ 
+-Mở [wireframes.html](wireframes.html). Đây là bộ màn hình thiết kế có liên kết chuyển trạng thái, không phải app hoạt động. Form/filter là bố cục minh họa; không nhận tài khoản thật, không gọi API, không ghi file. Link action dẫn tới một kết quả mẫu cố định, không mô phỏng logic từ input.
++Mở [snapshot Stitch revision 0.3](design-snapshots/2026-10-16-stitch-01/README.md) để xem HTML/screenshots mới nhất đã lấy. [wireframes.html](wireframes.html) giữ prototype baseline trước lần đồng bộ này, có liên kết chuyển trạng thái mẫu; không phải render mới của Stitch. Form/filter chỉ minh họa, không nhập tài khoản thật. HTML export có CDN/font bên ngoài; Ảnh đã lưu là tham chiếu trực quan tự chứa. Link action không chứng minh logic từ input hoặc navigation runtime.
+ 
+ ## Nguyên tắc giao diện
+ 
+-Bám screenshot Library và source Sidebar/app panels hiện tại: sidebar trái, tiêu đề và toolbar trên, filter pills, card grid, agent badges, preset/workspace và panel chi tiết. Tên sản phẩm “Skills Manager / Samsung SDS” là nhãn đề xuất. Accent xanh nhẹ minh họa, cần dùng design tokens hiện tại khi triển khai. Không phải một thiết kế thương hiệu mới.
++Giữ sidebar trái, tiêu đề/toolbar trên, filter pills, card grid, agent badges, preset/workspace và panel chi tiết. Bộ Stitch chính hiện dùng “AX Portal / Samsung SDS”, Inter/JetBrains Mono và shell compact (sidebar 225px, titlebar 32px). Đây là visual proposal; brand chính thức vẫn chờ V04. Named tokens mới dùng surface #f8f9ff, primary #004091, primary-container #1657b8; design-system prose và một số radius HTML khác nhau, chưa coi là bộ token triển khai đã chốt. Xem bảng tokens và R02/R03 trong báo cáo đồng bộ.
+ 
+ Sidebar dùng Skills Store; W02 mới dùng tiêu đề Install Skills và hai tab Store/Local Install. Giữ Library, Dashboard, Preset, Global Workspace, Project Workspace, Backup, Settings. Backup chỉ local snapshots theo P03. Không hiện Git Sync/CLI hay các agent ngoài bốn agent đã chốt. Tên/số liệu/project trong mockup đều là fixtures.
+ 
+@@ -35,6 +35,14 @@ Sidebar dùng Skills Store; W02 mới dùng tiêu đề Install Skills và hai t
+ 
+ HTML cục bộ đồng bộ bố cục W02 với nhãn tìm nội bộ `Search Skills Store...`; các tab/filter chỉ minh họa. Hành vi P09 và ranking/taxonomy V07 chưa được chứng minh bởi mockup. Không thêm skills.sh hoặc SSO từ các nhãn thừa trong export. preview-store.png là ảnh revision 0.1, không dùng làm baseline mới.
+ 
++## Đồng bộ toàn bộ revision 0.3 — 2026-10-16
++
++[Bảng Added / Modified / Removed / Unchanged cho W01–W14](STITCH-SYNC-2026-10-16.md) là đặc tả chênh lệch so với local 0.2. Giữ 14 IDs chính trong STITCH-TRANSFER; lưu cả 14 biến thể và ảnh tham chiếu, không chọn bản mới chỉ dựa vào tên. W08 có hai title giống nhau. Màn không có timestamp riêng; không khẳng định thứ tự revision.
++
++W01 dùng login card + panel lỗi; W03 tách description/MCP và package sidebar; W04 agent cards 2×2, chọn AIPro/Claude + Project; W06 giữ result table theo target; W07 cards + installed-locations table; W08 thêm Rescan/copy path/filter; W09 chọn target + bảo vệ local edits; W10 thêm sync placeholder; W11 table + restore preview và Scan folder; W12 hai cột settings; W13 confirmation card với Reveal + backup checkbox; W14 metrics/onboarding + agent table. Đây là bố cục quan sát, không phải xác nhận hành vi các control mới.
++
++Giữ nguyên trạng thái lỗi trong mục State coverage. Copy SSO, CLI troubleshooting, policy offline, retention, telemetry và Dashboard yêu cầu token trước cài cần review R04–R09; C07 vẫn cho Install anyway. Nhãn/shortcut và dữ liệu release/path/tenant/runtime trong mockup không thay các quy tắc C/P/V.
++
+ ## Các đường review
+ 
+ 1. W01 → W14 → W02 → W03 → W04 → W05 → W06 → W07: cài có cảnh báo MCP.
+diff --git "a/D:\\Documents\\Git Project\\skills-manager-app\\skills-manager\\docs\\sds-phase1\\STITCH-SYNC-2026-10-16.md" "b/D:\\Documents\\Git Project\\skills-manager-app\\skills-manager\\docs\\sds-phase1\\STITCH-SYNC-2026-10-16.md"
+new file mode 100644
+index 0000000..27fb7f6
+--- /dev/null
++++ "b/D:\\Documents\\Git Project\\skills-manager-app\\skills-manager\\docs\\sds-phase1\\STITCH-SYNC-2026-10-16.md"	
+@@ -0,0 +1,100 @@
++# Stitch design synchronization — revision 0.3
++
++Ngày: 2026-10-16 (Asia/Saigon) · Documentation only · Draft for review.
++
++## Nguồn, baseline và giới hạn
++
++Project [9226348915970684263](https://stitch.withgoogle.com/projects/9226348915970684263). MCP `get_project` trả `updateTime=2026-10-16T15:14:10.500363Z`, visibility `PUBLIC`. Chỉ gọi list/get; không sửa Stitch. Snapshot: [2026-10-16-stitch-01](design-snapshots/2026-10-16-stitch-01/README.md).
++
++Đã lấy danh sách 29 screens, get_screen cho cả 29, 28 HTML và 29 screenshot. Một lần get_screen W01 phụ lỗi, lần đọc lại thành công; `screens-retrieved.json` là kết quả đầy đủ, `screens.json` giữ lần đầu để truy vết. `image.png` là ảnh tham chiếu không có HTML. Lưu cả hai bộ W01–W14, project metadata, design systems, checksum SHA-256 và bản tài liệu trước đồng bộ.
++
++Baseline so sánh là tài liệu revision 0.2, `wireframes.html`, `preview-store.png`, `preview-mcp.png`, `stitch-transfer.json` và W02-CHANGELOG. Không có bộ raw HTML/screenshot Stitch cũ đầy đủ trong repo để chứng minh diff theo thời gian của từng screen. “Added/Modified/Removed/Unchanged” dưới đây nghĩa là so với baseline cục bộ, không phải khẳng định thời điểm chỉnh từng màn. W02 asset đã đổi từ `17399203032189606408` sang `12548026123402487532`.
++
++Giữ mapping 14 screen IDs trong STITCH-TRANSFER. Không chọn screen bằng title/order: W08 có hai screen cùng tên, bản chính là `629741bbcca2475fabdd7b80e0f29c77`; bản `b6fe75bbad4240a69b78d5c5d5ec99af` là biến thể. MCP không trả timestamp/version riêng cho screen; chưa xác định được biến thể nào được người dùng muốn thay thế bản chính. Hai bộ được đối chiếu, không gộp nội dung mâu thuẫn thành yêu cầu.
++
++## Before / after — layout, navigation và components
++
++Áp dụng bảng này cho 14 IDs chính; snapshot index có link HTML/screenshots và biến thể tương ứng. “Unchanged” chỉ áp dụng thành phần được nêu, không có nghĩa pixel giống hệt.
++
++| Phạm vi | Class | Trước (local 0.2) | Sau (Stitch đọc hiện tại) | Xử lý tài liệu |
++|---|---|---|---|---|
++| Shell / branding | Modified | Skills Manager / Samsung SDS; sidebar rộng 225px, titlebar 32px | AX Portal / Samsung SDS trên bộ chính; titlebar 32px, sidebar 225px vẫn có trong HTML, icon Material Symbols, layout gọn hơn | Ghi nhận visual proposal; tên chính thức vẫn cần V04 |
++| Navigation grouping | Modified | Presets, Global Workspace, Project Workspaces; count badges và Add project | Group label khác nhau giữa màn: Agents & Presets, Environment, Target Environments…; nhiều count/Add project không còn hiển thị | Chưa chốt một grouping chung; không bỏ chức năng workspace |
++| Review navigation | Removed | Thanh review W01–W14 và chú thích fixture ngoài app | Không xuất hiện trong màn app Stitch | Chỉ bỏ trong presentation của export; giữ hướng dẫn review cục bộ |
++| Navigation capability | Unchanged | Dashboard, Library, Skills Store, Backup, Settings, preset, 4 agent, Project Atlas | Các đích chính vẫn có | Giữ flow SRS §6; href="#" không chứng minh navigation hoạt động |
++| W01 | Modified | Form đăng nhập và details lỗi trong nội dung | Card giữa vùng làm việc; panel error/support riêng bên dưới, nhãn Authentication Error / Connectivity Warning / Account Administration | Email, Password, Sign in, Forgot password và 3 thông báo lõi Unchanged |
++| W01 footer | Removed | English default / Shared Store account / No credentials submitted | Không còn footer này trong export chính | Vẫn giữ English mặc định và cảnh báo prototype trong guide |
++| W02 | Unchanged | Install Skills; Store/Local Install, All Time/Trending/Hot, Source, 3-column grid, pagination | Cùng cấu trúc và 6 fixture cards; Store/All Time/All sources chọn | Không mở rộng P01/P09/V07; chưa có nội dung Local Install |
++| W02 state reference | Modified | No matches, empty catalog, loading, offline, session-expired tách rõ | Disclosure dùng No Matching Skills / Catalog Synchronizing / Store Offline; nhắc agent filters và SSO | Không thay state/error contract bằng copy mâu thuẫn; empty catalog/session expiry vẫn bắt buộc |
++| W03 | Modified | Mô tả/MCP bên trái và package bên phải | Các panel viền gọn: description, required MCP trái; package + Install skill phải; quick search Ctrl+K ở titlebar | Metadata và CTA Unchanged; quick search Added nhưng hành vi/shortcut chưa chốt |
++| W04 | Modified | Agent chips, scope options và path preview | Agent cards 2×2 với checkbox; AIPro/Claude chọn, Gemini/Codex không chọn; Project radio chọn; thêm Change directory | Giữ agent/scope/path review; không coi màu mờ là đã chứng minh disabled |
++| W04 troubleshooting | Modified | Agent/path unavailable và conflict guidance | Disclosure hướng dẫn PATH/CLI và lệnh sds-agent-check | Lệnh và dependency runtime chưa được xác minh, không thành điều kiện cài |
++| W05 | Modified | MCP table, warning, variants trong disclosure | Table và trạng thái Missing có panel; found/unverifiable cards cạnh nhau, thêm Check file permissions | Cancel / Check again / Install anyway và config-only check Unchanged |
++| W06 | Modified | Package progress + result table + footer actions | Compact progress strip, Target / Result / Action table và in-progress/failure disclosure | Partial completion, No write access, retry target thất bại và giữ target thành công Unchanged |
++| W07 | Modified | Toolbar/chips, 3 cards, bảng installed locations | Thanh search/status gọn; Categories label, table header “3 active targets detected” | All/Installed/Available/Updates, local edits/MCP badges và target versions Unchanged |
++| W08 | Added | Project path, Add from Library, agent/preset pills, table, preset review | Thêm Rescan, copy path icon, filter workspace input, overflow; context/verification badges và Sync ID | Các control là affordance quan sát; integrity/dependency checks chưa thành bảo đảm runtime |
++| W08 preset | Modified | Review panel với danh sách skill, input Preset name | Skill status chips, Preset name và actions trong panel ngang gọn | One-time application / Choose Library skills / Review installation Unchanged; không bật sync |
++| W09 | Added | Chọn target, local edits warning, snapshot protection | “1 of 2 candidates selected”, concrete backup path và inspect_mcp_pipeline.json link | Path/link fixture chưa là hợp đồng storage; lựa chọn target và backup-failure stop Unchanged |
++| W10 | Added | Offline banner, 2 cached cards, local actions, expired-session variant | Sync Queue Suspended card, retry countdown 48s, package/target labels, policy 72h trong disclosure | Không chấp nhận scheduler/72h policy; P07/V03 vẫn mở |
++| W11 | Added | Snapshot table + restore preview | Scan folder, snapshot count, path/size; retention/daemon/compression footer | Restore flow Unchanged; 30-day retention/gzip/daemon chưa được chốt |
++| W12 | Modified | General/Store/update và paths/MCP/activity groups | Hai cột panel dày; thêm copy MCP path, connection badges, language options và expanded audit controls | English, internal installer, local read-only MCP Unchanged; SSO/TTL/telemetry/translations chưa chốt |
++| W13 | Modified | Centered destructive confirmation, path, checkbox backup | Centered card không có modal backdrop; Reveal, RELEASE 3.4.1, explicit backup archive, Esc hint, rules panel bên dưới | Cancel / Back up and remove, backup checkbox, giữ Library/other targets Unchanged; Esc “discard” không định nghĩa xóa |
++| W14 | Modified | Welcome to Skills Manager; 3 metrics, onboarding, agent list, attention | Welcome to AX Portal; metric captions, onboarding links; agent table thêm Protocol; Refresh và diagnostics timestamp | Counts/detection chỉ fixture; protocol/runtime và MCP blocking copy cần review |
++| Reference image | Added | Không có asset ảnh rời này trong baseline | image.png: Install Skills / Leaderboard / Local Install / Git Install, public source chips | Chỉ ảnh tham khảo; không thêm Git/public marketplace vào phạm vi |
++
++## Tokens và kích thước
++
++Nguồn: CSS `before/wireframes.html`, HTML từng screen, `project.json.designTheme` và `design-systems.json`. Không dùng kích thước screenshot làm kích thước cửa sổ: phần lớn PNG 2560×2048, canvas instance 1280×1024; W12 phụ 2880×2118, W10 phụ 2560×1800, W07 phụ 2560×1984, W05 có chiều cao lớn hơn. SRS baseline 1440×860/minimum 1100×640 vẫn giữ; design prose đề xuất 1440×900 chưa thay yêu cầu này.
++
++| Token / geometry | Class | Baseline local | Export / metadata mới |
++|---|---|---|---|
++| Font | Modified | Segoe UI/Arial, body 14px/1.5; h1 26px, h2 19px | Inter cho UI, JetBrains Mono cho path/code; design system body 13px/18px, headings 20/16/14px, captions 11px, titlebar 12px |
++| Canvas/text | Modified | #fafafa / #24272b; muted #6b6f79 | Named tokens background/surface #f8f9ff, on-surface #191c20, on-surface-variant #424752 |
++| Primary/border | Modified | Blue #1657b8; border #e1e3e7 | Named primary #004091, primary-container #1657b8; outline-variant #c3c6d4 |
++| Status tokens | Modified | Green #087b58, amber #92580b, red #ac3535 with tinted backgrounds | Semantic error #ba1a1a / #ffdad6 and tertiary #004e36; screens also contain utility colors. Preserve text/icon status, not color alone |
++| Shell sizes | Unchanged | 225px sidebar / 32px titlebar | Same explicit values in mapped HTML; grouping/padding differs |
++| Spacing | Modified | Content 28px, grid gap 15px, cards 18px | Metadata scale 4/8/12/16/24px; gutter/margin 16px; inspect individual HTML for actual utility classes |
++| Radius | Modified | Cards 11px, buttons 7px, inputs 7–8px, pills 20px | Project ROUND_FOUR; design prose panels/controls 4px, modals 6px. W02 HTML radius DEFAULT 2px, lg 4px, xl 8px, full 12px: conflict flagged |
++| Controls/tables | Added | Padding-driven control heights and tables | Design prose: controls 28/32px, table header 28px, rows 32px; selected row pale blue + 2px left marker; button/input focus/hover styles available in HTML |
++| Dialog guidance | Added | Inline confirmation/restore panels | Design prose describes centered 480–640px modal, 44px header, 16px body, 48px footer; screenshot W13 is inline card, not evidence of modal focus trapping |
++| Shadow/surface | Modified | Outer review window shadow, larger rounded cards | Flatter border-separated shell; design prose has dropdown/modal elevations. Do not infer overlays from prose alone |
++
++Design-system prose retains old #fafafa/#24272b/#1657b8 palette while named tokens differ. Both are archived; do not silently choose one as implementation-wide truth. HTML also loads Tailwind/Google Fonts from public CDNs: these are archival design dependencies, not permission to violate SRS offline/internal-network requirements.
++
++## Labels, validation và state coverage
++
++- W01: retain “Email”, “Password”, “Incorrect email or password. Check your details and try again.”, Store unavailable and account unavailable messages. Preserve identifier and clear password after submit/error per guide; static inputs do not prove validation.
++- W02: HTML placeholder still says “Search skills.sh market...”. Approved documentation remains “Search Skills Store...”. No extra public provider or agent dropdown is implied by disclosure copy.
++- W04: “Choose agents”, “Where should this skill be available?”, “Project folder”, “Change directory”, “Review requirements”; checked AIPro/Claude + Project are example values. Path-invalid/conflict guidance remains required even when absent from the redesigned disclosure.
++- W05: “Missing”, “Configuration found”, “Cannot verify configuration”, “No MCP required.”, “MCP requirements have not been provided.” and “AIPro MCP configuration was not found.” preserve distinct semantics. “Check file permissions” is an added affordance without proven behavior.
++- W06: “Partially completed”, “Installed”, “Could not install”, “No write access to the folder”, “Review and retry”; progress and error examples are separate fixtures.
++- W07–W09: keep local “Modified” distinct from release “Current”; only selected targets update. “Dependencies verified” / “Workspace integrity check passed” do not prove execution.
++- W10: offline network failure remains distinct from “Your session has expired. Sign in again to access Skills Store.” No 72-hour access rule is accepted.
++- W11/W13: checkbox/action labels preserve backup-before-replace/remove; snapshot failure must stop the requested destructive action. Specific paths and release labels are examples, not migration instructions.
++- W12: language choices Korean/Japanese in HTML are unconfirmed additions. Keep English default and existing scope P05; “View activity / Export logs” must exclude secrets under LOG-01.
++- W14: “Endpoint token or bridge socket required before installation can proceed.” conflicts with C07 and W05. Keep warning + manual setup/check again/cancel/install anyway.
++- Hover/focus classes and selected states are inspectable in HTML; screenshot only proves captured state. Keyboard navigation, disabled behavior, dialogs, responsive layout and backend validation have not been functionally verified.
++
++## Review issues — không tự đổi business rules
++
++| ID | Cần review | Quy tắc giữ nguyên / owner |
++|---|---|---|
++| R01 | Chốt 14 mapped IDs hay bộ biến thể làm bản chính; không có per-screen timestamp | Product/design; mapping hiện tại giữ |
++| R02 | AX Portal name, sidebar grouping, badge counts và shortcut Ctrl+K/Ctrl+N/⌘N | V04/C13; Windows, không mặc định shortcut macOS |
++| R03 | Named tokens vs design prose vs radius HTML; 1440×900 vs SRS 1440×860 | Design/Desktop; cần một token source thống nhất |
++| R04 | SSO, 14-day session TTL, mTLS, tenant/admin/policy labels, Korean/Japanese | C09/P05/V03; Store account/password và English vẫn chuẩn |
++| R05 | 48s sync, 72h offline limit, SDS-SEC policy IDs | P07/V03/V06; không có policy được xác nhận |
++| R06 | 30-day snapshot/log retention, gzip, daemon, execution/token analytics | P03/V06/LOG-01; local snapshots và operation logs, không tự thêm telemetry |
++| R07 | CLI troubleshooting, agent protocols, integrity/dependency “verified”, MCP blocking on Dashboard | C06/C07/C08, V01; no CLI feature, config-only AIPro check, install anyway vẫn hợp lệ |
++| R08 | Backup paths khác nhau ở W09/W11/W13; fixture versions 3.4.x vs 1.2.0 | Snapshot location/retention chưa chốt; không dùng fixture làm release contract |
++| R09 | W02 public placeholder/SSO/agent-filter copy; reference image có Git Install | C02/C08, P01/P09/V07; internal Store, Local Install scope/ranking vẫn mở |
++| R10 | Project visibility hiện PUBLIC, transfer cũ ghi PRIVATE | Ghi nhận metadata hiện tại; không đổi visibility trên Stitch |
++
++## Validation và tài liệu thay đổi
++
++Đối chiếu HTML cả 28 wireframes và xem screenshot của cả 29 assets qua 5 contact sheets; ảnh W02/MCP cũ được xem riêng. Đọc snapshot HTML cũ để so sánh form/copy/layout. Có thể xem ảnh gốc đầy đủ từ index; screenshot tổng quan không chứng minh mọi hover/focus. Kiểm tra số asset, image signatures, SHA-256, local links và giữ nguyên các dòng C01–C14. Không chạy build/test sản phẩm vì không đổi source.
++
++Cập nhật tại chỗ: README, WIREFRAME-GUIDE, STITCH-TRANSFER, stitch-transfer.json, W02-CHANGELOG, SRS. Giữ section numbering SRS và cấu trúc tài liệu hiện có. Thêm báo cáo này và snapshot versioned. SAS/API-DRAFT/DEVELOPMENT-PLAN, skill-format-detection-spec và wireframes.html giữ nguyên: không có business/API contract mới được xác nhận; wireframes.html là prototype baseline cũ, không phải render mới.
++
++Git đang ignore docs. Diff trước/sau dùng `git diff --no-index` với bản `before/`; không sửa .gitignore, không stage/commit. [Full diff](design-snapshots/2026-10-16-stitch-01/changes.diff) gồm nội dung tài liệu sửa và file snapshot mới (ảnh thể hiện dưới dạng binary patch); diff không tự chứa chính nó. Manifest ghi file/hash trước khi tạo diff.
++

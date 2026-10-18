@@ -1,0 +1,602 @@
+<!DOCTYPE html><html class="h-full" lang="en" style=""><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Skills Manager — Samsung SDS</title>
+<!-- Material Symbols Outlined font -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<!-- Google Fonts: Inter & JetBrains Mono -->
+<link href="https://fonts.googleapis.com" rel="preconnect">
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "primary-fixed-dim": "#afc6ff",
+            "surface-container-lowest": "#ffffff",
+            "surface-bright": "#f8f9ff",
+            "surface-variant": "#e1e2e8",
+            "on-secondary-fixed-variant": "#434750",
+            "primary-container": "#1657b8",
+            "surface-dim": "#d8dadf",
+            "on-primary-container": "#c2d3ff",
+            "background": "#f8f9ff",
+            "error-container": "#ffdad6",
+            "surface-container-high": "#e6e8ed",
+            "tertiary-fixed": "#96f5ca",
+            "outline-variant": "#c3c6d4",
+            "on-primary-fixed": "#001a43",
+            "on-tertiary-fixed-variant": "#005139",
+            "on-error-container": "#93000a",
+            "inverse-on-surface": "#eff0f6",
+            "tertiary-fixed-dim": "#7ad9af",
+            "on-secondary-fixed": "#171c24",
+            "on-primary-fixed-variant": "#004397",
+            "surface": "#f8f9ff",
+            "on-tertiary": "#ffffff",
+            "secondary-fixed-dim": "#c3c6d1",
+            "surface-tint": "#1c5abc",
+            "on-surface": "#191c20",
+            "on-error": "#ffffff",
+            "on-surface-variant": "#424752",
+            "surface-container": "#eceef3",
+            "on-secondary-container": "#60646e",
+            "surface-container-low": "#f2f3f9",
+            "tertiary-container": "#006849",
+            "secondary-fixed": "#dfe2ee",
+            "primary": "#004091",
+            "error": "#ba1a1a",
+            "on-tertiary-container": "#87e6bb",
+            "surface-container-highest": "#e1e2e8",
+            "tertiary": "#004e36",
+            "inverse-surface": "#2e3135",
+            "on-background": "#191c20",
+            "inverse-primary": "#afc6ff",
+            "primary-fixed": "#d8e2ff",
+            "secondary": "#5a5e68",
+            "on-tertiary-fixed": "#002115",
+            "secondary-container": "#dfe2ee",
+            "on-primary": "#ffffff",
+            "outline": "#737784",
+            "on-secondary": "#ffffff"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.125rem",
+            "lg": "0.25rem",
+            "xl": "0.5rem",
+            "full": "0.75rem"
+          },
+          "spacing": {
+            "margin": "1rem",
+            "space-md": "0.75rem",
+            "space-xl": "1.5rem",
+            "gutter": "1rem",
+            "space-sm": "0.5rem",
+            "space-xs": "0.25rem",
+            "space-lg": "1rem"
+          },
+          "fontFamily": {
+            "headline-md": ["Inter"],
+            "code-sm": ["JetBrains Mono"],
+            "caption-regular": ["Inter"],
+            "headline-lg": ["Inter"],
+            "caption-medium": ["Inter"],
+            "body-default": ["Inter"],
+            "titlebar-caption": ["Inter"],
+            "headline-sm": ["Inter"],
+            "body-medium": ["Inter"]
+          },
+          "fontSize": {
+            "headline-md": ["16px", {"lineHeight": "24px", "fontWeight": "600"}],
+            "code-sm": ["12px", {"lineHeight": "16px", "fontWeight": "400"}],
+            "caption-regular": ["11px", {"lineHeight": "16px", "fontWeight": "400"}],
+            "headline-lg": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+            "caption-medium": ["11px", {"lineHeight": "16px", "fontWeight": "500"}],
+            "body-default": ["13px", {"lineHeight": "18px", "fontWeight": "400"}],
+            "titlebar-caption": ["12px", {"lineHeight": "16px", "fontWeight": "500"}],
+            "headline-sm": ["14px", {"lineHeight": "20px", "fontWeight": "600"}],
+            "body-medium": ["13px", {"lineHeight": "18px", "fontWeight": "500"}]
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-surface text-on-surface h-full flex flex-col antialiased select-none font-body-default text-body-default overflow-hidden">
+<!-- ================= TOP WINDOW CHROME (TopNavBar) ================= -->
+<!-- Mapped from Shared Components JSON: TopNavBar -->
+<header class="bg-surface-container dark:bg-surface-container-high text-on-surface dark:text-inverse-on-surface border-b border-outline-variant dark:border-outline flex justify-between items-center w-full h-8 px-3 select-none flex-shrink-0 z-50">
+<div class="flex items-center space-x-2">
+<span class="material-symbols-outlined text-primary text-[16px] leading-none">memory</span>
+<span class="text-titlebar-caption font-titlebar-caption text-on-surface dark:text-inverse-on-surface font-medium">AX Portal — Samsung SDS</span>
+</div>
+<!-- Window Actions (minimize, crop_square, close) -->
+<div class="flex items-center h-full -mr-3">
+<button aria-label="Minimize" class="w-11 h-8 flex items-center justify-center hover:bg-surface-variant dark:hover:bg-inverse-surface transition-colors duration-150 text-on-surface-variant" type="button">
+<span class="material-symbols-outlined text-[14px]">minimize</span>
+</button>
+<button aria-label="Maximize" class="w-11 h-8 flex items-center justify-center hover:bg-surface-variant dark:hover:bg-inverse-surface transition-colors duration-150 text-on-surface-variant" type="button">
+<span class="material-symbols-outlined text-[13px]">crop_square</span>
+</button>
+<button aria-label="Close" class="w-11 h-8 flex items-center justify-center hover:bg-error hover:text-on-error transition-colors duration-150 text-on-surface-variant" type="button">
+<span class="material-symbols-outlined text-[15px]">close</span>
+</button>
+</div>
+</header>
+<!-- ================= APP MAIN CONTAINER ================= -->
+<div class="flex flex-1 h-[calc(100vh-32px)] overflow-hidden">
+<!-- ================= FIXED 225px SIDEBAR (SideNavBar) ================= -->
+<!-- Mapped from Shared Components JSON: SideNavBar with active 'Skills Store' -->
+<aside class="w-[225px] h-full flex flex-col justify-between p-space-sm border-r border-outline-variant dark:border-outline bg-surface-container-lowest dark:bg-surface-container-low flex-shrink-0">
+<!-- Top Section: Brand Lockup, New Preset CTA, Navigation Links -->
+<div class="flex flex-col space-y-3 overflow-y-auto pr-0.5">
+<!-- Header / Logo Lockup -->
+<div class="flex items-center space-x-2.5 px-2 py-1.5">
+<div class="w-6 h-6 rounded bg-primary flex items-center justify-center text-on-primary font-bold text-caption-regular flex-shrink-0">
+            SDS
+          </div>
+<div class="flex flex-col min-w-0">
+<span class="text-headline-sm font-headline-sm text-primary dark:text-primary-fixed-dim font-bold truncate leading-tight">AX Portal</span>
+<span class="text-caption-regular font-caption-regular text-outline tracking-wider text-[10px] uppercase">SAMSUNG SDS</span>
+</div>
+</div>
+<!-- CTA Button -->
+<button class="w-full h-7 px-3 bg-surface-container-lowest border border-outline-variant hover:bg-surface-container text-on-surface font-body-medium text-body-medium rounded-lg flex items-center justify-center space-x-1.5 transition-colors duration-150 ease-in-out shadow-none" type="button">
+<span class="material-symbols-outlined text-[16px] text-primary">add</span>
+<span class="">New preset</span>
+</button>
+<!-- Navigation Tab Clusters -->
+<nav class="flex flex-col space-y-0.5 pt-1">
+<!-- Item 1: Dashboard -->
+<a class="flex items-center space-x-2 text-on-surface-variant dark:text-surface-variant font-normal rounded-lg px-2 py-1.5 hover:bg-surface-container dark:hover:bg-surface-container-high hover:text-on-surface transition-colors duration-150 ease-in-out" href="#dashboard">
+<span class="material-symbols-outlined text-[18px]">dashboard</span>
+<span class="text-body-default font-body-default">Dashboard</span>
+</a>
+<!-- Item 2: Library -->
+<a class="flex items-center space-x-2 text-on-surface-variant dark:text-surface-variant font-normal rounded-lg px-2 py-1.5 hover:bg-surface-container dark:hover:bg-surface-container-high hover:text-on-surface transition-colors duration-150 ease-in-out" href="#library">
+<span class="material-symbols-outlined text-[18px]">folder</span>
+<span class="text-body-default font-body-default">Library</span>
+</a>
+<!-- Item 3: Skills Store (ACTIVE) -->
+<a class="flex items-center space-x-2 bg-secondary-container dark:bg-secondary text-primary dark:text-primary-fixed font-medium rounded-lg px-2 py-1.5 border-l-2 border-primary dark:border-primary-fixed transition-colors duration-150 ease-in-out" href="#store">
+<span class="material-symbols-outlined text-[18px] text-primary" style="font-variation-settings: 'FILL' 1;">storefront</span>
+<span class="text-body-default font-body-default flex-1">Skills Store</span>
+
+</a>
+<!-- Item 4: Backup -->
+<a class="flex items-center space-x-2 text-on-surface-variant dark:text-surface-variant font-normal rounded-lg px-2 py-1.5 hover:bg-surface-container dark:hover:bg-surface-container-high hover:text-on-surface transition-colors duration-150 ease-in-out" href="#backup">
+<span class="material-symbols-outlined text-[18px]">backup</span>
+<span class="text-body-default font-body-default">Backup</span>
+</a>
+<div class="pt-2 pb-1 px-2 text-[10px] font-caption-medium uppercase tracking-wider text-outline">Agents &amp; Presets</div>
+<!-- Item 5: PM Essentials -->
+<a class="flex items-center space-x-2 text-on-surface-variant dark:text-surface-variant font-normal rounded-lg px-2 py-1.5 hover:bg-surface-container dark:hover:bg-surface-container-high hover:text-on-surface transition-colors duration-150 ease-in-out" href="#pm-essentials">
+<span class="material-symbols-outlined text-[18px]">tune</span>
+<span class="text-body-default font-body-default">PM Essentials</span>
+</a>
+<!-- Item 6: All Agents -->
+<a class="flex items-center space-x-2 text-on-surface-variant dark:text-surface-variant font-normal rounded-lg px-2 py-1.5 hover:bg-surface-container dark:hover:bg-surface-container-high hover:text-on-surface transition-colors duration-150 ease-in-out" href="#agents">
+<span class="material-symbols-outlined text-[18px]">smart_toy</span>
+<span class="text-body-default font-body-default">All Agents</span>
+</a>
+<!-- Item 7: AIPro -->
+<a class="flex items-center space-x-2 text-on-surface-variant dark:text-surface-variant font-normal rounded-lg px-2 py-1.5 hover:bg-surface-container dark:hover:bg-surface-container-high hover:text-on-surface transition-colors duration-150 ease-in-out" href="#aipro">
+<span class="material-symbols-outlined text-[18px] text-[#1657b8]">hub</span>
+<span class="text-body-default font-body-default">AIPro</span>
+</a>
+<!-- Item 8: Claude -->
+<a class="flex items-center space-x-2 text-on-surface-variant dark:text-surface-variant font-normal rounded-lg px-2 py-1.5 hover:bg-surface-container dark:hover:bg-surface-container-high hover:text-on-surface transition-colors duration-150 ease-in-out" href="#claude">
+<span class="material-symbols-outlined text-[18px] text-[#b94b29]">psychology</span>
+<span class="text-body-default font-body-default">Claude</span>
+</a>
+<!-- Item 9: Gemini -->
+<a class="flex items-center space-x-2 text-on-surface-variant dark:text-surface-variant font-normal rounded-lg px-2 py-1.5 hover:bg-surface-container dark:hover:bg-surface-container-high hover:text-on-surface transition-colors duration-150 ease-in-out" href="#gemini">
+<span class="material-symbols-outlined text-[18px] text-[#6a3ebd]">neurology</span>
+<span class="text-body-default font-body-default">Gemini</span>
+</a>
+<!-- Item 10: Codex -->
+<a class="flex items-center space-x-2 text-on-surface-variant dark:text-surface-variant font-normal rounded-lg px-2 py-1.5 hover:bg-surface-container dark:hover:bg-surface-container-high hover:text-on-surface transition-colors duration-150 ease-in-out" href="#codex">
+<span class="material-symbols-outlined text-[18px] text-secondary">terminal</span>
+<span class="text-body-default font-body-default">Codex</span>
+</a>
+<!-- Item 11: Project Atlas -->
+<a class="flex items-center space-x-2 text-on-surface-variant dark:text-surface-variant font-normal rounded-lg px-2 py-1.5 hover:bg-surface-container dark:hover:bg-surface-container-high hover:text-on-surface transition-colors duration-150 ease-in-out" href="#atlas">
+<span class="material-symbols-outlined text-[18px]">workspaces</span>
+<span class="text-body-default font-body-default">Project Atlas</span>
+</a>
+</nav>
+</div>
+<!-- Footer Actions: Settings, Example Employee -->
+<div class="pt-2 border-t border-outline-variant flex flex-col space-y-0.5">
+<a class="flex items-center space-x-2 text-on-surface-variant font-normal rounded-lg px-2 py-1.5 hover:bg-surface-container hover:text-on-surface transition-colors duration-150" href="#settings">
+<span class="material-symbols-outlined text-[18px]">settings</span>
+<span class="text-body-default font-body-default">Settings</span>
+</a>
+<div class="flex items-center space-x-2 text-on-surface-variant font-normal rounded-lg px-2 py-1.5 hover:bg-surface-container transition-colors duration-150 cursor-pointer">
+<span class="material-symbols-outlined text-[20px] text-primary">account_circle</span>
+<span class="text-body-default font-body-default text-on-surface truncate">Example Employee</span>
+</div>
+</div>
+</aside>
+<!-- ================= MAIN CONTENT VIEWPORT ================= -->
+<main class="flex-1 h-full overflow-y-auto bg-surface flex flex-col">
+<div class="p-6 max-w-[1215px] w-full mx-auto space-y-5">
+<!-- Screen Header -->
+<div class="flex items-start justify-between border-b border-outline-variant pb-2">
+  <div class="space-y-3">
+    <div class="flex items-center space-x-3">
+      <h1 class="text-headline-lg font-headline-lg text-on-surface tracking-tight font-bold">Install Skills</h1>
+    </div>
+    <div class="flex items-center space-x-6 pt-1">
+      <button type="button" class="flex items-center space-x-1.5 pb-2 text-[#087b58] font-body-medium text-body-medium border-b-2 border-[#087b58] transition-colors">
+        <span class="material-symbols-outlined text-[18px]">storefront</span>
+        <span class="">Store</span>
+      </button>
+      <button type="button" class="flex items-center space-x-1.5 pb-2 text-on-surface-variant hover:text-on-surface font-body-medium text-body-medium border-b-2 border-transparent transition-colors">
+        <span class="material-symbols-outlined text-[18px]">install_desktop</span>
+        <span class="">Local Install</span>
+      </button>
+    </div>
+  </div>
+  <div class="flex items-center px-2.5 py-1 rounded bg-[#e8f6ef] border border-[#7ad9af]/40 text-[#087b58] font-caption-medium text-caption-medium space-x-1.5 mt-1">
+    <span class="w-2 h-2 rounded-full bg-[#087b58] inline-block animate-pulse"></span>
+    <span class="">Internal Store connected</span>
+  </div>
+</div>
+<!-- Toolbar (Search & Filter Selects) -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-3 space-y-3 shadow-none">
+  <!-- Top Row: Time Range Segmented Control + Search Input -->
+  <div class="flex flex-wrap items-center gap-3">
+    <!-- Segmented Filter Control -->
+    <div class="inline-flex items-center bg-surface-container rounded-lg p-0.5 border border-outline-variant/60">
+      <button type="button" class="flex items-center space-x-1 px-3 py-1 bg-surface-container-lowest text-on-surface rounded font-caption-medium text-caption-medium shadow-none transition-colors">
+        <span class="material-symbols-outlined text-[15px]">schedule</span>
+        <span class="">All Time</span>
+      </button>
+      <button type="button" class="flex items-center space-x-1 px-2.5 py-1 text-on-surface-variant hover:text-on-surface rounded font-caption-medium text-caption-medium transition-colors">
+        <span class="material-symbols-outlined text-[15px]">trending_up</span>
+        <span class="">Trending</span>
+      </button>
+      <button type="button" class="flex items-center space-x-1 px-2.5 py-1 text-on-surface-variant hover:text-on-surface rounded font-caption-medium text-caption-medium transition-colors">
+        <span class="material-symbols-outlined text-[15px]">star</span>
+        <span class="">Hot</span>
+      </button>
+    </div>
+    <!-- Search Input -->
+    <div class="relative flex-1 min-w-[260px]">
+      <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[18px] text-outline">search</span>
+      <input type="text" class="w-full h-8 pl-9 pr-3 text-body-default font-body-default bg-surface-container-lowest border border-outline-variant rounded-lg focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 text-on-surface placeholder:text-outline" placeholder="Search skills.sh market...">
+    </div>
+  </div>
+  <div class="border-t border-outline-variant/50"></div>
+  <!-- Bottom Row: Source label & Tags -->
+  <div class="flex items-center space-x-2 overflow-x-auto pb-0.5 pt-0.5">
+    <span class="text-caption-medium font-caption-medium text-outline flex-shrink-0 pr-1">Source</span>
+    <button type="button" class="flex-shrink-0 px-3 py-1 rounded-full bg-[#e8f6ef] border border-[#7ad9af] text-[#087b58] font-caption-medium text-caption-medium transition-colors">
+      All sources
+    </button>
+    <button type="button" class="flex-shrink-0 px-3 py-1 rounded-full bg-surface-container-low hover:bg-surface-container border border-outline-variant text-on-surface-variant font-caption-medium text-caption-medium transition-colors">
+      Quality
+    </button>
+    <button type="button" class="flex-shrink-0 px-3 py-1 rounded-full bg-surface-container-low hover:bg-surface-container border border-outline-variant text-on-surface-variant font-caption-medium text-caption-medium transition-colors">
+      Security
+    </button>
+    <button type="button" class="flex-shrink-0 px-3 py-1 rounded-full bg-surface-container-low hover:bg-surface-container border border-outline-variant text-on-surface-variant font-caption-medium text-caption-medium transition-colors">
+      DevOps
+    </button>
+    <button type="button" class="flex-shrink-0 px-3 py-1 rounded-full bg-surface-container-low hover:bg-surface-container border border-outline-variant text-on-surface-variant font-caption-medium text-caption-medium transition-colors">
+      AI/ML
+    </button>
+    <button type="button" class="flex-shrink-0 px-3 py-1 rounded-full bg-surface-container-low hover:bg-surface-container border border-outline-variant text-on-surface-variant font-caption-medium text-caption-medium transition-colors">
+      Documentation
+    </button>
+    <button type="button" class="flex-shrink-0 px-3 py-1 rounded-full bg-surface-container-low hover:bg-surface-container border border-outline-variant text-on-surface-variant font-caption-medium text-caption-medium transition-colors">
+      Other
+    </button>
+    <button type="button" class="flex-shrink-0 px-3 py-1 rounded-full bg-surface-container-low hover:bg-surface-container border border-outline-variant text-on-surface-variant font-caption-medium text-caption-medium transition-colors">
+      Requirements
+    </button>
+    <button type="button" class="flex-shrink-0 px-3 py-1 rounded-full bg-surface-container-low hover:bg-surface-container border border-outline-variant text-on-surface-variant font-caption-medium text-caption-medium transition-colors">
+      Design
+    </button>
+    <button type="button" class="flex-shrink-0 px-3 py-1 rounded-full bg-surface-container-low hover:bg-surface-container border border-outline-variant text-on-surface-variant font-caption-medium text-caption-medium transition-colors">
+      Development
+    </button>
+    <button type="button" class="flex-shrink-0 px-3 py-1 rounded-full bg-surface-container-low hover:bg-surface-container border border-outline-variant text-on-surface-variant font-caption-medium text-caption-medium transition-colors">
+      Testing/QA
+    </button>
+    <button type="button" class="flex-shrink-0 px-3 py-1 rounded-full bg-surface-container-low hover:bg-surface-container border border-outline-variant text-on-surface-variant font-caption-medium text-caption-medium transition-colors">
+      Deployment
+    </button>
+    <button type="button" class="flex-shrink-0 px-3 py-1 rounded-full bg-surface-container-low hover:bg-surface-container border border-outline-variant text-on-surface-variant font-caption-medium text-caption-medium transition-colors">
+      Operations/Common
+    </button>
+    <button type="button" class="flex-shrink-0 w-7 h-7 rounded-full bg-surface-container-low hover:bg-surface-container border border-outline-variant text-on-surface-variant font-caption-medium text-caption-medium flex items-center justify-center transition-colors">
+      ···
+    </button>
+  </div>
+</div>
+<!-- Category Filter Chips -->
+
+<!-- ================= 3x2 CARD GRID ================= -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+<!-- Card 1: Jira Weekly Report -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-lg p-4 flex flex-col justify-between hover:border-primary/50 hover:shadow-sm transition-all duration-150">
+<div class="space-y-2.5">
+<div class="flex items-start justify-between gap-2">
+<h2 class="text-headline-sm font-headline-sm text-on-surface truncate">Jira Weekly Report</h2>
+<span class="px-1.5 py-0.5 rounded text-[11px] font-caption-medium bg-[#edf4ff] text-[#1657b8] border border-[#1657b8]/20 flex-shrink-0">
+                  1.2.0
+                </span>
+</div>
+<p class="text-body-default font-body-default text-on-surface-variant leading-snug line-clamp-2">
+                Summarize sprint progress, risks and blocked work from Jira.
+              </p>
+<!-- Tags -->
+<div class="flex flex-wrap items-center gap-1.5 pt-1">
+<span class="px-1.5 py-0.5 rounded text-[10px] font-caption-medium bg-surface-container text-on-surface-variant">PM</span>
+<span class="px-1.5 py-0.5 rounded text-[10px] font-caption-medium bg-surface-container text-on-surface-variant">TPM</span>
+<span class="px-1.5 py-0.5 rounded text-[10px] font-caption-medium bg-[#fff5e4] text-[#92580b] border border-[#92580b]/30">Requires MCP</span>
+</div>
+<div class="text-[11px] font-caption-regular text-outline pt-1">
+                Delivery Enablement · ZIP · 42 KB
+              </div>
+</div>
+<!-- Footer: Agent badges & link -->
+<div class="mt-4 pt-3 border-t border-outline-variant flex items-center justify-between">
+<div class="flex items-center space-x-1">
+<span class="w-5 h-5 rounded-full bg-[#edf4ff] text-[#1657b8] font-bold text-[10px] flex items-center justify-center border border-[#1657b8]/30" title="AIPro">A</span>
+<span class="w-5 h-5 rounded-full bg-[#faede8] text-[#b94b29] font-bold text-[10px] flex items-center justify-center border border-[#b94b29]/30" title="Claude">Cl</span>
+<span class="w-5 h-5 rounded-full bg-[#f3ecff] text-[#6a3ebd] font-bold text-[10px] flex items-center justify-center border border-[#6a3ebd]/30" title="Gemini">G</span>
+<span class="w-5 h-5 rounded-full bg-[#eceef1] text-[#464a53] font-bold text-[10px] flex items-center justify-center border border-[#464a53]/30" title="Codex">Cx</span>
+</div>
+<a class="text-primary hover:text-primary-container text-caption-medium font-caption-medium inline-flex items-center space-x-1" href="#view-skill-1">
+<span class="">View skill</span>
+<span class="material-symbols-outlined text-[14px]">arrow_forward</span>
+</a>
+</div>
+</div>
+<!-- Card 2: Meeting Notes -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-lg p-4 flex flex-col justify-between hover:border-primary/50 hover:shadow-sm transition-all duration-150">
+<div class="space-y-2.5">
+<div class="flex items-start justify-between gap-2">
+<h2 class="text-headline-sm font-headline-sm text-on-surface truncate">Meeting Notes</h2>
+<span class="px-1.5 py-0.5 rounded text-[11px] font-caption-medium bg-surface-container text-on-surface-variant flex-shrink-0">
+                  1.0.0
+                </span>
+</div>
+<p class="text-body-default font-body-default text-on-surface-variant leading-snug line-clamp-2">
+                Turn meeting notes into decisions, owners and next steps.
+              </p>
+<!-- Tags -->
+<div class="flex flex-wrap items-center gap-1.5 pt-1">
+<span class="px-1.5 py-0.5 rounded text-[10px] font-caption-medium bg-surface-container text-on-surface-variant">BSE</span>
+<span class="px-1.5 py-0.5 rounded text-[10px] font-caption-medium bg-surface-container text-on-surface-variant">PM</span>
+</div>
+<div class="text-[11px] font-caption-regular text-outline pt-1">
+                Knowledge Team · 7z · 68 KB
+              </div>
+</div>
+<!-- Footer: Agent badges & status green check -->
+<div class="mt-4 pt-3 border-t border-outline-variant flex items-center justify-between">
+<div class="flex items-center space-x-1">
+<span class="w-5 h-5 rounded-full bg-[#edf4ff] text-[#1657b8] font-bold text-[10px] flex items-center justify-center border border-[#1657b8]/30" title="AIPro">A</span>
+<span class="w-5 h-5 rounded-full bg-[#faede8] text-[#b94b29] font-bold text-[10px] flex items-center justify-center border border-[#b94b29]/30" title="Claude">Cl</span>
+<span class="w-5 h-5 rounded-full bg-[#f3ecff] text-[#6a3ebd] font-bold text-[10px] flex items-center justify-center border border-[#6a3ebd]/30" title="Gemini">G</span>
+<span class="w-5 h-5 rounded-full bg-[#eceef1] text-[#464a53] font-bold text-[10px] flex items-center justify-center border border-[#464a53]/30" title="Codex">Cx</span>
+</div>
+<div class="flex items-center space-x-1 text-[#087b58] font-caption-medium text-caption-medium">
+<span class="material-symbols-outlined text-[15px]" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+<span class="">In Library</span>
+</div>
+</div>
+</div>
+<!-- Card 3: Code Review Checklist -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-lg p-4 flex flex-col justify-between hover:border-primary/50 hover:shadow-sm transition-all duration-150">
+<div class="space-y-2.5">
+<div class="flex items-start justify-between gap-2">
+<h2 class="text-headline-sm font-headline-sm text-on-surface truncate">Code Review Checklist</h2>
+<span class="px-1.5 py-0.5 rounded text-[11px] font-caption-medium bg-surface-container text-on-surface-variant flex-shrink-0">
+                  2.1.0
+                </span>
+</div>
+<p class="text-body-default font-body-default text-on-surface-variant leading-snug line-clamp-2">
+                Review changes against your team's engineering checklist.
+              </p>
+<!-- Tags -->
+<div class="flex flex-wrap items-center gap-1.5 pt-1">
+<span class="px-1.5 py-0.5 rounded text-[10px] font-caption-medium bg-surface-container text-on-surface-variant">Dev</span>
+<span class="px-1.5 py-0.5 rounded text-[10px] font-caption-medium bg-surface-container text-on-surface-variant">Development</span>
+</div>
+<div class="text-[11px] font-caption-regular text-outline pt-1">
+                Engineering Team · ZIP · 105 KB
+              </div>
+</div>
+<!-- Footer -->
+<div class="mt-4 pt-3 border-t border-outline-variant flex items-center justify-between">
+<div class="flex items-center space-x-1">
+<span class="w-5 h-5 rounded-full bg-[#edf4ff] text-[#1657b8] font-bold text-[10px] flex items-center justify-center border border-[#1657b8]/30" title="AIPro">A</span>
+<span class="w-5 h-5 rounded-full bg-[#faede8] text-[#b94b29] font-bold text-[10px] flex items-center justify-center border border-[#b94b29]/30" title="Claude">Cl</span>
+<span class="w-5 h-5 rounded-full bg-[#f3ecff] text-[#6a3ebd] font-bold text-[10px] flex items-center justify-center border border-[#6a3ebd]/30" title="Gemini">G</span>
+<span class="w-5 h-5 rounded-full bg-[#eceef1] text-[#464a53] font-bold text-[10px] flex items-center justify-center border border-[#464a53]/30" title="Codex">Cx</span>
+</div>
+<span class="text-outline font-caption-medium text-caption-medium">Catalog sample</span>
+</div>
+</div>
+<!-- Card 4: Confluence Summary -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-lg p-4 flex flex-col justify-between hover:border-primary/50 hover:shadow-sm transition-all duration-150">
+<div class="space-y-2.5">
+<div class="flex items-start justify-between gap-2">
+<h2 class="text-headline-sm font-headline-sm text-on-surface truncate">Confluence Summary</h2>
+<span class="px-1.5 py-0.5 rounded text-[11px] font-caption-medium bg-surface-container text-on-surface-variant flex-shrink-0">
+                  1.1.0
+                </span>
+</div>
+<p class="text-body-default font-body-default text-on-surface-variant leading-snug line-clamp-2">
+                Find key decisions and prepare a concise project briefing.
+              </p>
+<!-- Tags -->
+<div class="flex flex-wrap items-center gap-1.5 pt-1">
+<span class="px-1.5 py-0.5 rounded text-[10px] font-caption-medium bg-surface-container text-on-surface-variant">BSE</span>
+<span class="px-1.5 py-0.5 rounded text-[10px] font-caption-medium bg-[#fff5e4] text-[#92580b] border border-[#92580b]/30">Requires MCP</span>
+</div>
+<div class="text-[11px] font-caption-regular text-outline pt-1">
+                Knowledge Team · ZIP · 31 KB
+              </div>
+</div>
+<!-- Footer -->
+<div class="mt-4 pt-3 border-t border-outline-variant flex items-center justify-between">
+<div class="flex items-center space-x-1">
+<span class="w-5 h-5 rounded-full bg-[#edf4ff] text-[#1657b8] font-bold text-[10px] flex items-center justify-center border border-[#1657b8]/30" title="AIPro">A</span>
+<span class="w-5 h-5 rounded-full bg-[#faede8] text-[#b94b29] font-bold text-[10px] flex items-center justify-center border border-[#b94b29]/30" title="Claude">Cl</span>
+</div>
+<span class="text-outline font-caption-medium text-caption-medium">Catalog sample</span>
+</div>
+</div>
+<!-- Card 5: Excel Status Report -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-lg p-4 flex flex-col justify-between hover:border-primary/50 hover:shadow-sm transition-all duration-150">
+<div class="space-y-2.5">
+<div class="flex items-start justify-between gap-2">
+<h2 class="text-headline-sm font-headline-sm text-on-surface truncate">Excel Status Report</h2>
+<span class="px-1.5 py-0.5 rounded text-[11px] font-caption-medium bg-surface-container text-on-surface-variant flex-shrink-0">
+                  1.0.0
+                </span>
+</div>
+<p class="text-body-default font-body-default text-on-surface-variant leading-snug line-clamp-2">
+                Prepare consistent status summaries from project workbooks.
+              </p>
+<!-- Tags -->
+<div class="flex flex-wrap items-center gap-1.5 pt-1">
+<span class="px-1.5 py-0.5 rounded text-[10px] font-caption-medium bg-surface-container text-on-surface-variant">TPM</span>
+<span class="px-1.5 py-0.5 rounded text-[10px] font-caption-medium bg-[#fff5e4] text-[#92580b] border border-[#92580b]/30">Requires MCP</span>
+</div>
+<div class="text-[11px] font-caption-regular text-outline pt-1">
+                Delivery Enablement · 7z · 82 KB
+              </div>
+</div>
+<!-- Footer -->
+<div class="mt-4 pt-3 border-t border-outline-variant flex items-center justify-between">
+<div class="flex items-center space-x-1">
+<span class="w-5 h-5 rounded-full bg-[#edf4ff] text-[#1657b8] font-bold text-[10px] flex items-center justify-center border border-[#1657b8]/30" title="AIPro">A</span>
+</div>
+<span class="text-outline font-caption-medium text-caption-medium">Catalog sample</span>
+</div>
+</div>
+<!-- Card 6: Release Notes -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-lg p-4 flex flex-col justify-between hover:border-primary/50 hover:shadow-sm transition-all duration-150">
+<div class="space-y-2.5">
+<div class="flex items-start justify-between gap-2">
+<h2 class="text-headline-sm font-headline-sm text-on-surface truncate">Release Notes</h2>
+<span class="px-1.5 py-0.5 rounded text-[11px] font-caption-medium bg-surface-container text-on-surface-variant flex-shrink-0">
+                  1.3.0
+                </span>
+</div>
+<p class="text-body-default font-body-default text-on-surface-variant leading-snug line-clamp-2">
+                Draft readable release notes from a structured change list.
+              </p>
+<!-- Tags -->
+<div class="flex flex-wrap items-center gap-1.5 pt-1">
+<span class="px-1.5 py-0.5 rounded text-[10px] font-caption-medium bg-surface-container text-on-surface-variant">Dev</span>
+<span class="px-1.5 py-0.5 rounded text-[10px] font-caption-medium bg-surface-container text-on-surface-variant">BSE</span>
+</div>
+<div class="text-[11px] font-caption-regular text-outline pt-1">
+                Engineering Team · ZIP · 29 KB
+              </div>
+</div>
+<!-- Footer -->
+<div class="mt-4 pt-3 border-t border-outline-variant flex items-center justify-between">
+<div class="flex items-center space-x-1">
+<span class="w-5 h-5 rounded-full bg-[#edf4ff] text-[#1657b8] font-bold text-[10px] flex items-center justify-center border border-[#1657b8]/30" title="AIPro">A</span>
+<span class="w-5 h-5 rounded-full bg-[#faede8] text-[#b94b29] font-bold text-[10px] flex items-center justify-center border border-[#b94b29]/30" title="Claude">Cl</span>
+<span class="w-5 h-5 rounded-full bg-[#f3ecff] text-[#6a3ebd] font-bold text-[10px] flex items-center justify-center border border-[#6a3ebd]/30" title="Gemini">G</span>
+<span class="w-5 h-5 rounded-full bg-[#eceef1] text-[#464a53] font-bold text-[10px] flex items-center justify-center border border-[#464a53]/30" title="Codex">Cx</span>
+</div>
+<span class="text-outline font-caption-medium text-caption-medium">Catalog sample</span>
+</div>
+</div>
+</div>
+<!-- ================= PAGINATION FOOTER ================= -->
+<div class="flex items-center justify-between pt-2 pb-4 text-body-default font-body-default text-on-surface-variant border-t border-outline-variant">
+<span class="text-caption-regular font-caption-regular text-outline">
+            Showing 6 sample skills · Filters and pagination are illustrative
+          </span>
+<div class="flex items-center space-x-1">
+<button aria-label="Previous Page" class="w-7 h-7 flex items-center justify-center rounded hover:bg-surface-container text-outline hover:text-on-surface transition-colors" type="button">
+<span class="material-symbols-outlined text-[16px]">chevron_left</span>
+</button>
+<button class="w-7 h-7 flex items-center justify-center rounded bg-primary text-on-primary font-caption-medium text-caption-medium" type="button">
+              1
+            </button>
+<button class="w-7 h-7 flex items-center justify-center rounded hover:bg-surface-container text-on-surface-variant font-caption-medium text-caption-medium transition-colors" type="button">
+              2
+            </button>
+<button class="w-7 h-7 flex items-center justify-center rounded hover:bg-surface-container text-on-surface-variant font-caption-medium text-caption-medium transition-colors" type="button">
+              3
+            </button>
+<button aria-label="Next Page" class="w-7 h-7 flex items-center justify-center rounded hover:bg-surface-container text-outline hover:text-on-surface transition-colors" type="button">
+<span class="material-symbols-outlined text-[16px]">chevron_right</span>
+</button>
+</div>
+</div>
+<!-- ================= COLLAPSIBLE SECTION BELOW ================= -->
+<div class="border border-outline-variant rounded-lg bg-surface-container-low overflow-hidden">
+<details class="group">
+<summary class="flex items-center justify-between px-4 py-3 bg-surface-container-lowest cursor-pointer list-none select-none hover:bg-surface-container transition-colors">
+<div class="flex items-center space-x-2">
+<span class="material-symbols-outlined text-[18px] text-outline group-open:rotate-90 transition-transform duration-150">chevron_right</span>
+<span class="text-headline-sm font-headline-sm text-on-surface">Empty, loading and unavailable states</span>
+</div>
+<span class="text-caption-regular font-caption-regular text-outline uppercase tracking-wider">Reference Guide</span>
+</summary>
+<div class="p-4 space-y-4 border-t border-outline-variant bg-surface-container-lowest">
+<p class="text-body-default font-body-default text-on-surface-variant">
+                When network synchronizations fail, filters return zero results, or agent capabilities are revoked, Skills Store renders standardized system states:
+              </p>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
+<!-- State 1: Empty Search -->
+<div class="p-3 bg-surface border border-outline-variant rounded-lg space-y-1.5">
+<div class="flex items-center space-x-1.5 text-on-surface font-headline-sm text-headline-sm">
+<span class="material-symbols-outlined text-[16px] text-outline">search_off</span>
+<span class="">No Matching Skills</span>
+</div>
+<p class="text-caption-regular font-caption-regular text-on-surface-variant">
+                    Triggered when combination of keyword query and agent filters matches 0 registry items. Clear filters or adjust search criteria to recover.
+                  </p>
+</div>
+<!-- State 2: Synchronizing / Loading -->
+<div class="p-3 bg-surface border border-outline-variant rounded-lg space-y-1.5">
+<div class="flex items-center space-x-1.5 text-on-surface font-headline-sm text-headline-sm">
+<span class="material-symbols-outlined text-[16px] text-primary animate-spin">sync</span>
+<span class="">Catalog Synchronizing</span>
+</div>
+<p class="text-caption-regular font-caption-regular text-on-surface-variant">
+                    Displayed during delta updates against the internal enterprise SDS skill registry. Skeleton shimmer cards render on the 3x2 stage.
+                  </p>
+</div>
+<!-- State 3: Disconnected / Unavailable -->
+<div class="p-3 bg-surface border border-outline-variant rounded-lg space-y-1.5">
+<div class="flex items-center space-x-1.5 text-[#ba1a1a] font-headline-sm text-headline-sm">
+<span class="material-symbols-outlined text-[16px] text-[#ba1a1a]">cloud_off</span>
+<span class="">Store Offline</span>
+</div>
+<p class="text-caption-regular font-caption-regular text-on-surface-variant">
+                    Shown when VPN or enterprise authentication drops. Cached skills remain in Library, while store downloads require re-establishing SSO session.
+                  </p>
+</div>
+</div>
+</div>
+</details>
+</div>
+</div>
+</main>
+</div>
+
+
+
+
+</body></html>

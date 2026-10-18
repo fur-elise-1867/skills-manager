@@ -1,0 +1,533 @@
+<!DOCTYPE html><html class="h-full" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Skills Manager — Samsung SDS</title>
+<!-- Material Symbols Outlined -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<!-- Google Fonts: Inter & JetBrains Mono -->
+<link href="https://fonts.googleapis.com" rel="preconnect">
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "primary-fixed-dim": "#afc6ff",
+            "surface-container-lowest": "#ffffff",
+            "surface-bright": "#f8f9ff",
+            "surface-variant": "#e1e2e8",
+            "on-secondary-fixed-variant": "#434750",
+            "primary-container": "#1657b8",
+            "surface-dim": "#d8dadf",
+            "on-primary-container": "#c2d3ff",
+            "background": "#f8f9ff",
+            "error-container": "#ffdad6",
+            "surface-container-high": "#e6e8ed",
+            "tertiary-fixed": "#96f5ca",
+            "outline-variant": "#c3c6d4",
+            "on-primary-fixed": "#001a43",
+            "on-tertiary-fixed-variant": "#005139",
+            "on-error-container": "#93000a",
+            "inverse-on-surface": "#eff0f6",
+            "tertiary-fixed-dim": "#7ad9af",
+            "on-secondary-fixed": "#171c24",
+            "on-primary-fixed-variant": "#004397",
+            "surface": "#f8f9ff",
+            "on-tertiary": "#ffffff",
+            "secondary-fixed-dim": "#c3c6d1",
+            "surface-tint": "#1c5abc",
+            "on-surface": "#191c20",
+            "on-error": "#ffffff",
+            "on-surface-variant": "#424752",
+            "surface-container": "#eceef3",
+            "on-secondary-container": "#60646e",
+            "surface-container-low": "#f2f3f9",
+            "tertiary-container": "#006849",
+            "secondary-fixed": "#dfe2ee",
+            "primary": "#004091",
+            "error": "#ba1a1a",
+            "on-tertiary-container": "#87e6bb",
+            "surface-container-highest": "#e1e2e8",
+            "tertiary": "#004e36",
+            "inverse-surface": "#2e3135",
+            "on-background": "#191c20",
+            "inverse-primary": "#afc6ff",
+            "primary-fixed": "#d8e2ff",
+            "secondary": "#5a5e68",
+            "on-tertiary-fixed": "#002115",
+            "secondary-container": "#dfe2ee",
+            "on-primary": "#ffffff",
+            "outline": "#737784",
+            "on-secondary": "#ffffff"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.125rem",
+            "lg": "0.25rem",
+            "xl": "0.5rem",
+            "full": "0.75rem"
+          },
+          "spacing": {
+            "margin": "1rem",
+            "space-md": "0.75rem",
+            "space-xl": "1.5rem",
+            "gutter": "1rem",
+            "space-sm": "0.5rem",
+            "space-xs": "0.25rem",
+            "space-lg": "1rem"
+          },
+          "fontFamily": {
+            "headline-md": ["Inter"],
+            "code-sm": ["JetBrains Mono"],
+            "caption-regular": ["Inter"],
+            "headline-lg": ["Inter"],
+            "caption-medium": ["Inter"],
+            "body-default": ["Inter"],
+            "titlebar-caption": ["Inter"],
+            "headline-sm": ["Inter"],
+            "body-medium": ["Inter"]
+          },
+          "fontSize": {
+            "headline-md": ["16px", { "lineHeight": "24px", "fontWeight": "600" }],
+            "code-sm": ["12px", { "lineHeight": "16px", "fontWeight": "400" }],
+            "caption-regular": ["11px", { "lineHeight": "16px", "fontWeight": "400" }],
+            "headline-lg": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+            "caption-medium": ["11px", { "lineHeight": "16px", "fontWeight": "500" }],
+            "body-default": ["13px", { "lineHeight": "18px", "fontWeight": "400" }],
+            "titlebar-caption": ["12px", { "lineHeight": "16px", "fontWeight": "500" }],
+            "headline-sm": ["14px", { "lineHeight": "20px", "fontWeight": "600" }],
+            "body-medium": ["13px", { "lineHeight": "18px", "fontWeight": "500" }]
+          }
+        }
+      }
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+      font-size: 16px;
+      line-height: 1;
+      display: inline-block;
+      vertical-align: middle;
+    }
+    /* Custom scrollbar to mimic modern native corporate IDE desktop */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f8f9ff;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #c3c6d4;
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #737784;
+    }
+  </style>
+</head>
+<body class="bg-surface text-on-surface h-full flex flex-col overflow-hidden antialiased select-none font-body-default text-body-default">
+<!-- ==================== TOP NAV BAR (Window Chrome Titlebar) ==================== -->
+<header class="flex justify-between items-center w-full h-8 px-3 select-none bg-surface-container text-on-surface border-b border-outline-variant z-50 shrink-0">
+<!-- Brand / Document Caption -->
+<div class="flex items-center space-x-2">
+<span class="material-symbols-outlined text-primary text-[15px]" style="font-variation-settings: 'FILL' 1;">terminal</span>
+<span class="font-titlebar-caption text-titlebar-caption text-on-surface font-semibold tracking-tight">AX Portal — Samsung SDS</span>
+<span class="text-outline text-caption-regular font-caption-regular px-1">/</span>
+<span class="text-on-surface-variant font-caption-regular text-caption-regular">Workspace: Project Atlas</span>
+</div>
+<!-- Window System Controls -->
+<div class="flex items-center -mr-3 h-full">
+<button class="w-11 h-8 flex items-center justify-center text-on-surface hover:bg-surface-variant transition-colors duration-150" title="Minimize">
+<span class="material-symbols-outlined text-[14px]">minimize</span>
+</button>
+<button class="w-11 h-8 flex items-center justify-center text-on-surface hover:bg-surface-variant transition-colors duration-150" title="Maximize">
+<span class="material-symbols-outlined text-[13px]">crop_square</span>
+</button>
+<button class="w-11 h-8 flex items-center justify-center text-on-surface hover:bg-[#ac3535] hover:text-white transition-colors duration-150" title="Close">
+<span class="material-symbols-outlined text-[15px]">close</span>
+</button>
+</div>
+</header>
+<!-- ==================== MAIN WORKSPACE SHELL ==================== -->
+<div class="flex flex-1 overflow-hidden">
+<!-- ==================== SIDE NAV BAR (225px) ==================== -->
+<aside class="w-[225px] h-full flex flex-col justify-between p-space-sm border-r border-outline-variant bg-surface-container-lowest shrink-0 select-none">
+<div class="flex flex-col space-y-3 overflow-y-auto pr-1">
+<!-- Sidebar Brand Lockup -->
+<div class="px-2 py-1.5 flex items-center justify-between border-b border-outline-variant pb-2.5">
+<div class="flex flex-col">
+<span class="font-headline-sm text-headline-sm text-primary font-bold tracking-tight">AX Portal</span>
+<span class="font-caption-medium text-caption-medium text-outline uppercase tracking-wider text-[9px] -mt-0.5">SAMSUNG SDS</span>
+</div>
+<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-caption-medium font-semibold bg-tertiary-fixed text-on-tertiary-fixed-variant">v2.4</span>
+</div>
+<!-- CTA Button -->
+<button class="w-full flex items-center justify-center space-x-1.5 bg-surface-container hover:bg-surface-variant text-primary border border-outline-variant rounded-lg py-1 px-2 text-body-medium font-body-medium transition-colors duration-150">
+<span class="material-symbols-outlined text-[14px]">add</span>
+<span class="">New preset</span>
+</button>
+<!-- Navigation Groups -->
+<nav class="flex flex-col space-y-0.5 pt-1">
+<div class="px-2 py-1 text-[10px] font-semibold text-outline uppercase tracking-wider">Navigation</div>
+<!-- Dashboard -->
+<a class="text-on-surface-variant font-normal rounded-lg px-2 py-1.5 flex items-center space-x-2.5 hover:bg-surface-container hover:text-on-surface transition-colors duration-150 ease-in-out" href="#">
+<span class="material-symbols-outlined text-outline">dashboard</span>
+<span class="font-body-default text-body-default">Dashboard</span>
+</a>
+<!-- Library -->
+<a class="text-on-surface-variant font-normal rounded-lg px-2 py-1.5 flex items-center space-x-2.5 hover:bg-surface-container hover:text-on-surface transition-colors duration-150 ease-in-out" href="#">
+<span class="material-symbols-outlined text-outline">folder</span>
+<span class="font-body-default text-body-default">Library</span>
+</a>
+<!-- Skills Store -->
+<a class="text-on-surface-variant font-normal rounded-lg px-2 py-1.5 flex items-center space-x-2.5 hover:bg-surface-container hover:text-on-surface transition-colors duration-150 ease-in-out" href="#">
+<span class="material-symbols-outlined text-outline">storefront</span>
+<span class="font-body-default text-body-default">Skills Store</span>
+</a>
+<!-- Backup -->
+<a class="text-on-surface-variant font-normal rounded-lg px-2 py-1.5 flex items-center space-x-2.5 hover:bg-surface-container hover:text-on-surface transition-colors duration-150 ease-in-out" href="#">
+<span class="material-symbols-outlined text-outline">backup</span>
+<span class="font-body-default text-body-default">Backup</span>
+</a>
+<div class="px-2 pt-2.5 pb-1 text-[10px] font-semibold text-outline uppercase tracking-wider">Presets &amp; Agents</div>
+<!-- PM Essentials -->
+<a class="text-on-surface-variant font-normal rounded-lg px-2 py-1.5 flex items-center justify-between hover:bg-surface-container hover:text-on-surface transition-colors duration-150 ease-in-out" href="#">
+<div class="flex items-center space-x-2.5">
+<span class="material-symbols-outlined text-outline">tune</span>
+<span class="font-body-default text-body-default">PM Essentials</span>
+</div>
+<span class="w-1.5 h-1.5 rounded-full bg-tertiary"></span>
+</a>
+<!-- All Agents -->
+<a class="text-on-surface-variant font-normal rounded-lg px-2 py-1.5 flex items-center space-x-2.5 hover:bg-surface-container hover:text-on-surface transition-colors duration-150 ease-in-out" href="#">
+<span class="material-symbols-outlined text-outline">smart_toy</span>
+<span class="font-body-default text-body-default">All Agents</span>
+</a>
+<!-- AIPro -->
+<a class="text-on-surface-variant font-normal rounded-lg px-2 py-1.5 flex items-center space-x-2.5 hover:bg-surface-container hover:text-on-surface transition-colors duration-150 ease-in-out" href="#">
+<span class="material-symbols-outlined text-primary-container">hub</span>
+<span class="font-body-default text-body-default">AIPro</span>
+</a>
+<!-- Claude -->
+<a class="text-on-surface-variant font-normal rounded-lg px-2 py-1.5 flex items-center space-x-2.5 hover:bg-surface-container hover:text-on-surface transition-colors duration-150 ease-in-out" href="#">
+<span class="material-symbols-outlined text-[#b94b29]">psychology</span>
+<span class="font-body-default text-body-default">Claude</span>
+</a>
+<!-- Gemini -->
+<a class="text-on-surface-variant font-normal rounded-lg px-2 py-1.5 flex items-center space-x-2.5 hover:bg-surface-container hover:text-on-surface transition-colors duration-150 ease-in-out" href="#">
+<span class="material-symbols-outlined text-[#6a3ebd]">neurology</span>
+<span class="font-body-default text-body-default">Gemini</span>
+</a>
+<!-- Codex -->
+<a class="text-on-surface-variant font-normal rounded-lg px-2 py-1.5 flex items-center space-x-2.5 hover:bg-surface-container hover:text-on-surface transition-colors duration-150 ease-in-out" href="#">
+<span class="material-symbols-outlined text-[#464a53]">terminal</span>
+<span class="font-body-default text-body-default">Codex</span>
+</a>
+<div class="px-2 pt-2.5 pb-1 text-[10px] font-semibold text-outline uppercase tracking-wider">Workspaces</div>
+<!-- Project Atlas (ACTIVE MATCH) -->
+<a class="bg-secondary-container text-primary font-medium rounded-lg px-2 py-1.5 border-l-2 border-primary flex items-center justify-between" href="#workspace">
+<div class="flex items-center space-x-2.5">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">workspaces</span>
+<span class="font-body-medium text-body-medium text-primary">Project Atlas</span>
+</div>
+<span class="text-[10px] font-caption-medium bg-primary-fixed text-on-primary-fixed px-1.5 py-0.2 rounded font-semibold">Live</span>
+</a>
+</nav>
+</div>
+<!-- Sidebar Footer -->
+<div class="pt-2 border-t border-outline-variant space-y-1">
+<a class="text-on-surface-variant font-normal rounded-lg px-2 py-1.5 flex items-center space-x-2.5 hover:bg-surface-container hover:text-on-surface transition-colors duration-150 ease-in-out" href="#">
+<span class="material-symbols-outlined text-outline">settings</span>
+<span class="font-body-default text-body-default">Settings</span>
+</a>
+<div class="flex items-center space-x-2 px-2 py-1.5 rounded-lg bg-surface-container-low text-on-surface">
+<span class="material-symbols-outlined text-outline">account_circle</span>
+<div class="flex flex-col truncate">
+<span class="font-caption-medium text-caption-medium text-on-surface font-semibold truncate leading-tight">Example Employee</span>
+<span class="font-caption-regular text-caption-regular text-outline text-[10px] leading-tight">Software Engineering</span>
+</div>
+</div>
+</div>
+</aside>
+<!-- ==================== MAIN CONTENT AREA ==================== -->
+<main class="flex-1 flex flex-col overflow-y-auto bg-surface-container-low">
+<!-- SCREEN HEAD -->
+<div class="bg-surface-container-lowest border-b border-outline-variant px-6 py-4 flex items-center justify-between shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
+<div>
+<div class="flex items-center space-x-2">
+<span class="font-caption-medium text-caption-medium text-primary uppercase font-bold tracking-wider">W08 · PROJECT WORKSPACE</span>
+<span class="w-1 h-1 rounded-full bg-outline-variant"></span>
+<span class="font-caption-regular text-caption-regular text-outline">Local Repository</span>
+</div>
+<h1 class="font-headline-lg text-headline-lg text-on-surface tracking-tight mt-0.5">Project Atlas</h1>
+<div class="flex items-center space-x-1.5 text-on-surface-variant font-code-sm text-code-sm mt-0.5">
+<span class="material-symbols-outlined text-[14px] text-outline">folder_open</span>
+<span class="">D:\Projects\Atlas</span>
+<button class="text-outline hover:text-primary transition-colors ml-1 p-0.5" title="Copy path">
+<span class="material-symbols-outlined text-[13px]">content_copy</span>
+</button>
+</div>
+</div>
+<!-- Primary Action -->
+<div class="flex items-center space-x-3">
+<button class="h-8 px-3 rounded-lg bg-surface-container-lowest border border-outline-variant hover:bg-surface-container text-on-surface font-body-medium text-body-medium flex items-center space-x-1.5 transition-colors duration-150">
+<span class="material-symbols-outlined text-[15px]">refresh</span>
+<span class="">Rescan</span>
+</button>
+<button class="h-8 px-3 rounded-lg bg-primary-container hover:bg-primary text-on-primary font-body-medium text-body-medium flex items-center space-x-1.5 transition-colors duration-150 shadow-sm">
+<span class="font-bold">＋</span>
+<span class="">Add from Library</span>
+</button>
+</div>
+</div>
+<!-- WORKSPACE STAGE BODY (Grid layout with high density) -->
+<div class="p-6 space-y-5 max-w-[1240px]">
+<!-- Agent Tabs / Filter Chips Bar -->
+<div class="flex items-center justify-between border-b border-outline-variant pb-2.5">
+<div class="flex items-center space-x-2">
+<!-- All Agents Chip -->
+<button class="h-7 px-3 rounded-full text-caption-medium font-caption-medium border border-outline-variant text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors">
+              All Agents
+            </button>
+<!-- AIPro · 3 (Selected active chip) -->
+<button class="h-7 px-3 rounded-full text-caption-medium font-caption-medium bg-primary text-on-primary border border-primary flex items-center space-x-1.5 shadow-xs">
+<span class="w-1.5 h-1.5 rounded-full bg-tertiary-fixed"></span>
+<span class="font-semibold">AIPro · 3</span>
+</button>
+<!-- Claude · 0 -->
+<button class="h-7 px-2.5 rounded-full text-caption-medium font-caption-medium border border-outline-variant text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors flex items-center space-x-1">
+<span class="w-1.5 h-1.5 rounded-full bg-[#b94b29] opacity-60"></span>
+<span class="">Claude · 0</span>
+</button>
+<!-- Gemini · 0 -->
+<button class="h-7 px-2.5 rounded-full text-caption-medium font-caption-medium border border-outline-variant text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors flex items-center space-x-1">
+<span class="w-1.5 h-1.5 rounded-full bg-[#6a3ebd] opacity-60"></span>
+<span class="">Gemini · 0</span>
+</button>
+<!-- Codex · 0 -->
+<button class="h-7 px-2.5 rounded-full text-caption-medium font-caption-medium border border-outline-variant text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors flex items-center space-x-1">
+<span class="w-1.5 h-1.5 rounded-full bg-[#464a53] opacity-60"></span>
+<span class="">Codex · 0</span>
+</button>
+</div>
+<div class="text-caption-regular font-caption-regular text-outline flex items-center space-x-1">
+<span class="material-symbols-outlined text-[14px]">tune</span>
+<span class="">Target Agent Context: <strong>AIPro Engine v1.8</strong></span>
+</div>
+</div>
+<!-- Presets bar / split header -->
+<div class="flex items-center justify-between bg-surface-container-lowest p-2.5 px-3.5 rounded-lg border border-outline-variant shadow-xs">
+<!-- Left side: Chips & Labels -->
+<div class="flex items-center space-x-2">
+<span class="font-caption-medium text-caption-medium font-semibold text-on-surface-variant uppercase tracking-wider text-[10px] mr-1">Presets</span>
+<!-- PM Essentials · 2/3 installed (Active Chip) -->
+<div class="h-7 px-3 rounded-full bg-[#edf4ff] text-primary border border-primary-container flex items-center space-x-1.5">
+<span class="material-symbols-outlined text-primary text-[14px]" style="font-variation-settings: 'FILL' 1;">task_alt</span>
+<span class="font-body-medium text-body-medium text-primary font-semibold">PM Essentials · 2/3 installed</span>
+</div>
+<!-- ＋ New preset Chip -->
+<button class="h-7 px-2.5 rounded-full border border-dashed border-outline-variant text-on-surface-variant hover:border-primary hover:text-primary transition-colors flex items-center space-x-1 font-caption-medium text-caption-medium">
+<span class="font-bold">＋</span>
+<span class="">New preset</span>
+</button>
+</div>
+<!-- Right side: Review Preset button -->
+<div>
+<button class="h-7 px-3 rounded-lg border border-outline-variant bg-surface-container-lowest hover:bg-surface-container text-on-surface font-body-medium text-body-medium flex items-center space-x-1.5 transition-colors">
+<span class="material-symbols-outlined text-[15px] text-outline">history_edu</span>
+<span class="">Review preset</span>
+</button>
+</div>
+</div>
+<!-- TABLE PANEL: SKILLS INVENTORY -->
+<div class="bg-surface-container-lowest rounded-lg border border-outline-variant overflow-hidden shadow-xs">
+<div class="px-4 py-2.5 bg-surface-container flex items-center justify-between border-b border-outline-variant">
+<div class="flex items-center space-x-2">
+<span class="material-symbols-outlined text-primary text-[17px]">inventory_2</span>
+<h2 class="font-headline-sm text-headline-sm text-on-surface">Installed Agent Skills</h2>
+<span class="text-caption-medium font-caption-medium px-2 py-0.5 rounded-full bg-surface-variant text-on-surface-variant">3 Skills</span>
+</div>
+<div class="flex items-center space-x-2">
+<input class="h-6 text-caption-regular font-caption-regular rounded border border-outline-variant px-2 bg-surface-container-lowest text-on-surface focus:outline-none focus:border-primary w-48" placeholder="Filter workspace skills..." type="text">
+<button class="p-1 hover:bg-surface-variant rounded text-outline hover:text-on-surface" title="Settings">
+<span class="material-symbols-outlined text-[15px]">more_vert</span>
+</button>
+</div>
+</div>
+<!-- Table Container -->
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-surface-container-low h-7 border-b border-outline-variant">
+<th class="px-4 py-1 text-[11px] font-semibold text-outline uppercase tracking-wider">Skill</th>
+<th class="px-4 py-1 text-[11px] font-semibold text-outline uppercase tracking-wider w-24">Version</th>
+<th class="px-4 py-1 text-[11px] font-semibold text-outline uppercase tracking-wider w-36">Status</th>
+<th class="px-4 py-1 text-[11px] font-semibold text-outline uppercase tracking-wider text-right w-44">Actions</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant">
+<!-- ROW 1: Local changes -->
+<tr class="h-10 bg-[#edf4ff] border-l-2 border-primary hover:bg-[#e4efff] transition-colors">
+<td class="px-4 py-1.5">
+<div class="flex flex-col">
+<div class="flex items-center space-x-1.5">
+<span class="font-body-medium text-body-medium text-on-surface font-semibold">Jira Weekly Report</span>
+<span class="material-symbols-outlined text-[#92580b] text-[14px]" title="Modified locally">edit_note</span>
+</div>
+<span class="font-code-sm text-code-sm text-outline text-[11px]">.aipro\skills\jira-weekly-report</span>
+</div>
+</td>
+<td class="px-4 py-1.5 font-code-sm text-code-sm text-on-surface">1.1.0</td>
+<td class="px-4 py-1.5">
+<!-- Amber tag -->
+<span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-[#fff5e4] text-[#92580b] border border-[#f5dfb8]">
+<span class="w-1.5 h-1.5 rounded-full bg-[#92580b] mr-1.5"></span>
+                      Local changes
+                    </span>
+</td>
+<td class="px-4 py-1.5 text-right font-body-medium text-body-medium whitespace-nowrap">
+<button class="text-primary hover:text-primary-container font-medium mr-2 hover:underline">Update</button>
+<span class="text-outline-variant">·</span>
+<button class="text-[#ac3535] hover:text-error font-medium ml-2 hover:underline">Remove</button>
+</td>
+</tr>
+<!-- ROW 2: Installed -->
+<tr class="h-10 bg-surface-container-lowest hover:bg-[#f8f9ff] transition-colors">
+<td class="px-4 py-1.5">
+<div class="flex flex-col">
+<span class="font-body-medium text-body-medium text-on-surface font-medium">Meeting Notes</span>
+<span class="font-code-sm text-code-sm text-outline text-[11px]">.aipro\skills\meeting-notes</span>
+</div>
+</td>
+<td class="px-4 py-1.5 font-code-sm text-code-sm text-on-surface-variant">1.0.0</td>
+<td class="px-4 py-1.5">
+<!-- Green tag -->
+<span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-[#e8f6ef] text-[#087b58] border border-[#c4ebd7]">
+<span class="w-1.5 h-1.5 rounded-full bg-[#087b58] mr-1.5"></span>
+                      Installed
+                    </span>
+</td>
+<td class="px-4 py-1.5 text-right font-body-default text-body-default text-outline italic">
+                    Sample row
+                  </td>
+</tr>
+<!-- ROW 3: Installed -->
+<tr class="h-10 bg-surface-container-lowest hover:bg-[#f8f9ff] transition-colors">
+<td class="px-4 py-1.5">
+<div class="flex flex-col">
+<span class="font-body-medium text-body-medium text-on-surface font-medium">Release Notes</span>
+<span class="font-code-sm text-code-sm text-outline text-[11px]">.aipro\skills\release-notes</span>
+</div>
+</td>
+<td class="px-4 py-1.5 font-code-sm text-code-sm text-on-surface-variant">1.3.0</td>
+<td class="px-4 py-1.5">
+<!-- Green tag -->
+<span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-[#e8f6ef] text-[#087b58] border border-[#c4ebd7]">
+<span class="w-1.5 h-1.5 rounded-full bg-[#087b58] mr-1.5"></span>
+                      Installed
+                    </span>
+</td>
+<td class="px-4 py-1.5 text-right font-body-default text-body-default text-outline italic">
+                    Sample row
+                  </td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<!-- PRESET REVIEW PANEL BELOW -->
+<div class="bg-surface-container-lowest rounded-lg border border-outline-variant overflow-hidden shadow-sm">
+<!-- Panel Header Row -->
+<div class="px-5 py-3 bg-surface-container border-b border-outline-variant flex items-center justify-between">
+<div class="flex items-center space-x-3">
+<span class="material-symbols-outlined text-primary text-[18px]">rule_settings</span>
+<h3 class="font-headline-sm text-headline-sm text-on-surface font-bold">PM Essentials · Preset review</h3>
+<span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-secondary-container text-on-secondary-fixed-variant border border-outline-variant">
+                One-time application
+              </span>
+</div>
+<div class="flex items-center space-x-2 text-caption-regular font-caption-regular text-on-surface-variant">
+<span class="material-symbols-outlined text-[14px] text-tertiary">check_circle</span>
+<span class="">Dependencies verified</span>
+</div>
+</div>
+<div class="p-5 space-y-4">
+<!-- Subtitle -->
+<div class="flex items-center justify-between pb-1 border-b border-surface-container">
+<div class="text-caption-medium font-caption-medium text-on-surface-variant">
+                Target: <strong class="text-on-surface font-semibold">AIPro · Project Atlas</strong>
+</div>
+<div class="text-caption-regular font-caption-regular text-outline">
+                Sync ID: <code class="font-code-sm text-[11px]">PRESET-PM-ATLAS-2024</code>
+</div>
+</div>
+<!-- Skill status chips row -->
+<div class="flex flex-wrap items-center gap-2 pt-1">
+<span class="font-caption-medium text-caption-medium text-outline mr-1">Skills Included:</span>
+<!-- Meeting Notes · Installed (green tag) -->
+<span class="inline-flex items-center px-2.5 py-1 rounded text-caption-medium font-caption-medium bg-[#e8f6ef] text-[#087b58] border border-[#c4ebd7]">
+<span class="material-symbols-outlined text-[13px] mr-1 text-[#087b58]" style="font-variation-settings: 'FILL' 1;">check</span>
+                Meeting Notes · Installed
+              </span>
+<!-- Jira Weekly Report · Update available (amber tag) -->
+<span class="inline-flex items-center px-2.5 py-1 rounded text-caption-medium font-caption-medium bg-[#fff5e4] text-[#92580b] border border-[#f5dfb8]">
+<span class="material-symbols-outlined text-[13px] mr-1 text-[#92580b]">sync_problem</span>
+                Jira Weekly Report · Update available
+              </span>
+<!-- Confluence Summary · Not installed (neutral tag) -->
+<span class="inline-flex items-center px-2.5 py-1 rounded text-caption-medium font-caption-medium bg-surface-container text-on-surface-variant border border-outline-variant">
+<span class="material-symbols-outlined text-[13px] mr-1 text-outline">download</span>
+                Confluence Summary · Not installed
+              </span>
+</div>
+<!-- Field Input: Preset Name -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+<div class="md:col-span-1 space-y-1">
+<label class="block font-caption-medium text-caption-medium text-on-surface font-semibold" for="preset-name">
+                  Preset name
+                </label>
+<div class="relative">
+<input class="w-full h-8 px-2.5 rounded border border-outline-variant bg-surface-container-lowest text-on-surface font-body-default text-body-default focus:border-primary-container focus:ring-1 focus:ring-primary-container focus:outline-none" id="preset-name" type="text" value="PM Essentials">
+<span class="material-symbols-outlined text-outline text-[15px] absolute right-2.5 top-2">edit</span>
+</div>
+</div>
+<!-- Explanatory note -->
+<div class="md:col-span-2 flex items-start space-x-2.5 bg-surface-container-low p-2.5 rounded border border-outline-variant text-on-surface-variant text-[12px] leading-relaxed">
+<span class="material-symbols-outlined text-primary text-[18px] shrink-0 mt-0.5">info</span>
+<p class="">
+                  Choose Library skills when creating a preset. Applying a preset reviews versions, destinations and AIPro MCP requirements before changes are made.
+                </p>
+</div>
+</div>
+<!-- Footer actions divider & buttons -->
+<div class="pt-4 border-t border-outline-variant flex items-center justify-between">
+<div class="flex items-center space-x-2 text-outline font-caption-regular text-caption-regular">
+<span class="material-symbols-outlined text-[14px]">shield</span>
+<span class="">Workspace integrity check passed</span>
+</div>
+<div class="flex items-center space-x-3">
+<!-- Button: Choose Library skills -->
+<button class="h-8 px-3.5 rounded border border-outline-variant bg-surface-container-lowest hover:bg-surface-container text-on-surface font-body-medium text-body-medium transition-colors">
+                  Choose Library skills
+                </button>
+<!-- Primary Button: Review installation (blue #1657b8) -->
+<button class="h-8 px-4 rounded bg-primary-container hover:bg-primary text-on-primary font-body-medium text-body-medium flex items-center space-x-1.5 transition-colors shadow-sm">
+<span class="material-symbols-outlined text-[15px]">verified</span>
+<span class="">Review installation</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+
+
+</body></html>

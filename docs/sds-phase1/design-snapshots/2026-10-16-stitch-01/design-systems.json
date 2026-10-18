@@ -1,0 +1,145 @@
+{
+  "designSystems": [
+    {
+      "designSystem": {
+        "displayName": "Enterprise Productivity Shell",
+        "styleGuidelines": "## Brand & Style\n\nThis design system embodies an authoritative, precise, and utilitarian corporate desktop software experience tailored for mission-critical enterprise administration. Rooted in professional efficiency, technical clarity, and high information density, it optimizes workflows for technical leads, enterprise architects, and AI orchestrators.\n\nThe aesthetic fuses **Corporate / Modern** desktop engineering with desktop-native application ergonomics:\n- **Calm, High-Legibility Visual Hierarchy:** A crisp, light-neutral backdrop keeps complex enterprise registries visually organized without fatigue.\n- **Utilitarian Discipline:** Every pixel, boundary, and contrast level reinforces operational confidence, system uptime, and rigorous management of agentic capabilities.\n- **Native Shell Ergonomics:** Integrated native window controls, fixed-width navigational infrastructure, and precise state indicators evoke a robust native desktop client.\n\n## Layout & Spacing\n\nThe architectural layout utilizes a structured desktop shell targeting a primary canvas viewport of 1440×900 and scaling dynamically.\n\n### Shell Matrix\n- **Window Chrome Titlebar:** 32px fixed height across the entire upper perimeter. Hosts the application brand mark, document caption, global search quick-jump, and platform native window controls (minimize, maximize, close).\n- **Navigation Dock (Sidebar):** Fixed width of exactly 225px. Spans the vertical height immediately beneath the titlebar, containing system grouping, skill catalogs, and environmental presets.\n- **Main Working Stage:** Dynamic fluid grid split into master inventory panes (flexible `1fr`) and an optional collapsible inspection drawer (fixed 380px).\n- **Rhythm & Grid:** Built upon a 4px/8px incremental cadence. Gaps between form controls, table cells, and panel borders honor compact information grouping without edge crowding.\n\n## Elevation & Depth\n\nVisual separation is constructed using **low-contrast structural outlines** alongside subdued, planar tonal changes rather than high-deflection drop shadows.\n\n- **Level 0 (App Base Canvas):** `#fafafa` base surface.\n- **Level 1 (Docked Panels & Data Tables):** `#ffffff` with a crisp `1px solid #e1e3e7` border. No drop shadow.\n- **Level 2 (Active Dropdowns & Flyout Menus):** `#ffffff` surface, `1px solid #e1e3e7`, accompanied by an ambient boundary blur: `box-shadow: 0 4px 12px rgba(36, 39, 43, 0.08)`.\n- **Level 3 (Modal Dialogs & Confirmation Overlays):** `#ffffff` surface with `box-shadow: 0 12px 32px rgba(36, 39, 43, 0.16)`. Overlays render over a darkened backdrop wash (`rgba(36, 39, 43, 0.35)`).\n\n## Components\n\n### Titlebar & Window Chrome\n- **Container:** 32px height, background `#f4f4f5`, border-bottom `1px solid #e1e3e7`.\n- **Window Controls (Right):** Horizontal button trio (Minimize, Maximize, Close) with 44px width each. Close button shifts background to `#ac3535` with white iconography on hover; minimize/maximize shifts to `#e1e3e7`.\n- **Title Caption:** Center-aligned or left-docked with 12px Medium type in `#24272b`, coupled with a subtle lockup icon.\n\n### Buttons & Actions\n- **Primary:** Background `#1657b8`, foreground `#ffffff`, height 28px or 32px, horizontal padding 12px, border-radius 4px. Hover: `#124491`.\n- **Secondary / Neutral:** Background `#ffffff`, border `1px solid #e1e3e7`, foreground `#24272b`. Hover: background `#f4f4f5`, border `#d2d5dc`.\n- **Destructive:** Background `#fff0f0`, border `1px solid #ac3535`, foreground `#ac3535`. Hover: background `#ac3535`, foreground `#ffffff`.\n\n### Badges, Chips & Agent Indicators\n- **State Badges:** Padding 2px 6px, font-size 11px, font-weight 500, line-height 14px, radius 3px.\n  - Active: `#087b58` on `#e8f6ef`.\n  - Staging/Paused: `#92580b` on `#fff5e4`.\n  - Error/Revoked: `#ac3535` on `#fff0f0`.\n- **Agent Provider Indicator:** A dual-element capsule. Displays a 6px solid dot indicator beside the provider label:\n  - *AIPro:* Dot `#1657b8`, background `#edf4ff`, text `#1657b8`.\n  - *Claude:* Dot `#b94b29`, background `#faede8`, text `#b94b29`.\n  - *Gemini:* Dot `#6a3ebd`, background `#f3ecff`, text `#6a3ebd`.\n  - *Codex:* Dot `#464a53`, background `#eceef1`, text `#464a53`.\n\n### Data Tables & Property Sheets\n- **Header Cells:** Background `#f4f4f5`, height 28px, text color `#6b6f79`, font size 11px, font weight 600, uppercase letter-spacing 0.04em, bottom border `1px solid #e1e3e7`.\n- **Data Rows:** Background `#ffffff`, alternating with `#fafafa` on high-density grids. Height 32px, text color `#24272b`, font size 13px, bottom border `1px solid #e1e3e7`. Row hover state: `#edf4ff`.\n- **Selected Row:** Background `#edf4ff`, left edge visual anchor `2px solid #1657b8`.\n\n### Input Fields & Select Controls\n- **Geometry:** Height 28px (compact) or 32px (standard), 8px horizontal padding, radius 4px.\n- **States:** Border `1px solid #e1e3e7`, background `#ffffff`, text `#24272b`. Focus creates an immediate highlight with border `1px solid #1657b8` and a 1px soft focus ring (`rgba(22, 87, 184, 0.2)`).\n\n### Modal Dialogs\n- **Framing:** Centered, width 480px to 640px, background `#ffffff`, border `1px solid #e1e3e7`, radius 6px, level 3 elevation.\n- **Structure:** 44px modal header with bottom border, padded body area (padding 16px), 48px utility footer with top divider `#e1e3e7` and right-aligned action pairs.",
+        "theme": {
+          "bodyFont": "INTER",
+          "bodyFontFamily": "Inter",
+          "colorMode": "LIGHT",
+          "colorVariant": "FIDELITY",
+          "customColor": "#1657b8",
+          "designMd": "---\nname: Enterprise Productivity Shell\ncolors:\n  surface: '#f8f9ff'\n  surface-dim: '#d8dadf'\n  surface-bright: '#f8f9ff'\n  surface-container-lowest: '#ffffff'\n  surface-container-low: '#f2f3f9'\n  surface-container: '#eceef3'\n  surface-container-high: '#e6e8ed'\n  surface-container-highest: '#e1e2e8'\n  on-surface: '#191c20'\n  on-surface-variant: '#424752'\n  inverse-surface: '#2e3135'\n  inverse-on-surface: '#eff0f6'\n  outline: '#737784'\n  outline-variant: '#c3c6d4'\n  surface-tint: '#1c5abc'\n  primary: '#004091'\n  on-primary: '#ffffff'\n  primary-container: '#1657b8'\n  on-primary-container: '#c2d3ff'\n  inverse-primary: '#afc6ff'\n  secondary: '#5a5e68'\n  on-secondary: '#ffffff'\n  secondary-container: '#dfe2ee'\n  on-secondary-container: '#60646e'\n  tertiary: '#004e36'\n  on-tertiary: '#ffffff'\n  tertiary-container: '#006849'\n  on-tertiary-container: '#87e6bb'\n  error: '#ba1a1a'\n  on-error: '#ffffff'\n  error-container: '#ffdad6'\n  on-error-container: '#93000a'\n  primary-fixed: '#d8e2ff'\n  primary-fixed-dim: '#afc6ff'\n  on-primary-fixed: '#001a43'\n  on-primary-fixed-variant: '#004397'\n  secondary-fixed: '#dfe2ee'\n  secondary-fixed-dim: '#c3c6d1'\n  on-secondary-fixed: '#171c24'\n  on-secondary-fixed-variant: '#434750'\n  tertiary-fixed: '#96f5ca'\n  tertiary-fixed-dim: '#7ad9af'\n  on-tertiary-fixed: '#002115'\n  on-tertiary-fixed-variant: '#005139'\n  background: '#f8f9ff'\n  on-background: '#191c20'\n  surface-variant: '#e1e2e8'\ntypography:\n  titlebar-caption:\n    fontFamily: Inter\n    fontSize: 12px\n    fontWeight: '500'\n    lineHeight: 16px\n  headline-lg:\n    fontFamily: Inter\n    fontSize: 20px\n    fontWeight: '600'\n    lineHeight: 28px\n  headline-md:\n    fontFamily: Inter\n    fontSize: 16px\n    fontWeight: '600'\n    lineHeight: 24px\n  headline-sm:\n    fontFamily: Inter\n    fontSize: 14px\n    fontWeight: '600'\n    lineHeight: 20px\n  body-default:\n    fontFamily: Inter\n    fontSize: 13px\n    fontWeight: '400'\n    lineHeight: 18px\n  body-medium:\n    fontFamily: Inter\n    fontSize: 13px\n    fontWeight: '500'\n    lineHeight: 18px\n  caption-regular:\n    fontFamily: Inter\n    fontSize: 11px\n    fontWeight: '400'\n    lineHeight: 16px\n  caption-medium:\n    fontFamily: Inter\n    fontSize: 11px\n    fontWeight: '500'\n    lineHeight: 16px\n  code-sm:\n    fontFamily: JetBrains Mono\n    fontSize: 12px\n    fontWeight: '400'\n    lineHeight: 16px\nrounded:\n  sm: 0.125rem\n  DEFAULT: 0.25rem\n  md: 0.375rem\n  lg: 0.5rem\n  xl: 0.75rem\n  full: 9999px\nspacing:\n  gutter: 1rem\n  margin: 1rem\n  space-xs: 0.25rem\n  space-sm: 0.5rem\n  space-md: 0.75rem\n  space-lg: 1rem\n  space-xl: 1.5rem\n---\n\n## Brand & Style\n\nThis design system embodies an authoritative, precise, and utilitarian corporate desktop software experience tailored for mission-critical enterprise administration. Rooted in professional efficiency, technical clarity, and high information density, it optimizes workflows for technical leads, enterprise architects, and AI orchestrators.\n\nThe aesthetic fuses **Corporate / Modern** desktop engineering with desktop-native application ergonomics:\n- **Calm, High-Legibility Visual Hierarchy:** A crisp, light-neutral backdrop keeps complex enterprise registries visually organized without fatigue.\n- **Utilitarian Discipline:** Every pixel, boundary, and contrast level reinforces operational confidence, system uptime, and rigorous management of agentic capabilities.\n- **Native Shell Ergonomics:** Integrated native window controls, fixed-width navigational infrastructure, and precise state indicators evoke a robust native desktop client.\n\n## Colors\n\nThe palette is engineered for prolonged operational focus, leveraging high-contrast functional color assignments with soft, tint-matched structural containers.\n\n### Core Canvas & Structure\n- **App Canvas (`#fafafa`):** Primary desktop substrate framing the working environment.\n- **Surface Elevation (`#ffffff`):** Work surfaces, active inspectors, modal sheets, and data tables.\n- **Sidebar Surface (`#f4f4f5`):** Docked navigation strip providing tactile separation from data panes.\n- **Dividers & Structural Borders (`#e1e3e7`):** Precision 1px grid alignments that maintain architectural division without visual heaviness.\n- **Deep Ink Primary Text (`#24272b`):** High-clarity typography for maximum readability across complex data sets.\n- **Muted Subtext (`#6b6f79`):** Secondary meta-information, property labels, and column headers.\n\n### Functional Status Tokens\n- **Accent Primary / Informational:** Text/Icon `#1657b8`, Container Surface `#edf4ff`.\n- **Operational Success:** Text/Icon `#087b58`, Container Surface `#e8f6ef`.\n- **Warning / Review Required:** Text/Icon `#92580b`, Container Surface `#fff5e4`.\n- **Critical / Deprecated:** Text/Icon `#ac3535`, Container Surface `#fff0f0`.\n\n### Agent Multi-Model Identifiers\n- **AIPro:** Ink `#1657b8`, Tint `#edf4ff`.\n- **Claude:** Ink `#b94b29`, Tint `#faede8` (Warm Terracotta).\n- **Gemini:** Ink `#6a3ebd`, Tint `#f3ecff` (Structured Violet).\n- **Codex:** Ink `#464a53`, Tint `#eceef1` (Graphite Slate).\n\n## Typography\n\nThe typographic hierarchy prioritizes systematic density, legibility, and geometric vertical balance. Rendered with an enterprise system-sans profile (Inter / Segoe UI metric stack), the scale enforces crisp vertical alignment inside compressed row heights and split-pane inspectors.\n\n- **Monospace Integration:** JetBrains Mono is assigned exclusively to runtime parameters, skill IDs, schema versions, and endpoint configurations to avoid character ambiguity.\n- **Visual Weighting:** Semantic emphasis relies on transitioning from `400` to `500` or `600` weight rather than arbitrary scale jumps.\n- **Scale Compactness:** Headline scale is deliberately constrained (peaking at 20px) to maximize real-estate efficiency within a standard desktop display frame.\n\n## Layout & Spacing\n\nThe architectural layout utilizes a structured desktop shell targeting a primary canvas viewport of 1440×900 and scaling dynamically.\n\n### Shell Matrix\n- **Window Chrome Titlebar:** 32px fixed height across the entire upper perimeter. Hosts the application brand mark, document caption, global search quick-jump, and platform native window controls (minimize, maximize, close).\n- **Navigation Dock (Sidebar):** Fixed width of exactly 225px. Spans the vertical height immediately beneath the titlebar, containing system grouping, skill catalogs, and environmental presets.\n- **Main Working Stage:** Dynamic fluid grid split into master inventory panes (flexible `1fr`) and an optional collapsible inspection drawer (fixed 380px).\n- **Rhythm & Grid:** Built upon a 4px/8px incremental cadence. Gaps between form controls, table cells, and panel borders honor compact information grouping without edge crowding.\n\n## Elevation & Depth\n\nVisual separation is constructed using **low-contrast structural outlines** alongside subdued, planar tonal changes rather than high-deflection drop shadows.\n\n- **Level 0 (App Base Canvas):** `#fafafa` base surface.\n- **Level 1 (Docked Panels & Data Tables):** `#ffffff` with a crisp `1px solid #e1e3e7` border. No drop shadow.\n- **Level 2 (Active Dropdowns & Flyout Menus):** `#ffffff` surface, `1px solid #e1e3e7`, accompanied by an ambient boundary blur: `box-shadow: 0 4px 12px rgba(36, 39, 43, 0.08)`.\n- **Level 3 (Modal Dialogs & Confirmation Overlays):** `#ffffff` surface with `box-shadow: 0 12px 32px rgba(36, 39, 43, 0.16)`. Overlays render over a darkened backdrop wash (`rgba(36, 39, 43, 0.35)`).\n\n## Shapes\n\nThe design system employs a **Soft** geometric shape posture (`roundedness: 1`), projecting an engineered, institutional presence.\n\n- **Panels, Windows, & Cards:** 4px border radius (`0.25rem`). This provides slight corner smoothing while retaining strong rectangular structure along screen divisions.\n- **Form Fields & Standard Buttons:** 4px border radius (`0.25rem`).\n- **Status Badges & Model Indicators:** 3px border radius for compact rectangular tags, or fully round (circle) for pure dot telemetry.\n- **Modal Containers:** 6px border radius (`0.375rem`) to signify independent layering above the root desktop frame.\n\n## Components\n\n### Titlebar & Window Chrome\n- **Container:** 32px height, background `#f4f4f5`, border-bottom `1px solid #e1e3e7`.\n- **Window Controls (Right):** Horizontal button trio (Minimize, Maximize, Close) with 44px width each. Close button shifts background to `#ac3535` with white iconography on hover; minimize/maximize shifts to `#e1e3e7`.\n- **Title Caption:** Center-aligned or left-docked with 12px Medium type in `#24272b`, coupled with a subtle lockup icon.\n\n### Buttons & Actions\n- **Primary:** Background `#1657b8`, foreground `#ffffff`, height 28px or 32px, horizontal padding 12px, border-radius 4px. Hover: `#124491`.\n- **Secondary / Neutral:** Background `#ffffff`, border `1px solid #e1e3e7`, foreground `#24272b`. Hover: background `#f4f4f5`, border `#d2d5dc`.\n- **Destructive:** Background `#fff0f0`, border `1px solid #ac3535`, foreground `#ac3535`. Hover: background `#ac3535`, foreground `#ffffff`.\n\n### Badges, Chips & Agent Indicators\n- **State Badges:** Padding 2px 6px, font-size 11px, font-weight 500, line-height 14px, radius 3px.\n  - Active: `#087b58` on `#e8f6ef`.\n  - Staging/Paused: `#92580b` on `#fff5e4`.\n  - Error/Revoked: `#ac3535` on `#fff0f0`.\n- **Agent Provider Indicator:** A dual-element capsule. Displays a 6px solid dot indicator beside the provider label:\n  - *AIPro:* Dot `#1657b8`, background `#edf4ff`, text `#1657b8`.\n  - *Claude:* Dot `#b94b29`, background `#faede8`, text `#b94b29`.\n  - *Gemini:* Dot `#6a3ebd`, background `#f3ecff`, text `#6a3ebd`.\n  - *Codex:* Dot `#464a53`, background `#eceef1`, text `#464a53`.\n\n### Data Tables & Property Sheets\n- **Header Cells:** Background `#f4f4f5`, height 28px, text color `#6b6f79`, font size 11px, font weight 600, uppercase letter-spacing 0.04em, bottom border `1px solid #e1e3e7`.\n- **Data Rows:** Background `#ffffff`, alternating with `#fafafa` on high-density grids. Height 32px, text color `#24272b`, font size 13px, bottom border `1px solid #e1e3e7`. Row hover state: `#edf4ff`.\n- **Selected Row:** Background `#edf4ff`, left edge visual anchor `2px solid #1657b8`.\n\n### Input Fields & Select Controls\n- **Geometry:** Height 28px (compact) or 32px (standard), 8px horizontal padding, radius 4px.\n- **States:** Border `1px solid #e1e3e7`, background `#ffffff`, text `#24272b`. Focus creates an immediate highlight with border `1px solid #1657b8` and a 1px soft focus ring (`rgba(22, 87, 184, 0.2)`).\n\n### Modal Dialogs\n- **Framing:** Centered, width 480px to 640px, background `#ffffff`, border `1px solid #e1e3e7`, radius 6px, level 3 elevation.\n- **Structure:** 44px modal header with bottom border, padded body area (padding 16px), 48px utility footer with top divider `#e1e3e7` and right-aligned action pairs.",
+          "font": "INTER",
+          "headlineFont": "INTER",
+          "headlineFontFamily": "Inter",
+          "labelFont": "INTER",
+          "labelFontFamily": "Inter",
+          "namedColors": {
+            "background": "#f8f9ff",
+            "error": "#ba1a1a",
+            "error_container": "#ffdad6",
+            "inverse_on_surface": "#eff0f6",
+            "inverse_primary": "#afc6ff",
+            "inverse_surface": "#2e3135",
+            "on_background": "#191c20",
+            "on_error": "#ffffff",
+            "on_error_container": "#93000a",
+            "on_primary": "#ffffff",
+            "on_primary_container": "#c2d3ff",
+            "on_primary_fixed": "#001a43",
+            "on_primary_fixed_variant": "#004397",
+            "on_secondary": "#ffffff",
+            "on_secondary_container": "#60646e",
+            "on_secondary_fixed": "#171c24",
+            "on_secondary_fixed_variant": "#434750",
+            "on_surface": "#191c20",
+            "on_surface_variant": "#424752",
+            "on_tertiary": "#ffffff",
+            "on_tertiary_container": "#87e6bb",
+            "on_tertiary_fixed": "#002115",
+            "on_tertiary_fixed_variant": "#005139",
+            "outline": "#737784",
+            "outline_variant": "#c3c6d4",
+            "primary": "#004091",
+            "primary_container": "#1657b8",
+            "primary_fixed": "#d8e2ff",
+            "primary_fixed_dim": "#afc6ff",
+            "secondary": "#5a5e68",
+            "secondary_container": "#dfe2ee",
+            "secondary_fixed": "#dfe2ee",
+            "secondary_fixed_dim": "#c3c6d1",
+            "surface": "#f8f9ff",
+            "surface_bright": "#f8f9ff",
+            "surface_container": "#eceef3",
+            "surface_container_high": "#e6e8ed",
+            "surface_container_highest": "#e1e2e8",
+            "surface_container_low": "#f2f3f9",
+            "surface_container_lowest": "#ffffff",
+            "surface_dim": "#d8dadf",
+            "surface_tint": "#1c5abc",
+            "surface_variant": "#e1e2e8",
+            "tertiary": "#004e36",
+            "tertiary_container": "#006849",
+            "tertiary_fixed": "#96f5ca",
+            "tertiary_fixed_dim": "#7ad9af"
+          },
+          "overrideNeutralColor": "#24272b",
+          "overridePrimaryColor": "#1657b8",
+          "overrideSecondaryColor": "#6b6f79",
+          "overrideTertiaryColor": "#087b58",
+          "roundness": "ROUND_FOUR",
+          "spacing": {
+            "gutter": "1rem",
+            "margin": "1rem",
+            "space-lg": "1rem",
+            "space-md": "0.75rem",
+            "space-sm": "0.5rem",
+            "space-xl": "1.5rem",
+            "space-xs": "0.25rem"
+          },
+          "spacingScale": 2,
+          "typography": {
+            "body-default": {
+              "fontFamily": "Inter",
+              "fontSize": "13px",
+              "fontWeight": "400",
+              "lineHeight": "18px"
+            },
+            "body-medium": {
+              "fontFamily": "Inter",
+              "fontSize": "13px",
+              "fontWeight": "500",
+              "lineHeight": "18px"
+            },
+            "caption-medium": {
+              "fontFamily": "Inter",
+              "fontSize": "11px",
+              "fontWeight": "500",
+              "lineHeight": "16px"
+            },
+            "caption-regular": {
+              "fontFamily": "Inter",
+              "fontSize": "11px",
+              "fontWeight": "400",
+              "lineHeight": "16px"
+            },
+            "code-sm": {
+              "fontFamily": "JetBrains Mono",
+              "fontSize": "12px",
+              "fontWeight": "400",
+              "lineHeight": "16px"
+            },
+            "headline-lg": {
+              "fontFamily": "Inter",
+              "fontSize": "20px",
+              "fontWeight": "600",
+              "lineHeight": "28px"
+            },
+            "headline-md": {
+              "fontFamily": "Inter",
+              "fontSize": "16px",
+              "fontWeight": "600",
+              "lineHeight": "24px"
+            },
+            "headline-sm": {
+              "fontFamily": "Inter",
+              "fontSize": "14px",
+              "fontWeight": "600",
+              "lineHeight": "20px"
+            },
+            "titlebar-caption": {
+              "fontFamily": "Inter",
+              "fontSize": "12px",
+              "fontWeight": "500",
+              "lineHeight": "16px"
+            }
+          }
+        }
+      },
+      "name": "assets/51e4271149204b4d8a190f275938397e",
+      "version": "1"
+    }
+  ]
+}

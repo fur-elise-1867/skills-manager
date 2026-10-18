@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>W09 Update review</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Material Symbols Icons -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              DEFAULT: '#1657b8',
+              hover: '#124594',
+              subtle: '#eaf1fb',
+              dark: '#0c326e'
+            },
+            surface: {
+              canvas: '#fafafa',
+              sidebar: '#f4f4f5',
+              card: '#ffffff',
+              border: '#e1e3e7',
+              borderLight: '#edf0f4'
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif'],
+            mono: ['JetBrains Mono', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace']
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+      font-size: 18px;
+      line-height: 1;
+    }
+    .material-symbols-outlined.fill {
+      font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+    }
+    /* Custom scrollbar for clean enterprise look */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #d1d5db;
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #9ca3af;
+    }
+  </style>
+</head>
+<body class="bg-[#fafafa] text-neutral-800 antialiased font-sans min-h-screen flex flex-col select-none overflow-x-hidden">
+
+  <!-- Desktop App Window Titlebar (32px / h-8) -->
+  <header class="h-8 bg-[#f4f4f5] border-b border-[#e1e3e7] flex items-center justify-between px-3 text-xs text-neutral-600 select-none z-50 sticky top-0">
+    <div class="flex items-center gap-2">
+      <!-- App icon badge -->
+      <span class="w-4 h-4 rounded bg-[#1657b8] flex items-center justify-center text-[10px] font-bold text-white leading-none">S</span>
+      <span class="font-medium text-neutral-800 tracking-tight">Skills Manager — Samsung SDS</span>
+      <span class="text-neutral-400 mx-1">/</span>
+      <span class="text-neutral-500 font-mono text-[11px]">v1.2.0-rc3</span>
+    </div>
+    <!-- Window controls -->
+    <div class="flex items-center gap-4 text-neutral-500">
+      <div class="flex items-center gap-1.5 text-[11px] text-neutral-500 font-mono">
+        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+        <span>Local Workspace Active</span>
+      </div>
+      <div class="flex items-center gap-2 ml-2 pl-3 border-l border-neutral-300">
+        <button class="hover:text-neutral-800 transition-colors p-0.5" aria-label="Minimize">
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><path d="M5 12h14"/></svg>
+        </button>
+        <button class="hover:text-neutral-800 transition-colors p-0.5" aria-label="Maximize">
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><rect x="4" y="4" width="16" height="16" rx="1"/></svg>
+        </button>
+        <button class="hover:text-red-600 transition-colors p-0.5" aria-label="Close">
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><path d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main App Shell Body -->
+  <div class="flex-1 flex w-full max-w-[1440px] mx-auto min-h-[calc(100vh-32px)]">
+
+    <!-- Shared 225px Desktop Sidebar -->
+    <aside class="w-[225px] flex-shrink-0 bg-[#f4f4f5] border-r border-[#e1e3e7] flex flex-col justify-between p-3 select-none" aria-label="App navigation">
+      <div class="flex flex-col gap-3">
+        <!-- Brand identity -->
+        <div class="flex items-center gap-2.5 px-2 py-1.5">
+          <span class="w-7 h-7 rounded bg-[#1657b8] flex items-center justify-center font-bold text-white text-sm shadow-sm">S</span>
+          <div class="leading-tight">
+            <strong class="block text-xs font-semibold text-neutral-900 tracking-tight">Skills Manager</strong>
+            <small class="text-[10px] uppercase font-bold text-neutral-500 tracking-wider">SAMSUNG SDS</small>
+          </div>
+        </div>
+
+        <!-- New preset button -->
+        <button class="w-full flex items-center justify-center gap-1.5 py-1.5 px-3 bg-white hover:bg-neutral-50 border border-[#e1e3e7] rounded-lg text-xs font-medium text-neutral-700 shadow-sm transition-all hover:border-neutral-300 active:scale-[0.99]">
+          <span class="text-sm font-semibold text-neutral-500 leading-none">＋</span>
+          <span>New preset</span>
+        </button>
+
+        <!-- Navigation list -->
+        <nav class="flex flex-col gap-0.5 text-xs">
+          <a class="flex items-center justify-between px-2.5 py-1.5 rounded-md text-neutral-600 hover:text-neutral-900 hover:bg-neutral-200/60 transition-colors" href="#dashboard">
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-[17px] text-neutral-500">grid_view</span>
+              <span>Dashboard</span>
+            </div>
+          </a>
+          <a class="flex items-center justify-between px-2.5 py-1.5 rounded-md text-neutral-600 hover:text-neutral-900 hover:bg-neutral-200/60 transition-colors" href="#library">
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-[17px] text-neutral-500">folder_open</span>
+              <span>Library</span>
+            </div>
+            <span class="text-[11px] font-medium text-neutral-500 bg-neutral-200/70 px-1.5 py-0.2 rounded-full">12</span>
+          </a>
+          <a class="flex items-center justify-between px-2.5 py-1.5 rounded-md text-neutral-600 hover:text-neutral-900 hover:bg-neutral-200/60 transition-colors" href="#store">
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-[17px] text-neutral-500">storefront</span>
+              <span>Skills Store</span>
+            </div>
+          </a>
+          <a class="flex items-center justify-between px-2.5 py-1.5 rounded-md text-neutral-600 hover:text-neutral-900 hover:bg-neutral-200/60 transition-colors" href="#backup">
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-[17px] text-neutral-500">history</span>
+              <span>Backup</span>
+            </div>
+          </a>
+
+          <!-- Presets Section -->
+          <div class="mt-3 px-2.5 text-[10px] font-semibold text-neutral-400 uppercase tracking-wider">Presets</div>
+          <a class="flex items-center justify-between px-2.5 py-1.5 rounded-md text-neutral-600 hover:text-neutral-900 hover:bg-neutral-200/60 transition-colors" href="#workspace">
+            <div class="flex items-center gap-2 truncate">
+              <span class="material-symbols-outlined text-[16px] text-neutral-400">tune</span>
+              <span class="truncate">PM Essentials</span>
+            </div>
+            <span class="text-[11px] font-medium text-neutral-500 bg-neutral-200/70 px-1.5 py-0.2 rounded-full">3</span>
+          </a>
+          <a class="flex items-center gap-2 px-2.5 py-1 rounded-md text-neutral-500 hover:text-neutral-800 hover:bg-neutral-200/40 transition-colors" href="#workspace">
+            <span class="text-sm font-semibold text-neutral-400 leading-none">＋</span>
+            <span>New preset</span>
+          </a>
+
+          <!-- Global Workspace Section -->
+          <div class="mt-3 px-2.5 text-[10px] font-semibold text-neutral-400 uppercase tracking-wider">Global Workspace</div>
+          <a class="flex items-center justify-between px-2.5 py-1.5 rounded-md text-neutral-600 hover:text-neutral-900 hover:bg-neutral-200/60 transition-colors" href="#workspace">
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-[16px] text-neutral-400">hub</span>
+              <span>All Agents</span>
+            </div>
+          </a>
+          <a class="flex items-center justify-between px-2.5 py-1.5 rounded-md text-neutral-600 hover:text-neutral-900 hover:bg-neutral-200/60 transition-colors" href="#workspace">
+            <div class="flex items-center gap-2">
+              <span class="w-4 h-4 rounded-full bg-blue-600 text-white text-[9px] font-bold flex items-center justify-center">A</span>
+              <span>AIPro</span>
+            </div>
+            <span class="text-[11px] font-medium text-neutral-400">8</span>
+          </a>
+          <a class="flex items-center justify-between px-2.5 py-1.5 rounded-md text-neutral-600 hover:text-neutral-900 hover:bg-neutral-200/60 transition-colors" href="#workspace">
+            <div class="flex items-center gap-2">
+              <span class="w-4 h-4 rounded-full bg-amber-700 text-white text-[9px] font-bold flex items-center justify-center">Cl</span>
+              <span>Claude</span>
+            </div>
+            <span class="text-[11px] font-medium text-neutral-400">4</span>
+          </a>
+          <a class="flex items-center justify-between px-2.5 py-1.5 rounded-md text-neutral-600 hover:text-neutral-900 hover:bg-neutral-200/60 transition-colors" href="#workspace">
+            <div class="flex items-center gap-2">
+              <span class="w-4 h-4 rounded-full bg-purple-600 text-white text-[9px] font-bold flex items-center justify-center">G</span>
+              <span>Gemini</span>
+            </div>
+            <span class="text-[11px] font-medium text-neutral-400">3</span>
+          </a>
+          <a class="flex items-center justify-between px-2.5 py-1.5 rounded-md text-neutral-600 hover:text-neutral-900 hover:bg-neutral-200/60 transition-colors" href="#workspace">
+            <div class="flex items-center gap-2">
+              <span class="w-4 h-4 rounded-full bg-neutral-800 text-white text-[8px] font-bold flex items-center justify-center">Cx</span>
+              <span>Codex</span>
+            </div>
+            <span class="text-[11px] font-medium text-neutral-400">5</span>
+          </a>
+
+          <!-- Project Workspaces Section -->
+          <div class="mt-3 px-2.5 text-[10px] font-semibold text-neutral-400 uppercase tracking-wider">Project Workspaces</div>
+          <a class="flex items-center justify-between px-2.5 py-1.5 rounded-md bg-[#eaf1fb] text-[#1657b8] font-medium border-l-2 border-[#1657b8] shadow-xs" href="#workspace">
+            <div class="flex items-center gap-2 truncate">
+              <span class="material-symbols-outlined text-[17px] text-[#1657b8]">folder_special</span>
+              <span class="truncate">Project Atlas</span>
+            </div>
+            <span class="text-[11px] font-semibold text-[#1657b8] bg-blue-100/60 px-1.5 py-0.2 rounded-full">3</span>
+          </a>
+          <a class="flex items-center gap-2 px-2.5 py-1 rounded-md text-neutral-500 hover:text-neutral-800 hover:bg-neutral-200/40 transition-colors" href="#install">
+            <span class="text-sm font-semibold text-neutral-400 leading-none">＋</span>
+            <span>Add project</span>
+          </a>
+        </nav>
+      </div>
+
+      <!-- Sidebar Footer -->
+      <div class="pt-3 border-t border-[#e1e3e7] flex flex-col gap-2">
+        <a class="flex items-center gap-2 px-2.5 py-1.5 rounded-md text-xs text-neutral-600 hover:text-neutral-900 hover:bg-neutral-200/60 transition-colors" href="#settings">
+          <span class="material-symbols-outlined text-[17px] text-neutral-500">settings</span>
+          <span>Settings</span>
+        </a>
+        <div class="flex items-center gap-2 px-2 py-1 rounded-lg bg-neutral-200/40 border border-neutral-200/70">
+          <span class="w-6 h-6 rounded-full bg-neutral-600 text-white text-[11px] font-medium flex items-center justify-center flex-shrink-0">E</span>
+          <div class="leading-tight truncate">
+            <div class="text-xs font-medium text-neutral-800 truncate">Example Employee</div>
+            <div class="text-[10px] text-neutral-500 truncate">Skills Store account</div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content Area: W09 Update review -->
+    <main class="flex-1 min-w-0 bg-[#fafafa] flex flex-col overflow-y-auto" id="update" aria-labelledby="update-title">
+      <div class="max-w-4xl w-full p-8 space-y-6">
+
+        <!-- Screen Header -->
+        <div class="flex items-start justify-between pb-2 border-b border-[#e1e3e7]">
+          <div>
+            <h1 id="update-title" class="text-2xl font-bold tracking-tight text-neutral-900">Update Jira Weekly Report</h1>
+            <p class="text-xs text-neutral-500 mt-1 flex items-center gap-2">
+              <span class="font-mono font-medium text-neutral-700 bg-neutral-100 px-1.5 py-0.5 rounded border border-neutral-200">1.1.0 → 1.2.0</span>
+              <span class="text-neutral-300">•</span>
+              <span>Adds blocked-task summaries</span>
+            </p>
+          </div>
+          <a href="#library" class="px-3.5 py-1.5 text-xs font-medium text-neutral-700 bg-white hover:bg-neutral-50 border border-[#e1e3e7] rounded-lg shadow-sm transition-all hover:border-neutral-300">
+            Cancel
+          </a>
+        </div>
+
+        <!-- Warning Notice: Local changes detected -->
+        <div class="p-4 rounded-xl bg-amber-50 border border-amber-200/90 text-amber-900 flex items-start gap-3 shadow-sm" role="alert">
+          <span class="material-symbols-outlined text-amber-600 mt-0.5 flex-shrink-0" style="font-size: 20px;">warning</span>
+          <div class="text-xs leading-relaxed">
+            <strong class="font-semibold text-amber-950 block text-[13px]">Your Project Atlas copy has local changes.</strong>
+            <span class="text-amber-900/90">Keep the current version, or save a local backup before replacing it.</span>
+          </div>
+        </div>
+
+        <!-- Panel 1: Choose locations to update -->
+        <div class="bg-white border border-[#e1e3e7] rounded-xl shadow-xs overflow-hidden">
+          <div class="px-5 py-4 border-b border-[#e1e3e7] flex items-center justify-between bg-neutral-50/50">
+            <div>
+              <h3 class="text-sm font-semibold text-neutral-900">Choose locations to update</h3>
+              <p class="text-xs text-neutral-500 mt-0.5">Select specific agent installations or global environments for this skill.</p>
+            </div>
+            <span class="text-[11px] font-mono text-neutral-500 bg-white px-2 py-0.5 rounded border border-[#e1e3e7]">1 of 2 candidates selected</span>
+          </div>
+
+          <!-- Locations Table -->
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr class="bg-neutral-50 border-b border-[#e1e3e7] text-neutral-500 font-medium">
+                  <th scope="col" class="py-2.5 px-4 w-12 text-center">Update</th>
+                  <th scope="col" class="py-2.5 px-4 font-semibold text-neutral-700">Target</th>
+                  <th scope="col" class="py-2.5 px-4 font-semibold text-neutral-700 w-28">Current</th>
+                  <th scope="col" class="py-2.5 px-4 font-semibold text-neutral-700 w-32">Local state</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-[#edf0f4]">
+                <!-- Row 1: AIPro · Project Atlas (Modified / Checked) -->
+                <tr class="hover:bg-blue-50/30 transition-colors">
+                  <td class="py-3 px-4 text-center align-top">
+                    <input type="checkbox" checked id="target-aipro-atlas" aria-label="Update AIPro Project Atlas" class="w-4 h-4 rounded text-[#1657b8] focus:ring-[#1657b8] border-neutral-300 mt-0.5 cursor-pointer" />
+                  </td>
+                  <td class="py-3 px-4 align-top">
+                    <label for="target-aipro-atlas" class="cursor-pointer block">
+                      <div class="flex items-center gap-1.5 font-medium text-neutral-900 text-xs">
+                        <span class="w-2 h-2 rounded-full bg-blue-600 inline-block"></span>
+                        <span>AIPro · Project Atlas</span>
+                      </div>
+                      <small class="block font-mono text-[11px] text-neutral-500 mt-0.5 tracking-tight">D:\Projects\Atlas\.aipro\skills\jira-weekly-report</small>
+                    </label>
+                  </td>
+                  <td class="py-3 px-4 align-top font-mono text-neutral-600">
+                    1.1.0
+                  </td>
+                  <td class="py-3 px-4 align-top">
+                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-amber-100/80 text-amber-800 border border-amber-300/60">
+                      <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                      Modified
+                    </span>
+                  </td>
+                </tr>
+
+                <!-- Row 2: AIPro · Global (Unchanged / Unchecked) -->
+                <tr class="hover:bg-neutral-50/70 transition-colors">
+                  <td class="py-3 px-4 text-center align-top">
+                    <input type="checkbox" id="target-aipro-global" aria-label="Update AIPro global" class="w-4 h-4 rounded text-[#1657b8] focus:ring-[#1657b8] border-neutral-300 mt-0.5 cursor-pointer" />
+                  </td>
+                  <td class="py-3 px-4 align-top">
+                    <label for="target-aipro-global" class="cursor-pointer block">
+                      <div class="flex items-center gap-1.5 font-medium text-neutral-900 text-xs">
+                        <span class="w-2 h-2 rounded-full bg-blue-600 inline-block"></span>
+                        <span>AIPro · Global</span>
+                      </div>
+                      <small class="block font-mono text-[11px] text-neutral-400 mt-0.5">Shared Core Environment</small>
+                    </label>
+                  </td>
+                  <td class="py-3 px-4 align-top font-mono text-neutral-600">
+                    1.1.0
+                  </td>
+                  <td class="py-3 px-4 align-top">
+                    <span class="inline-block text-neutral-500 text-xs">Unchanged</span>
+                  </td>
+                </tr>
+
+                <!-- Row 3: Claude · Global (Already Current / Disabled) -->
+                <tr class="bg-neutral-50/40 text-neutral-500">
+                  <td class="py-3 px-4 text-center align-top text-neutral-400 font-medium">—</td>
+                  <td class="py-3 px-4 align-top">
+                    <div class="flex items-center gap-1.5 font-medium text-neutral-700 text-xs">
+                      <span class="w-2 h-2 rounded-full bg-amber-600 inline-block"></span>
+                      <span>Claude · Global</span>
+                    </div>
+                    <small class="block font-mono text-[11px] text-neutral-400 mt-0.5">Production Registry</small>
+                  </td>
+                  <td class="py-3 px-4 align-top font-mono text-neutral-500">
+                    1.2.0
+                  </td>
+                  <td class="py-3 px-4 align-top">
+                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+                      <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                      Current
+                    </span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Panel 2: Protect your changes -->
+        <div class="bg-white border border-[#e1e3e7] rounded-xl p-5 shadow-xs space-y-4">
+          <div>
+            <div class="flex items-center justify-between">
+              <h3 class="text-sm font-semibold text-neutral-900 flex items-center gap-2">
+                <span class="material-symbols-outlined text-[#1657b8]" style="font-size: 19px;">shield</span>
+                <span>Protect your changes</span>
+              </h3>
+              <span class="text-[11px] font-mono text-neutral-400">Target: D:\Projects\Atlas\.backup\</span>
+            </div>
+            <p class="text-xs text-neutral-600 mt-1 leading-relaxed">
+              A snapshot of the selected Project Atlas copy will be saved locally before it is replaced. If backup fails, this copy will not be updated.
+            </p>
+          </div>
+
+          <!-- Information notice box -->
+          <div class="p-3.5 rounded-lg bg-blue-50/60 border border-blue-100 flex items-start gap-2.5 text-xs text-blue-900">
+            <span class="material-symbols-outlined text-[#1657b8] mt-0.5 flex-shrink-0" style="font-size: 18px;">info</span>
+            <div class="leading-relaxed">
+              Only the selected location will change. AIPro global stays on 1.1.0. The new release's MCP requirements will be checked next.
+            </div>
+          </div>
+
+          <!-- Bottom Action Buttons inside the panel -->
+          <div class="flex items-center justify-end gap-3 pt-2 border-t border-[#edf0f4]">
+            <a href="#library" class="px-4 py-2 text-xs font-medium text-neutral-700 bg-white hover:bg-neutral-50 border border-[#e1e3e7] rounded-lg shadow-sm transition-all hover:border-neutral-300">
+              Keep current
+            </a>
+            <a href="#mcp" class="px-4 py-2 text-xs font-semibold text-white bg-[#1657b8] hover:bg-[#124594] rounded-lg shadow-sm transition-all flex items-center gap-1.5 active:scale-[0.99]">
+              <span>Back up and update</span>
+              <span class="text-sm font-bold leading-none">→</span>
+            </a>
+          </div>
+        </div>
+
+      </div>
+    </main>
+
+  </div>
+
+</body>
+</html>

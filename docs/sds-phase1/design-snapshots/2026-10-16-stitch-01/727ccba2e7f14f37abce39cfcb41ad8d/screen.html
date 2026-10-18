@@ -1,0 +1,411 @@
+<!DOCTYPE html><html class="h-full" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Skills Manager — Samsung SDS</title>
+<!-- Material Symbols Outlined Font -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect">
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "primary-fixed-dim": "#afc6ff",
+            "surface-container-lowest": "#ffffff",
+            "surface-bright": "#f8f9ff",
+            "surface-variant": "#e1e2e8",
+            "on-secondary-fixed-variant": "#434750",
+            "primary-container": "#1657b8",
+            "surface-dim": "#d8dadf",
+            "on-primary-container": "#c2d3ff",
+            "background": "#f8f9ff",
+            "error-container": "#ffdad6",
+            "surface-container-high": "#e6e8ed",
+            "tertiary-fixed": "#96f5ca",
+            "outline-variant": "#c3c6d4",
+            "on-primary-fixed": "#001a43",
+            "on-tertiary-fixed-variant": "#005139",
+            "on-error-container": "#93000a",
+            "inverse-on-surface": "#eff0f6",
+            "tertiary-fixed-dim": "#7ad9af",
+            "on-secondary-fixed": "#171c24",
+            "on-primary-fixed-variant": "#004397",
+            "surface": "#f8f9ff",
+            "on-tertiary": "#ffffff",
+            "secondary-fixed-dim": "#c3c6d1",
+            "surface-tint": "#1c5abc",
+            "on-surface": "#191c20",
+            "on-error": "#ffffff",
+            "on-surface-variant": "#424752",
+            "surface-container": "#eceef3",
+            "on-secondary-container": "#60646e",
+            "surface-container-low": "#f2f3f9",
+            "tertiary-container": "#006849",
+            "secondary-fixed": "#dfe2ee",
+            "primary": "#004091",
+            "error": "#ba1a1a",
+            "on-tertiary-container": "#87e6bb",
+            "surface-container-highest": "#e1e2e8",
+            "tertiary": "#004e36",
+            "inverse-surface": "#2e3135",
+            "on-background": "#191c20",
+            "inverse-primary": "#afc6ff",
+            "primary-fixed": "#d8e2ff",
+            "secondary": "#5a5e68",
+            "on-tertiary-fixed": "#002115",
+            "secondary-container": "#dfe2ee",
+            "on-primary": "#ffffff",
+            "outline": "#737784",
+            "on-secondary": "#ffffff"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.125rem",
+            "lg": "0.25rem",
+            "xl": "0.5rem",
+            "full": "0.75rem"
+          },
+          "spacing": {
+            "margin": "1rem",
+            "space-md": "0.75rem",
+            "space-xl": "1.5rem",
+            "gutter": "1rem",
+            "space-sm": "0.5rem",
+            "space-xs": "0.25rem",
+            "space-lg": "1rem"
+          },
+          "fontFamily": {
+            "headline-md": ["Inter"],
+            "code-sm": ["JetBrains Mono"],
+            "caption-regular": ["Inter"],
+            "headline-lg": ["Inter"],
+            "caption-medium": ["Inter"],
+            "body-default": ["Inter"],
+            "titlebar-caption": ["Inter"],
+            "headline-sm": ["Inter"],
+            "body-medium": ["Inter"]
+          },
+          "fontSize": {
+            "headline-md": ["16px", { "lineHeight": "24px", "fontWeight": "600" }],
+            "code-sm": ["12px", { "lineHeight": "16px", "fontWeight": "400" }],
+            "caption-regular": ["11px", { "lineHeight": "16px", "fontWeight": "400" }],
+            "headline-lg": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+            "caption-medium": ["11px", { "lineHeight": "16px", "fontWeight": "500" }],
+            "body-default": ["13px", { "lineHeight": "18px", "fontWeight": "400" }],
+            "titlebar-caption": ["12px", { "lineHeight": "16px", "fontWeight": "500" }],
+            "headline-sm": ["14px", { "lineHeight": "20px", "fontWeight": "600" }],
+            "body-medium": ["13px", { "lineHeight": "18px", "fontWeight": "500" }]
+          }
+        },
+      },
+    }
+  </script>
+</head>
+<body class="bg-background text-on-surface antialiased h-full flex flex-col overflow-hidden select-none">
+<!-- TOP TITLEBAR WINDOW CHROME (Immutable Content from Shared JSON) -->
+<header class="bg-surface-container border-b border-outline-variant flex justify-between items-center w-full h-8 px-3 select-none z-50 shrink-0">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[16px] text-primary" data-icon="widgets">widgets</span>
+<span class="text-titlebar-caption font-titlebar-caption text-on-surface font-semibold tracking-tight">AX Portal — Samsung SDS</span>
+</div>
+<div class="flex items-center text-titlebar-caption font-titlebar-caption text-on-surface-variant font-medium">
+<span class="">Project Atlas &gt; Install &gt; Jira Weekly Report</span>
+</div>
+<!-- Window Chrome Native Controls -->
+<div class="flex items-center h-full -mr-3">
+<button aria-label="Minimize" class="w-11 h-8 flex items-center justify-center text-on-surface hover:bg-surface-variant transition-colors duration-150" type="button">
+<span class="material-symbols-outlined text-[14px]" data-icon="minimize">minimize</span>
+</button>
+<button aria-label="Maximize" class="w-11 h-8 flex items-center justify-center text-on-surface hover:bg-surface-variant transition-colors duration-150" type="button">
+<span class="material-symbols-outlined text-[14px]" data-icon="crop_square">crop_square</span>
+</button>
+<button aria-label="Close" class="w-11 h-8 flex items-center justify-center text-on-surface hover:bg-error hover:text-on-error transition-colors duration-150" type="button">
+<span class="material-symbols-outlined text-[14px]" data-icon="close">close</span>
+</button>
+</div>
+</header>
+<!-- MAIN APP CONTAINER (Sidebar + Canvas) -->
+<div class="flex-1 flex overflow-hidden relative">
+<!-- FIXED 225px SIDEBAR (Immutable Content & Styles from Shared JSON) -->
+<aside class="w-[225px] h-full flex flex-col justify-between p-space-sm border-r border-outline-variant bg-surface-container-lowest shrink-0">
+<!-- Top Section -->
+<div class="flex flex-col gap-3">
+<!-- Logo Header -->
+<div class="flex items-center gap-2 px-2 py-1">
+<div class="w-6 h-6 rounded bg-primary flex items-center justify-center text-on-primary font-bold text-caption-medium">
+            SDS
+          </div>
+<div class="flex flex-col leading-none">
+<span class="text-headline-sm font-headline-sm text-primary font-bold">AX Portal</span>
+<span class="text-caption-regular font-caption-regular text-outline uppercase tracking-wider text-[9px] mt-0.5">SAMSUNG SDS</span>
+</div>
+</div>
+<!-- Primary CTA -->
+<button class="w-full h-7 bg-surface-container hover:bg-surface-variant text-on-surface border border-outline-variant rounded-lg px-2 flex items-center justify-center gap-1.5 transition-colors duration-150 ease-in-out text-body-medium font-body-medium" type="button">
+<span class="material-symbols-outlined text-[16px] text-primary" data-icon="add">add</span>
+<span class="">New preset</span>
+</button>
+<!-- Navigation Tab Group -->
+<nav class="flex flex-col gap-0.5 mt-1 overflow-y-auto max-h-[calc(100vh-210px)] pr-1">
+<!-- Dashboard -->
+<a class="text-on-surface-variant font-normal rounded-lg px-2 py-1.5 flex items-center gap-2 hover:bg-surface-container transition-colors duration-150 text-body-default font-body-default" href="#">
+<span class="material-symbols-outlined text-[18px]" data-icon="dashboard">dashboard</span>
+<span class="">Dashboard</span>
+</a>
+<!-- Library (Active destination for completion context) -->
+<a class="bg-secondary-container text-primary font-medium rounded-lg px-2 py-1.5 border-l-2 border-primary flex items-center gap-2 transition-colors duration-150 text-body-default font-body-default" href="#">
+<span class="material-symbols-outlined text-[18px]" data-icon="folder" data-weight="fill" style="font-variation-settings: 'FILL' 1;">folder</span>
+<span class="flex-1">Library</span>
+<span class="w-2 h-2 rounded-full bg-primary"></span>
+</a>
+<!-- Skills Store -->
+<a class="text-on-surface-variant font-normal rounded-lg px-2 py-1.5 flex items-center gap-2 hover:bg-surface-container transition-colors duration-150 text-body-default font-body-default" href="#">
+<span class="material-symbols-outlined text-[18px]" data-icon="storefront">storefront</span>
+<span class="">Skills Store</span>
+</a>
+<!-- Backup -->
+<a class="text-on-surface-variant font-normal rounded-lg px-2 py-1.5 flex items-center gap-2 hover:bg-surface-container transition-colors duration-150 text-body-default font-body-default" href="#">
+<span class="material-symbols-outlined text-[18px]" data-icon="backup">backup</span>
+<span class="">Backup</span>
+</a>
+<!-- Divider -->
+<div class="h-px bg-outline-variant my-1.5 mx-1"></div>
+<span class="text-caption-regular font-caption-regular text-outline px-2 py-0.5 tracking-wider uppercase text-[10px]">Environments</span>
+<!-- PM Essentials -->
+<a class="text-on-surface-variant font-normal rounded-lg px-2 py-1.5 flex items-center gap-2 hover:bg-surface-container transition-colors duration-150 text-body-default font-body-default" href="#">
+<span class="material-symbols-outlined text-[18px]" data-icon="tune">tune</span>
+<span class="">PM Essentials</span>
+</a>
+<!-- All Agents -->
+<a class="text-on-surface-variant font-normal rounded-lg px-2 py-1.5 flex items-center gap-2 hover:bg-surface-container transition-colors duration-150 text-body-default font-body-default" href="#">
+<span class="material-symbols-outlined text-[18px]" data-icon="smart_toy">smart_toy</span>
+<span class="">All Agents</span>
+</a>
+<!-- AIPro -->
+<a class="text-on-surface-variant font-normal rounded-lg px-2 py-1.5 flex items-center gap-2 hover:bg-surface-container transition-colors duration-150 text-body-default font-body-default" href="#">
+<span class="material-symbols-outlined text-[18px]" data-icon="hub">hub</span>
+<span class="">AIPro</span>
+</a>
+<!-- Claude -->
+<a class="text-on-surface-variant font-normal rounded-lg px-2 py-1.5 flex items-center gap-2 hover:bg-surface-container transition-colors duration-150 text-body-default font-body-default" href="#">
+<span class="material-symbols-outlined text-[18px]" data-icon="psychology">psychology</span>
+<span class="">Claude</span>
+</a>
+<!-- Gemini -->
+<a class="text-on-surface-variant font-normal rounded-lg px-2 py-1.5 flex items-center gap-2 hover:bg-surface-container transition-colors duration-150 text-body-default font-body-default" href="#">
+<span class="material-symbols-outlined text-[18px]" data-icon="neurology">neurology</span>
+<span class="">Gemini</span>
+</a>
+<!-- Codex -->
+<a class="text-on-surface-variant font-normal rounded-lg px-2 py-1.5 flex items-center gap-2 hover:bg-surface-container transition-colors duration-150 text-body-default font-body-default" href="#">
+<span class="material-symbols-outlined text-[18px]" data-icon="terminal">terminal</span>
+<span class="">Codex</span>
+</a>
+<!-- Project Atlas -->
+<a class="text-on-surface-variant font-normal rounded-lg px-2 py-1.5 flex items-center gap-2 hover:bg-surface-container transition-colors duration-150 text-body-default font-body-default" href="#">
+<span class="material-symbols-outlined text-[18px]" data-icon="workspaces">workspaces</span>
+<span class="">Project Atlas</span>
+</a>
+</nav>
+</div>
+<!-- Footer Section (Footer Tabs from Shared JSON) -->
+<div class="flex flex-col gap-1 border-t border-outline-variant pt-2">
+<a class="text-on-surface-variant font-normal rounded-lg px-2 py-1 flex items-center gap-2 hover:bg-surface-container transition-colors duration-150 text-body-default font-body-default" href="#">
+<span class="material-symbols-outlined text-[18px]" data-icon="settings">settings</span>
+<span class="">Settings</span>
+</a>
+<div class="flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-surface-container transition-colors cursor-pointer">
+<span class="material-symbols-outlined text-[20px] text-primary" data-icon="account_circle">account_circle</span>
+<div class="flex flex-col leading-none">
+<span class="text-body-medium font-body-medium text-on-surface">Example Employee</span>
+<span class="text-caption-regular font-caption-regular text-outline text-[10px]">Cloud Architect</span>
+</div>
+</div>
+</div>
+</aside>
+<!-- MAIN WORKING CANVAS (Fluid 1fr, Max 1440 Viewport Centering) -->
+<main class="flex-1 bg-surface-bright overflow-y-auto px-8 py-6 flex flex-col items-center">
+<!-- Max Width 780px Structured Container -->
+<div class="w-full max-w-[780px] flex flex-col gap-5 pb-12">
+<!-- Screen Head: Metadata & Title Hierarchy -->
+<section class="flex justify-between items-start pt-1">
+<div class="flex flex-col gap-1">
+<div class="flex items-center gap-2">
+<span class="text-caption-medium font-caption-medium tracking-wider text-outline uppercase font-semibold">
+                W06 · INSTALLATION RESULT
+              </span>
+<span class="text-caption-regular font-caption-regular text-outline">#result</span>
+</div>
+<h1 class="text-headline-lg font-headline-lg text-on-surface font-semibold tracking-tight">
+              1 installed · 1 needs attention
+            </h1>
+<p class="text-body-default font-body-default text-on-surface-variant">
+              Jira Weekly Report 1.2.0 · Project Atlas
+            </p>
+</div>
+<!-- Status badge right: 'Partially completed' (amber tag) -->
+<div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#fff5e4] text-[#92580b] border border-[#f3dfbe] text-caption-medium font-caption-medium shrink-0">
+<span class="w-1.5 h-1.5 rounded-full bg-[#92580b]"></span>
+<span class="">Partially completed</span>
+</div>
+</section>
+<!-- Main Panel: Package Prep & Target Results Matrix -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-lg p-5 flex flex-col gap-4">
+<!-- Panel Header Row: Package prepared + Complete badge -->
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px] text-tertiary-container" data-icon="inventory_2">inventory_2</span>
+<h2 class="text-headline-sm font-headline-sm text-on-surface">Package prepared</h2>
+</div>
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-caption-medium font-caption-medium bg-[#e8f6ef] text-[#087b58] border border-[#caeedd]">
+<span class="material-symbols-outlined text-[12px]" data-icon="check">check</span>
+              Complete
+            </span>
+</div>
+<!-- Progress Bar (Full blue horizontal bar) -->
+<div class="w-full bg-surface-container rounded h-1.5 overflow-hidden">
+<div class="bg-primary-container h-full w-full rounded"></div>
+</div>
+<!-- Subtext pipeline status -->
+<p class="text-caption-regular font-caption-regular text-outline flex items-center gap-1">
+<span class="material-symbols-outlined text-[13px] text-primary" data-icon="verified">verified</span>
+            Downloaded → checksum verified → extracted → deployed to selected targets
+          </p>
+<!-- Divider -->
+<hr class="border-t border-outline-variant my-1">
+<!-- Results Table -->
+<div class="border border-outline-variant rounded overflow-hidden">
+<table class="w-full border-collapse text-left">
+<thead>
+<tr class="bg-surface-container border-b border-outline-variant">
+<th class="py-2 px-3 text-caption-medium font-caption-medium text-outline uppercase tracking-wider text-[11px] font-semibold w-1/2">Target</th>
+<th class="py-2 px-3 text-caption-medium font-caption-medium text-outline uppercase tracking-wider text-[11px] font-semibold w-5/12">Result</th>
+<th class="py-2 px-3 text-caption-medium font-caption-medium text-outline uppercase tracking-wider text-[11px] font-semibold text-right w-1/12">Action</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant">
+<!-- Row 1: AIPro (Installed with MCP warning) -->
+<tr class="hover:bg-[#edf4ff]/60 transition-colors">
+<td class="py-2.5 px-3">
+<div class="flex items-start gap-2.5">
+<!-- AIPro Badge ('A') -->
+<div class="w-6 h-6 rounded bg-[#edf4ff] text-[#1657b8] border border-[#afc6ff] flex items-center justify-center font-bold text-caption-medium shrink-0 mt-0.5">
+                        A
+                      </div>
+<div class="flex flex-col">
+<span class="text-body-medium font-body-medium text-on-surface font-semibold">AIPro · Project Atlas</span>
+<span class="text-code-sm font-code-sm text-outline text-[11px] mt-0.5">.aipro\skills\jira-weekly-report</span>
+</div>
+</div>
+</td>
+<td class="py-2.5 px-3">
+<div class="flex flex-col gap-0.5">
+<div>
+<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-caption-medium font-caption-medium bg-[#e8f6ef] text-[#087b58]">
+<span class="w-1.5 h-1.5 rounded-full bg-[#087b58]"></span>
+                          Installed
+                        </span>
+</div>
+<span class="text-caption-regular font-caption-regular text-outline flex items-center gap-1 mt-0.5">
+<span class="material-symbols-outlined text-[13px] text-[#92580b]" data-icon="warning">warning</span>
+                        MCP configuration still missing
+                      </span>
+</div>
+</td>
+<td class="py-2.5 px-3 text-right">
+<button class="text-primary hover:text-primary-container text-body-medium font-body-medium underline underline-offset-2 whitespace-nowrap" type="button">
+                      Check MCP
+                    </button>
+</td>
+</tr>
+<!-- Row 2: Claude (Could not install) -->
+<tr class="hover:bg-[#edf4ff]/60 transition-colors bg-surface-bright/50">
+<td class="py-2.5 px-3">
+<div class="flex items-start gap-2.5">
+<!-- Claude Badge ('Cl') -->
+<div class="w-6 h-6 rounded bg-[#faede8] text-[#b94b29] border border-[#e3b8a8] flex items-center justify-center font-bold text-caption-medium shrink-0 mt-0.5">
+                        Cl
+                      </div>
+<div class="flex flex-col">
+<span class="text-body-medium font-body-medium text-on-surface font-semibold">Claude · Project Atlas</span>
+<span class="text-code-sm font-code-sm text-outline text-[11px] mt-0.5">.claude\skills\jira-weekly-report</span>
+</div>
+</div>
+</td>
+<td class="py-2.5 px-3">
+<div class="flex flex-col gap-0.5">
+<div>
+<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-caption-medium font-caption-medium bg-[#fff0f0] text-[#ac3535]">
+<span class="w-1.5 h-1.5 rounded-full bg-[#ac3535]"></span>
+                          Could not install
+                        </span>
+</div>
+<span class="text-caption-regular font-caption-regular text-error flex items-center gap-1 mt-0.5">
+<span class="material-symbols-outlined text-[13px] text-error" data-icon="error">error</span>
+                        No write access to the folder
+                      </span>
+</div>
+</td>
+<td class="py-2.5 px-3 text-right">
+<button class="text-primary hover:text-primary-container text-body-medium font-body-medium underline underline-offset-2 whitespace-nowrap" type="button">
+                      Review and retry
+                    </button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<!-- Informational Notice Box (Light Blue Background) -->
+<div class="bg-[#edf4ff] border border-[#afc6ff] rounded-lg p-3.5 flex items-start gap-3">
+<span class="material-symbols-outlined text-[20px] text-primary mt-0.5 shrink-0" data-icon="info">info</span>
+<p class="text-body-default font-body-default text-on-surface leading-snug">
+            The skill is saved in Library. Fix the failed destination and retry that target. AIPro's successful installation is kept.
+          </p>
+</div>
+<!-- Footer Actions Bar -->
+<div class="flex items-center justify-between pt-1">
+<button class="h-8 px-3 bg-surface-container-lowest border border-outline-variant hover:bg-surface-container text-on-surface rounded text-body-medium font-body-medium transition-colors flex items-center gap-1.5" type="button">
+<span class="material-symbols-outlined text-[16px] text-secondary" data-icon="folder_open">folder_open</span>
+<span class="">Open workspace</span>
+</button>
+<div class="flex items-center gap-2">
+<button class="h-8 px-4 bg-primary-container hover:bg-primary text-on-primary rounded text-body-medium font-body-medium font-semibold shadow-sm transition-colors flex items-center gap-1.5" type="button">
+<span class="material-symbols-outlined text-[16px]" data-icon="folder">folder</span>
+<span class="">View Library</span>
+</button>
+</div>
+</div>
+<!-- Collapsible Detail Box: Operational Engineering Specs -->
+<details class="group bg-surface-container-lowest border border-outline-variant rounded-lg overflow-hidden transition-all duration-150">
+<summary class="flex items-center justify-between px-4 py-2.5 cursor-pointer hover:bg-surface-container transition-colors list-none select-none">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[16px] text-outline group-open:rotate-90 transition-transform duration-150" data-icon="chevron_right">chevron_right</span>
+<span class="text-body-medium font-body-medium text-on-surface font-semibold">In-progress and failure variants</span>
+</div>
+<span class="text-caption-regular font-caption-regular text-outline bg-surface-container px-2 py-0.5 rounded">Technical Specification</span>
+</summary>
+<div class="px-4 py-3 border-t border-outline-variant bg-surface-bright/50 text-body-default font-body-default text-on-surface-variant flex flex-col gap-2">
+<p class="leading-relaxed">
+              While working: show the current step, byte progress when available, and Cancel. Checksum mismatch, damaged archive, multiple skill roots or missing SKILL.md stops installation before target replacement. If cancelled during replacement, finish recovery before confirming cancellation.
+            </p>
+<div class="flex items-center gap-2 pt-1">
+<span class="text-caption-medium font-caption-medium text-outline uppercase font-semibold text-[10px]">Guardrails enforced:</span>
+<span class="inline-flex items-center px-1.5 py-0.5 rounded bg-surface-container text-caption-regular font-caption-regular text-on-surface-variant">SHA256 Checksum</span>
+<span class="inline-flex items-center px-1.5 py-0.5 rounded bg-surface-container text-caption-regular font-caption-regular text-on-surface-variant">SKILL.md Spec</span>
+<span class="inline-flex items-center px-1.5 py-0.5 rounded bg-surface-container text-caption-regular font-caption-regular text-on-surface-variant">Atomic Target Swap</span>
+</div>
+</div>
+</details>
+</div>
+</main>
+</div>
+
+
+</body></html>

@@ -1,0 +1,474 @@
+{
+  "projectId": "9226348915970684263",
+  "projectUrl": "https://stitch.withgoogle.com/projects/9226348915970684263",
+  "visibility": "PRIVATE",
+  "transferMethod": "Reconstructed editable Stitch screens from existing wireframe HTML; not direct HTML import",
+  "mainScreens": [
+    {
+      "title": "W01 Sign in (#login)",
+      "resourceName": "projects/9226348915970684263/screens/ca797a30d9a14f298953483347c4546f"
+    },
+    {
+      "title": "W02 Skills Store (#store)",
+      "resourceName": "projects/9226348915970684263/screens/e921a2c10a034eca80e4af20e760ad1f"
+    },
+    {
+      "title": "W03 Skill detail (#detail)",
+      "resourceName": "projects/9226348915970684263/screens/7dcd2666d80d43dd8ae20556de775abc"
+    },
+    {
+      "title": "W04 Install skill (#install)",
+      "resourceName": "projects/9226348915970684263/screens/a3cca1f7d09646bca0f0a74a0fbbc1c2"
+    },
+    {
+      "title": "W05 AIPro MCP check (#mcp)",
+      "resourceName": "projects/9226348915970684263/screens/e297f1843ce04ab9a2189dd690f7f7ee"
+    },
+    {
+      "title": "W06 Installation result (#result)",
+      "resourceName": "projects/9226348915970684263/screens/727ccba2e7f14f37abce39cfcb41ad8d"
+    },
+    {
+      "title": "W07 Library (#library)",
+      "resourceName": "projects/9226348915970684263/screens/c4c7355ac0aa416eb275e610be3e916a"
+    },
+    {
+      "title": "W08 Workspace and preset (#workspace)",
+      "resourceName": "projects/9226348915970684263/screens/629741bbcca2475fabdd7b80e0f29c77"
+    },
+    {
+      "title": "W09 Update review (#update)",
+      "resourceName": "projects/9226348915970684263/screens/47e723baede14b0cb331426b055b6f8f"
+    },
+    {
+      "title": "W10 Offline Library (#offline)",
+      "resourceName": "projects/9226348915970684263/screens/9c91f3d8eaae489e887790fa7bfd3113"
+    },
+    {
+      "title": "W11 Backup - local snapshots (#backup)",
+      "resourceName": "projects/9226348915970684263/screens/9f7fa1d49a4a468bb88a18dc58def5f1"
+    },
+    {
+      "title": "W12 Settings (#settings)",
+      "resourceName": "projects/9226348915970684263/screens/662d6089aed24f248081b81a4a9fb2ed"
+    },
+    {
+      "title": "W13 Remove skill (#remove)",
+      "resourceName": "projects/9226348915970684263/screens/7f90de67b26746b3bb047c078b4e9fbe"
+    },
+    {
+      "title": "W14 Dashboard (#dashboard)",
+      "resourceName": "projects/9226348915970684263/screens/da58f733eb074f4aa714cb22457e12c8"
+    }
+  ],
+  "additionalScreens": [
+    {
+      "title": "W01 Sign in",
+      "resourceName": "projects/9226348915970684263/screens/518f46085b834b8ca3012bebfce57f04"
+    },
+    {
+      "title": "W05 AIPro MCP check",
+      "resourceName": "projects/9226348915970684263/screens/95909941e1ca4fcda5e927598d08ed53"
+    },
+    {
+      "title": "W02 Skills Store",
+      "resourceName": "projects/9226348915970684263/screens/12113535d43548f8ac089a41897ef8b9"
+    },
+    {
+      "title": "W03 Skill detail",
+      "resourceName": "projects/9226348915970684263/screens/e2a4a81be76f47678beb4b0976b8bc55"
+    },
+    {
+      "title": "W04 Install skill",
+      "resourceName": "projects/9226348915970684263/screens/8ba8f16c850b46d28e693af308e555ae"
+    }
+  ],
+  "fidelityCorrectionEvents": [
+    {
+      "actor": "Agent",
+      "eventId": "fd84f5d1",
+      "eventPayload": {
+        "dom_operations": [
+          {
+            "action": "remove_element",
+            "attr_name": null,
+            "attr_value": null,
+            "class_name": null,
+            "content": null,
+            "selector": "header div.flex.items-center.gap-2 > span.text-outline",
+            "selector_strategy": "Target the span containing 'v2.4.12-rc3' inside header > div.flex.items-center.gap-2.",
+            "target_element_goal": "Remove the v2.4.12-rc3 version metadata span from the titlebar header.",
+            "verified_html_context": "<span class=\"text-outline text-caption-regular font-caption-regular ml-2\">v2.4.12-rc3</span>"
+          },
+          {
+            "action": "remove_element",
+            "attr_name": null,
+            "attr_value": null,
+            "class_name": null,
+            "content": null,
+            "selector": "section > div.flex.items-start.justify-between > span.font-code-sm",
+            "selector_strategy": "Target the release badge span within the modal header section.",
+            "target_element_goal": "Remove the RELEASE 3.4.1 badge from the remove skill modal header.",
+            "verified_html_context": "<span class=\"text-caption-regular font-caption-regular px-2 py-0.5 rounded bg-surface-container border border-outline-variant text-secondary font-code-sm\">RELEASE 3.4.1</span>"
+          }
+        ],
+        "payload_type": "DomOperationEvent",
+        "screen_id": "7f90de67b26746b3bb047c078b4e9fbe"
+      },
+      "eventTime": "2026-10-15T17:35:42.915464560Z",
+      "eventType": "project.file_update"
+    },
+    {
+      "actor": "Agent",
+      "eventId": "2c697098",
+      "eventPayload": {
+        "dom_operations": [
+          {
+            "action": "remove_element",
+            "attr_name": null,
+            "attr_value": null,
+            "class_name": null,
+            "content": null,
+            "selector": "div.mt-auto > div.font-code-sm",
+            "selector_strategy": "Target the div containing SNAPSHOT_STORAGE_HASH in the footer metrics strip.",
+            "target_element_goal": "Remove invented machine hash metadata from footer",
+            "verified_html_context": "<div class=\"flex items-center gap-2 font-code-sm text-[10px]\">"
+          }
+        ],
+        "payload_type": "DomOperationEvent",
+        "screen_id": "9f7fa1d49a4a468bb88a18dc58def5f1"
+      },
+      "eventTime": "2026-10-15T17:35:42.915465800Z",
+      "eventType": "project.file_update"
+    },
+    {
+      "actor": "Agent",
+      "eventId": "faae90ae",
+      "eventPayload": {
+        "dom_operations": [
+          {
+            "action": "remove_element",
+            "attr_name": null,
+            "attr_value": null,
+            "class_name": null,
+            "content": null,
+            "selector": "header > div:first-child > span.text-caption-regular",
+            "selector_strategy": "Select the version badge span directly inside the header's first child flex container",
+            "target_element_goal": "Remove the 'v2.4.1-enterprise' badge span from the titlebar",
+            "verified_html_context": "<span class=\"text-caption-regular font-caption-regular text-outline bg-surface-container-high px-1.5 py-0.5 rounded ml-2\">v2.4.1-enterprise</span>"
+          }
+        ],
+        "payload_type": "DomOperationEvent",
+        "screen_id": "da58f733eb074f4aa714cb22457e12c8"
+      },
+      "eventTime": "2026-10-15T17:35:42.915466833Z",
+      "eventType": "project.file_update"
+    },
+    {
+      "actor": "Agent",
+      "eventId": "f969d9f6",
+      "eventPayload": {
+        "dom_operations": [
+          {
+            "action": "remove_element",
+            "attr_name": null,
+            "attr_value": null,
+            "class_name": null,
+            "content": null,
+            "selector": "header > div:nth-child(1) > span:nth-child(3)",
+            "selector_strategy": "Target the span containing the version number inside header's brand container",
+            "target_element_goal": "Remove 'v2.4.1-enterprise' version badge from the titlebar",
+            "verified_html_context": "<span class=\"text-caption-regular font-caption-regular text-outline border-l border-outline-variant pl-2 ml-1\">v2.4.1-enterprise</span>"
+          },
+          {
+            "action": "remove_element",
+            "attr_name": null,
+            "attr_value": null,
+            "class_name": null,
+            "content": null,
+            "selector": "header > div.hidden.md\\:flex",
+            "selector_strategy": "Target the middle div inside header that holds 'Workstation Node · Seoul IDC #4'",
+            "target_element_goal": "Remove the workstation node text from the titlebar",
+            "verified_html_context": "<div class=\"hidden md:flex items-center gap-1.5 text-caption-regular font-caption-regular text-on-surface-variant\">"
+          },
+          {
+            "action": "replace_content",
+            "attr_name": null,
+            "attr_value": null,
+            "class_name": null,
+            "content": "<span class=\"material-symbols-outlined text-[13px]\" data-icon=\"account_circle\">account_circle</span> Skills Store account",
+            "selector": "section:nth-child(2) > div:nth-child(1) > span",
+            "selector_strategy": "Target the badge span in the Skills Store connection section header",
+            "target_element_goal": "Replace 'Enterprise SSO' badge with 'Skills Store account' badge",
+            "verified_html_context": "<span class=\"inline-flex items-center gap-1 text-[11px] font-medium text-[#087b58] bg-[#e8f6ef] px-1.5 py-0.5 rounded\">"
+          },
+          {
+            "action": "replace_content",
+            "attr_name": null,
+            "attr_value": null,
+            "class_name": null,
+            "content": "Signed in with your registered Skills Store account. Connection credentials and API access follow your organization policy.",
+            "selector": "section:nth-child(2) > div.space-y-3\\.5 > p",
+            "selector_strategy": "Target the explanatory paragraph inside section 2's content space",
+            "target_element_goal": "Update the description and notice under Skills Store connection to refer to Skills Store account credentials",
+            "verified_html_context": "<p class=\"text-caption-regular font-caption-regular text-secondary\">"
+          },
+          {
+            "action": "replace_content",
+            "attr_name": null,
+            "attr_value": null,
+            "class_name": null,
+            "content": "<span>Last Sync: Today 09:42:18</span>",
+            "selector": "footer > div.flex.items-center.gap-3",
+            "selector_strategy": "Target the first div in footer containing Client ID and Policy metadata",
+            "target_element_goal": "Remove invented client metadata and policy from footer",
+            "verified_html_context": "<div class=\"flex items-center gap-3\">"
+          }
+        ],
+        "payload_type": "DomOperationEvent",
+        "screen_id": "662d6089aed24f248081b81a4a9fb2ed"
+      },
+      "eventTime": "2026-10-15T17:35:42.915470683Z",
+      "eventType": "project.file_update"
+    },
+    {
+      "actor": "Agent",
+      "eventId": "536300d3",
+      "eventPayload": {
+        "dom_operations": [
+          {
+            "action": "remove_element",
+            "attr_name": null,
+            "attr_value": null,
+            "class_name": null,
+            "content": null,
+            "selector": "section > div > span.text-caption-regular.text-outline.hidden.sm\\:inline",
+            "selector_strategy": "Locate the span element inside the screen head action group containing the countdown text and remove it.",
+            "target_element_goal": "Remove unsupported countdown timer 'Attempting background sync in 48s' while retaining the Retry connection button and indicators",
+            "verified_html_context": "<span class=\"text-caption-regular font-caption-regular text-outline hidden sm:inline\">Attempting background sync in 48s</span>"
+          }
+        ],
+        "payload_type": "DomOperationEvent",
+        "screen_id": "9c91f3d8eaae489e887790fa7bfd3113"
+      },
+      "eventTime": "2026-10-15T17:35:42.915471840Z",
+      "eventType": "project.file_update"
+    },
+    {
+      "actor": "Agent",
+      "eventId": "bc6bdb83",
+      "eventPayload": {
+        "dom_operations": [
+          {
+            "action": "remove_element",
+            "attr_name": null,
+            "attr_value": null,
+            "class_name": null,
+            "content": null,
+            "selector": "header > div.flex.items-center.text-titlebar-caption",
+            "selector_strategy": "Target the center breadcrumb container inside the header directly via header > div.flex.items-center.text-titlebar-caption.",
+            "target_element_goal": "Remove the path breadcrumbs from the top window titlebar so it only reads 'Skills Manager — Samsung SDS' with window controls.",
+            "verified_html_context": "<div class=\"flex items-center text-titlebar-caption font-titlebar-caption text-on-surface-variant font-medium\">"
+          }
+        ],
+        "payload_type": "DomOperationEvent",
+        "screen_id": "727ccba2e7f14f37abce39cfcb41ad8d"
+      },
+      "eventTime": "2026-10-15T17:35:42.915472940Z",
+      "eventType": "project.file_update"
+    },
+    {
+      "actor": "Agent",
+      "eventId": "52ff8956",
+      "eventPayload": {
+        "dom_operations": [
+          {
+            "action": "remove_element",
+            "attr_name": null,
+            "attr_value": null,
+            "class_name": null,
+            "content": null,
+            "selector": "header > div.flex.items-center.text-caption-regular",
+            "selector_strategy": "Target the middle div container inside header that holds 'v1.2.0-rc3'",
+            "target_element_goal": "Remove 'v1.2.0-rc3' version badge from the top window titlebar header",
+            "verified_html_context": "<div class=\"flex items-center text-caption-regular font-caption-regular text-on-surface-variant\">"
+          },
+          {
+            "action": "replace_content",
+            "attr_name": null,
+            "attr_value": null,
+            "class_name": null,
+            "content": "Skills Store account",
+            "selector": "aside span.text-\\[10px\\].text-on-surface-variant",
+            "selector_strategy": "Select the span containing 'sds.enterprise' inside the user profile section in aside footer",
+            "target_element_goal": "Replace SSO domain reference 'sds.enterprise' with 'Skills Store account'",
+            "verified_html_context": "<span class=\"text-[10px] text-on-surface-variant font-code-sm\">sds.enterprise</span>"
+          }
+        ],
+        "payload_type": "DomOperationEvent",
+        "screen_id": "47e723baede14b0cb331426b055b6f8f"
+      },
+      "eventTime": "2026-10-15T17:35:42.915474841Z",
+      "eventType": "project.file_update"
+    },
+    {
+      "actor": "Agent",
+      "eventId": "3863e633",
+      "eventPayload": {
+        "dom_operations": [
+          {
+            "action": "remove_element",
+            "attr_name": null,
+            "attr_value": null,
+            "class_name": null,
+            "content": null,
+            "selector": "aside span.bg-tertiary-fixed",
+            "selector_strategy": "The v2.4 badge is in the sidebar brand lockup: aside .border-b > span.bg-tertiary-fixed",
+            "target_element_goal": "Remove the v2.4 badge next to Skills Manager in the sidebar brand lockup header",
+            "verified_html_context": "<span class=\"inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-caption-medium font-semibold bg-tertiary-fixed text-on-tertiary-fixed-variant\">v2.4</span>"
+          },
+          {
+            "action": "remove_element",
+            "attr_name": null,
+            "attr_value": null,
+            "class_name": null,
+            "content": null,
+            "selector": "div.border-b > div.text-caption-regular.text-outline",
+            "selector_strategy": "Target the container div containing the 'Target Agent Context: AIPro Engine v1.8' text and tune icon inside the filter chips bar",
+            "target_element_goal": "Remove the runtime decoration 'Target Agent Context: AIPro Engine v1.8' from the filter chips bar",
+            "verified_html_context": "<div class=\"text-caption-regular font-caption-regular text-outline flex items-center space-x-1\">"
+          }
+        ],
+        "payload_type": "DomOperationEvent",
+        "screen_id": "629741bbcca2475fabdd7b80e0f29c77"
+      },
+      "eventTime": "2026-10-15T17:35:42.915476788Z",
+      "eventType": "project.file_update"
+    },
+    {
+      "actor": "Agent",
+      "eventId": "899cc839",
+      "eventPayload": {
+        "dom_operations": [
+          {
+            "action": "remove_element",
+            "attr_name": null,
+            "attr_value": null,
+            "class_name": null,
+            "content": null,
+            "selector": "header > div:nth-child(2)",
+            "selector_strategy": "The header contains 3 child elements: 1. left brand div, 2. center status div ('hidden md:flex items-center gap-1.5 text-on-surface-variant font-caption-regular text-caption-regular'), 3. native window controls div. Target header > div:nth-child(2) or header > div.hidden.md:flex.",
+            "target_element_goal": "Remove the 'Registry v2.4.0 (Sync Active)' status indicator decoration from the top window titlebar header",
+            "verified_html_context": "<div class=\"hidden md:flex items-center gap-1.5 text-on-surface-variant font-caption-regular text-caption-regular\">"
+          }
+        ],
+        "payload_type": "DomOperationEvent",
+        "screen_id": "c4c7355ac0aa416eb275e610be3e916a"
+      },
+      "eventTime": "2026-10-15T17:35:42.915478127Z",
+      "eventType": "project.file_update"
+    },
+    {
+      "actor": "Agent",
+      "eventId": "11a99fe4",
+      "eventPayload": {
+        "dom_operations": [
+          {
+            "action": "remove_element",
+            "attr_name": null,
+            "attr_value": null,
+            "class_name": null,
+            "content": null,
+            "selector": "header div.flex.items-center.gap-2 > span.text-caption-regular",
+            "selector_strategy": "Locate the badge span directly inside the header's brand lockup container.",
+            "target_element_goal": "Remove the Enterprise v2.4 badge from the top window titlebar",
+            "verified_html_context": "<span class=\"text-caption-regular font-caption-regular text-outline px-1.5 py-0.5 rounded bg-surface-container-high border border-outline-variant\">Enterprise v2.4</span>"
+          },
+          {
+            "action": "remove_element",
+            "attr_name": null,
+            "attr_value": null,
+            "class_name": null,
+            "content": null,
+            "selector": "header > div.hidden.md\\:flex",
+            "selector_strategy": "Target the middle window caption context div containing the Project Atlas / Jira Weekly Report / W05-REQ metadata in header.",
+            "target_element_goal": "Remove invented workstation/runtime node metadata or reference tags in the titlebar",
+            "verified_html_context": "<div class=\"hidden md:flex items-center gap-2 text-titlebar-caption font-titlebar-caption text-on-surface-variant\">"
+          }
+        ],
+        "payload_type": "DomOperationEvent",
+        "screen_id": "e297f1843ce04ab9a2189dd690f7f7ee"
+      },
+      "eventTime": "2026-10-15T17:35:42.915480042Z",
+      "eventType": "project.file_update"
+    },
+    {
+      "actor": "Agent",
+      "eventId": "f5e2f490",
+      "eventPayload": {
+        "dom_operations": [
+          {
+            "action": "replace_content",
+            "attr_name": null,
+            "attr_value": null,
+            "class_name": null,
+            "content": "Shown when VPN or enterprise authentication drops. Cached skills remain in Library, while store downloads require re-establishing Skills Store account.",
+            "selector": "details > div > div > div:nth-child(3) > p",
+            "selector_strategy": "Locate the 3rd card in the collapsible reference guide grid which describes the Store Offline state and mentions SSO session.",
+            "target_element_goal": "Replace SSO reference in the collapsible Disconnected / Unavailable state card with 'Skills Store account'",
+            "verified_html_context": "<p class=\"text-caption-regular font-caption-regular text-on-surface-variant\">"
+          }
+        ],
+        "payload_type": "DomOperationEvent",
+        "screen_id": "e921a2c10a034eca80e4af20e760ad1f"
+      },
+      "eventTime": "2026-10-15T17:35:42.915481415Z",
+      "eventType": "project.file_update"
+    },
+    {
+      "actor": "Agent",
+      "eventId": "b3f30fb2",
+      "eventPayload": {
+        "dom_operations": [
+          {
+            "action": "replace_content",
+            "attr_name": null,
+            "attr_value": null,
+            "class_name": null,
+            "content": "Sign in with your company Skills Store account credentials (email and password). Your existing skills stay on this computer.",
+            "selector": "div.bg-surface-container-low.border.border-outline-variant.rounded-lg.p-3.flex.items-start > p",
+            "selector_strategy": "Target the info callout notice paragraph inside the sign-in card by referencing the container's paragraph element.",
+            "target_element_goal": "Refine the info callout notice copy to clearly explain signing in with company Skills Store credentials (email and password) while keeping existing skills on the computer.",
+            "verified_html_context": "<p class=\"text-caption-regular font-caption-regular text-on-surface-variant leading-snug\">"
+          },
+          {
+            "action": "replace_content",
+            "attr_name": null,
+            "attr_value": null,
+            "class_name": null,
+            "content": "Account unavailable. Contact your Skills Store administrator. Password reset opens the internal Skills Store account portal in the implemented app.",
+            "selector": "details div.divide-y > div:nth-child(3) p",
+            "selector_strategy": "Target the third support state text in the details disclosure container.",
+            "target_element_goal": "Refine the Account Administration note to explicitly specify internal Skills Store account reset.",
+            "verified_html_context": "<p class=\"text-caption-regular font-caption-regular text-on-surface-variant mt-0.5\">\n                    Account unavailable. Contact your Store administrator. Password reset opens the internal Store web page in the implemented app.\n                  </p>"
+          }
+        ],
+        "payload_type": "DomOperationEvent",
+        "screen_id": "ca797a30d9a14f298953483347c4546f"
+      },
+      "eventTime": "2026-10-15T17:35:42.915483995Z",
+      "eventType": "project.file_update"
+    }
+  ],
+  "documentationSync": {
+    "date": "2026-10-16",
+    "revision": "0.2",
+    "screenName": "projects/9226348915970684263/screens/e921a2c10a034eca80e4af20e760ad1f",
+    "htmlAssetName": "projects/9226348915970684263/files/17399203032189606408",
+    "direction": "Stitch to local documentation",
+    "source": "Stitch list_screens and exported HTML",
+    "changeNote": "W02-CHANGELOG.md",
+    "stitchModified": false,
+    "previewStoreStatus": "revision 0.1; superseded by local HTML and Stitch"
+  }
+}

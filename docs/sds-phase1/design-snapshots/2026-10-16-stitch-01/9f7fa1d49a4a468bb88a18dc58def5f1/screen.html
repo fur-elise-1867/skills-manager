@@ -1,0 +1,422 @@
+<!DOCTYPE html><html class="h-full" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Skills Manager — Samsung SDS</title>
+<!-- Material Symbols Outlined -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<!-- Fonts: Inter & JetBrains Mono -->
+<link href="https://fonts.googleapis.com" rel="preconnect">
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "primary-fixed-dim": "#afc6ff",
+            "surface-container-lowest": "#ffffff",
+            "surface-bright": "#f8f9ff",
+            "surface-variant": "#e1e2e8",
+            "on-secondary-fixed-variant": "#434750",
+            "primary-container": "#1657b8",
+            "surface-dim": "#d8dadf",
+            "on-primary-container": "#c2d3ff",
+            "background": "#f8f9ff",
+            "error-container": "#ffdad6",
+            "surface-container-high": "#e6e8ed",
+            "tertiary-fixed": "#96f5ca",
+            "outline-variant": "#c3c6d4",
+            "on-primary-fixed": "#001a43",
+            "on-tertiary-fixed-variant": "#005139",
+            "on-error-container": "#93000a",
+            "inverse-on-surface": "#eff0f6",
+            "tertiary-fixed-dim": "#7ad9af",
+            "on-secondary-fixed": "#171c24",
+            "on-primary-fixed-variant": "#004397",
+            "surface": "#f8f9ff",
+            "on-tertiary": "#ffffff",
+            "secondary-fixed-dim": "#c3c6d1",
+            "surface-tint": "#1c5abc",
+            "on-surface": "#191c20",
+            "on-error": "#ffffff",
+            "on-surface-variant": "#424752",
+            "surface-container": "#eceef3",
+            "on-secondary-container": "#60646e",
+            "surface-container-low": "#f2f3f9",
+            "tertiary-container": "#006849",
+            "secondary-fixed": "#dfe2ee",
+            "primary": "#004091",
+            "error": "#ba1a1a",
+            "on-tertiary-container": "#87e6bb",
+            "surface-container-highest": "#e1e2e8",
+            "tertiary": "#004e36",
+            "inverse-surface": "#2e3135",
+            "on-background": "#191c20",
+            "inverse-primary": "#afc6ff",
+            "primary-fixed": "#d8e2ff",
+            "secondary": "#5a5e68",
+            "on-tertiary-fixed": "#002115",
+            "secondary-container": "#dfe2ee",
+            "on-primary": "#ffffff",
+            "outline": "#737784",
+            "on-secondary": "#ffffff"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.125rem",
+            "lg": "0.25rem",
+            "xl": "0.5rem",
+            "full": "0.75rem"
+          },
+          "spacing": {
+            "margin": "1rem",
+            "space-md": "0.75rem",
+            "space-xl": "1.5rem",
+            "gutter": "1rem",
+            "space-sm": "0.5rem",
+            "space-xs": "0.25rem",
+            "space-lg": "1rem"
+          },
+          "fontFamily": {
+            "headline-md": ["Inter"],
+            "code-sm": ["JetBrains Mono"],
+            "caption-regular": ["Inter"],
+            "headline-lg": ["Inter"],
+            "caption-medium": ["Inter"],
+            "body-default": ["Inter"],
+            "titlebar-caption": ["Inter"],
+            "headline-sm": ["Inter"],
+            "body-medium": ["Inter"]
+          },
+          "fontSize": {
+            "headline-md": ["16px", { "lineHeight": "24px", "fontWeight": "600" }],
+            "code-sm": ["12px", { "lineHeight": "16px", "fontWeight": "400" }],
+            "caption-regular": ["11px", { "lineHeight": "16px", "fontWeight": "400" }],
+            "headline-lg": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+            "caption-medium": ["11px", { "lineHeight": "16px", "fontWeight": "500" }],
+            "body-default": ["13px", { "lineHeight": "18px", "fontWeight": "400" }],
+            "titlebar-caption": ["12px", { "lineHeight": "16px", "fontWeight": "500" }],
+            "headline-sm": ["14px", { "lineHeight": "20px", "fontWeight": "600" }],
+            "body-medium": ["13px", { "lineHeight": "18px", "fontWeight": "500" }]
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-surface font-body-default text-body-default text-on-surface h-full flex flex-col antialiased select-none overflow-hidden">
+<!-- ==================== TOP WINDOW TITLEBAR ==================== -->
+<header class="bg-surface-container text-on-surface docked full-width top-0 h-8 border-b border-outline-variant flex justify-between items-center w-full px-3 select-none z-50 shrink-0">
+<!-- Brand / Document Info -->
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[15px] text-primary" data-icon="terminal">terminal</span>
+<span class="text-titlebar-caption font-titlebar-caption text-on-surface font-medium">AX Portal — Samsung SDS</span>
+</div>
+<!-- Window Controls -->
+<div class="flex items-center h-full">
+<button class="h-8 w-11 inline-flex items-center justify-center text-on-surface hover:bg-surface-variant transition-colors duration-150" title="Minimize">
+<span class="material-symbols-outlined text-[14px]" data-icon="minimize">minimize</span>
+</button>
+<button class="h-8 w-11 inline-flex items-center justify-center text-on-surface hover:bg-surface-variant transition-colors duration-150" title="Maximize">
+<span class="material-symbols-outlined text-[13px]" data-icon="crop_square">crop_square</span>
+</button>
+<button class="h-8 w-11 inline-flex items-center justify-center text-on-surface hover:bg-error hover:text-on-error transition-colors duration-150" title="Close">
+<span class="material-symbols-outlined text-[14px]" data-icon="close">close</span>
+</button>
+</div>
+</header>
+<!-- ==================== MAIN WORKSPACE ==================== -->
+<div class="flex flex-1 h-[calc(100vh-32px)] overflow-hidden">
+<!-- ==================== SIDE NAVIGATION DOCK (225px) ==================== -->
+<aside class="w-[225px] h-full flex flex-col justify-between p-space-sm border-r border-outline-variant bg-surface-container-lowest shrink-0 select-none">
+<div class="flex flex-col gap-3">
+<!-- Logo Header -->
+<div class="px-2 py-1.5 flex items-center justify-between">
+<div class="flex flex-col">
+<span class="text-headline-sm font-headline-sm text-primary font-bold tracking-tight">AX Portal</span>
+<span class="text-caption-medium font-caption-medium text-outline text-[10px] uppercase tracking-wider">SAMSUNG SDS</span>
+</div>
+<span class="material-symbols-outlined text-outline text-[18px]" data-icon="hub">hub</span>
+</div>
+<!-- Action CTA -->
+<button class="w-full h-7 px-2.5 bg-surface-container hover:bg-surface-container-high text-on-surface rounded-lg text-body-medium font-body-medium flex items-center justify-between border border-outline-variant transition-colors duration-150">
+<span class="flex items-center gap-1.5 text-[12px]">
+<span class="material-symbols-outlined text-[15px]" data-icon="add">add</span>
+            New preset
+          </span>
+<span class="text-[10px] text-outline font-code-sm">⌘N</span>
+</button>
+<!-- Navigation Tabs Group -->
+<nav class="flex flex-col gap-0.5 mt-1">
+<!-- Item: Dashboard -->
+<a class="text-on-surface-variant font-normal rounded-lg px-2 py-1.5 hover:bg-surface-container hover:text-on-surface transition-colors duration-150 flex items-center gap-2 text-body-default font-body-default" href="#">
+<span class="material-symbols-outlined text-[16px]" data-icon="dashboard">dashboard</span>
+<span class="">Dashboard</span>
+</a>
+<!-- Item: Library -->
+<a class="text-on-surface-variant font-normal rounded-lg px-2 py-1.5 hover:bg-surface-container hover:text-on-surface transition-colors duration-150 flex items-center gap-2 text-body-default font-body-default" href="#">
+<span class="material-symbols-outlined text-[16px]" data-icon="folder">folder</span>
+<span class="">Library</span>
+</a>
+<!-- Item: Skills Store -->
+<a class="text-on-surface-variant font-normal rounded-lg px-2 py-1.5 hover:bg-surface-container hover:text-on-surface transition-colors duration-150 flex items-center gap-2 text-body-default font-body-default" href="#">
+<span class="material-symbols-outlined text-[16px]" data-icon="storefront">storefront</span>
+<span class="">Skills Store</span>
+</a>
+<!-- Item: Backup (ACTIVE) -->
+<a class="bg-secondary-container text-primary font-medium rounded-lg px-2 py-1.5 border-l-2 border-primary flex items-center gap-2 text-body-default font-body-default shadow-none" href="#">
+<span class="material-symbols-outlined text-[16px]" data-icon="backup">backup</span>
+<span class="">Backup</span>
+</a>
+<div class="h-[1px] bg-outline-variant my-1 opacity-50"></div>
+<!-- Item: PM Essentials -->
+<a class="text-on-surface-variant font-normal rounded-lg px-2 py-1.5 hover:bg-surface-container hover:text-on-surface transition-colors duration-150 flex items-center gap-2 text-body-default font-body-default" href="#">
+<span class="material-symbols-outlined text-[16px]" data-icon="tune">tune</span>
+<span class="">PM Essentials</span>
+</a>
+<!-- Item: All Agents -->
+<a class="text-on-surface-variant font-normal rounded-lg px-2 py-1.5 hover:bg-surface-container hover:text-on-surface transition-colors duration-150 flex items-center gap-2 text-body-default font-body-default" href="#">
+<span class="material-symbols-outlined text-[16px]" data-icon="smart_toy">smart_toy</span>
+<span class="">All Agents</span>
+</a>
+<!-- Item: AIPro -->
+<a class="text-on-surface-variant font-normal rounded-lg px-2 py-1.5 hover:bg-surface-container hover:text-on-surface transition-colors duration-150 flex items-center gap-2 text-body-default font-body-default" href="#">
+<span class="material-symbols-outlined text-[16px] text-primary" data-icon="hub">hub</span>
+<span class="">AIPro</span>
+</a>
+<!-- Item: Claude -->
+<a class="text-on-surface-variant font-normal rounded-lg px-2 py-1.5 hover:bg-surface-container hover:text-on-surface transition-colors duration-150 flex items-center gap-2 text-body-default font-body-default" href="#">
+<span class="material-symbols-outlined text-[16px]" data-icon="psychology">psychology</span>
+<span class="">Claude</span>
+</a>
+<!-- Item: Gemini -->
+<a class="text-on-surface-variant font-normal rounded-lg px-2 py-1.5 hover:bg-surface-container hover:text-on-surface transition-colors duration-150 flex items-center gap-2 text-body-default font-body-default" href="#">
+<span class="material-symbols-outlined text-[16px]" data-icon="neurology">neurology</span>
+<span class="">Gemini</span>
+</a>
+<!-- Item: Codex -->
+<a class="text-on-surface-variant font-normal rounded-lg px-2 py-1.5 hover:bg-surface-container hover:text-on-surface transition-colors duration-150 flex items-center gap-2 text-body-default font-body-default" href="#">
+<span class="material-symbols-outlined text-[16px]" data-icon="terminal">terminal</span>
+<span class="">Codex</span>
+</a>
+<!-- Item: Project Atlas -->
+<a class="text-on-surface-variant font-normal rounded-lg px-2 py-1.5 hover:bg-surface-container hover:text-on-surface transition-colors duration-150 flex items-center gap-2 text-body-default font-body-default" href="#">
+<span class="material-symbols-outlined text-[16px]" data-icon="workspaces">workspaces</span>
+<span class="">Project Atlas</span>
+</a>
+</nav>
+</div>
+<!-- Footer navigation -->
+<div class="flex flex-col gap-0.5 pt-2 border-t border-outline-variant">
+<a class="text-on-surface-variant font-normal rounded-lg px-2 py-1.5 hover:bg-surface-container hover:text-on-surface transition-colors duration-150 flex items-center gap-2 text-body-default font-body-default" href="#">
+<span class="material-symbols-outlined text-[16px]" data-icon="settings">settings</span>
+<span class="">Settings</span>
+</a>
+<div class="px-2 py-1.5 flex items-center justify-between text-on-surface-variant">
+<div class="flex items-center gap-2 truncate">
+<span class="material-symbols-outlined text-[18px] text-outline" data-icon="account_circle">account_circle</span>
+<span class="text-body-default font-body-default truncate">Example Employee</span>
+</div>
+<span class="h-2 w-2 rounded-full bg-tertiary-container ring-2 ring-surface-container-lowest" title="Connected"></span>
+</div>
+</div>
+</aside>
+<!-- ==================== MAIN CONTENT CANVAS ==================== -->
+<main class="flex-1 overflow-y-auto bg-surface-bright px-8 py-6 flex flex-col gap-5">
+<!-- SCREEN HEAD -->
+<div class="flex items-start justify-between pb-3 border-b border-outline-variant">
+<div>
+<div class="flex items-center gap-2 mb-1">
+<span class="text-caption-medium font-caption-medium text-outline uppercase tracking-wider text-[10px]">W11 · LOCAL SNAPSHOTS</span>
+<span class="text-outline text-caption-regular font-caption-regular">•</span>
+<span class="text-caption-regular font-caption-regular text-outline font-code-sm">#backup</span>
+</div>
+<h1 class="text-headline-lg font-headline-lg text-on-surface tracking-tight">Backup</h1>
+<p class="text-body-default font-body-default text-on-surface-variant mt-0.5">
+            Copies saved on this computer before replacing locally modified skills.
+          </p>
+</div>
+<div class="flex items-center gap-2">
+<span class="inline-flex items-center px-2 py-0.5 rounded-lg text-caption-medium font-caption-medium bg-surface-container-high text-on-surface border border-outline-variant">
+            Local only
+          </span>
+<button class="h-7 px-2.5 bg-surface-container-lowest border border-outline-variant rounded-lg text-body-default font-body-default text-on-surface hover:bg-surface-container transition-colors duration-150 flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[14px]" data-icon="refresh">refresh</span>
+            Scan folder
+          </button>
+</div>
+</div>
+<!-- NOTICE BOX (Light Blue Background) -->
+<div class="bg-primary-fixed/20 border border-primary-fixed-dim/70 rounded-lg p-3 flex items-start gap-2.5">
+<span class="material-symbols-outlined text-primary text-[18px] shrink-0 mt-0.5" data-icon="info">info</span>
+<div class="text-body-default font-body-default text-on-surface">
+          These snapshots protect changes during updates. They are not cloud backups or a backup of your entire computer.
+        </div>
+</div>
+<!-- TWO-PANEL CONTENT GRID -->
+<div class="grid grid-cols-12 gap-5 items-start">
+<!-- PANEL 1: SNAPSHOTS LIST (Left Column, col-span-7) -->
+<section class="col-span-12 lg:col-span-7 bg-surface-container-lowest rounded-lg border border-outline-variant overflow-hidden shadow-none flex flex-col">
+<div class="px-4 py-2.5 bg-surface-container-low border-b border-outline-variant flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[16px] text-outline" data-icon="history">history</span>
+<h2 class="text-headline-sm font-headline-sm text-on-surface">Snapshots list</h2>
+</div>
+<span class="text-caption-medium font-caption-medium text-outline">1 snapshot stored</span>
+</div>
+<!-- Table Container -->
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-surface-container border-b border-outline-variant">
+<th class="py-2 px-3 text-caption-medium font-caption-medium text-outline uppercase tracking-wider text-[11px]">Skill / target</th>
+<th class="py-2 px-3 text-caption-medium font-caption-medium text-outline uppercase tracking-wider text-[11px] w-32">Saved</th>
+<th class="py-2 px-3 text-caption-medium font-caption-medium text-outline uppercase tracking-wider text-[11px]">Reason</th>
+<th class="py-2 px-3 text-caption-medium font-caption-medium text-outline uppercase tracking-wider text-[11px] text-right w-24">Action</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant">
+<!-- Row 1 (Selected snapshot) -->
+<tr class="bg-primary-fixed/20 hover:bg-primary-fixed/30 transition-colors border-l-2 border-primary">
+<td class="py-2.5 px-3">
+<div class="flex flex-col">
+<div class="flex items-center gap-1.5">
+<span class="text-body-medium font-body-medium text-on-surface">Jira Weekly Report</span>
+<span class="inline-flex items-center px-1.5 py-0.2 rounded text-[10px] font-caption-medium bg-tertiary-fixed text-on-tertiary-fixed-variant">local edits</span>
+</div>
+<span class="text-caption-regular font-caption-regular text-on-surface-variant flex items-center gap-1 mt-0.5">
+<span class="h-1.5 w-1.5 rounded-full bg-primary"></span>
+                        AIPro · Project Atlas · 1.1.0 with local edits
+                      </span>
+</div>
+</td>
+<td class="py-2.5 px-3 align-top">
+<div class="flex flex-col">
+<span class="text-body-default font-body-default text-on-surface">15 Oct 2026</span>
+<span class="text-caption-regular font-caption-regular text-outline font-code-sm">09:42</span>
+</div>
+</td>
+<td class="py-2.5 px-3 align-top">
+<span class="text-body-default font-body-default text-on-surface-variant">Before update to 1.2.0</span>
+</td>
+<td class="py-2.5 px-3 text-right align-middle">
+<button class="text-primary hover:text-on-primary-fixed-variant font-body-medium text-body-medium hover:underline inline-flex items-center gap-0.5">
+                      Restore…
+                    </button>
+</td>
+</tr>
+<!-- Subtle placeholder row indicating state -->
+<tr class="opacity-50 bg-surface-container-lowest">
+<td class="py-2 px-3 text-caption-regular font-caption-regular text-outline italic" colspan="4">
+                    End of local snapshot archive. Older snapshots are retained for 30 days.
+                  </td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="px-3 py-2 bg-surface-container-low border-t border-outline-variant flex items-center justify-between text-caption-regular font-caption-regular text-outline">
+<span class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[13px]" data-icon="folder_zip">folder_zip</span>
+              Path: ~/.samsung-sds/skills/snapshots/
+            </span>
+<span class="">42.8 KB</span>
+</div>
+</section>
+<!-- PANEL 2: RESTORE PREVIEW (Right Column, col-span-5) -->
+<section class="col-span-12 lg:col-span-5 bg-surface-container-lowest rounded-lg border border-outline-variant overflow-hidden shadow-none flex flex-col">
+<div class="px-4 py-2.5 bg-surface-container-low border-b border-outline-variant flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[16px] text-primary" data-icon="unarchive">unarchive</span>
+<h2 class="text-headline-sm font-headline-sm text-on-surface">Restore preview</h2>
+</div>
+<span class="h-2 w-2 rounded-full bg-primary" title="Target Selected"></span>
+</div>
+<div class="p-4 flex flex-col gap-4">
+<!-- Definition List / Key-Value Grid -->
+<dl class="grid grid-cols-3 gap-y-2.5 gap-x-2 text-body-default font-body-default border border-outline-variant/60 rounded-lg p-3 bg-surface-container-low/40">
+<!-- Item 1: Snapshot -->
+<dt class="text-outline font-caption-medium text-caption-medium self-start pt-0.5">Snapshot</dt>
+<dd class="col-span-2 text-on-surface font-body-medium text-body-medium">
+                Jira Weekly Report · 15 Oct 2026, 09:42
+              </dd>
+<div class="col-span-3 h-[1px] bg-outline-variant/40"></div>
+<!-- Item 2: Destination -->
+<dt class="text-outline font-caption-medium text-caption-medium self-start pt-0.5">Destination</dt>
+<dd class="col-span-2 text-on-surface flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[14px] text-primary" data-icon="hub">hub</span>
+<span class="">AIPro · Project Atlas</span>
+</dd>
+<div class="col-span-3 h-[1px] bg-outline-variant/40"></div>
+<!-- Item 3: Current version -->
+<dt class="text-outline font-caption-medium text-caption-medium self-start pt-0.5">Current version</dt>
+<dd class="col-span-2 text-on-surface font-code-sm text-code-sm">
+                1.2.0
+              </dd>
+<div class="col-span-3 h-[1px] bg-outline-variant/40"></div>
+<!-- Item 4: Restores -->
+<dt class="text-outline font-caption-medium text-caption-medium self-start pt-0.5">Restores</dt>
+<dd class="col-span-2 text-primary font-body-medium text-body-medium">
+                1.1.0 with the saved local edits
+              </dd>
+</dl>
+<!-- Warning notice box (Amber) -->
+<div class="bg-[#fff5e4] border border-[#e2a84a] rounded-lg p-3 flex items-start gap-2.5">
+<span class="material-symbols-outlined text-[#92580b] text-[18px] shrink-0 mt-0.5" data-icon="warning">warning</span>
+<p class="text-body-default font-body-default text-[#714102] leading-snug">
+                The selected target will be replaced. If it has changed since installation, save its current contents before restoring.
+              </p>
+</div>
+<!-- Footer Actions -->
+<div class="flex items-center justify-end gap-2 pt-2 border-t border-outline-variant mt-1">
+<button class="h-8 px-3 rounded-lg border border-outline-variant bg-surface-container-lowest text-on-surface hover:bg-surface-container text-body-default font-body-default transition-colors duration-150" type="button">
+                Cancel
+              </button>
+<button class="h-8 px-3 rounded-lg bg-[#1657b8] hover:bg-[#124491] text-on-primary font-body-medium text-body-medium transition-colors duration-150 flex items-center gap-1.5 shadow-none" type="button">
+<span class="material-symbols-outlined text-[15px]" data-icon="settings_backup_restore">settings_backup_restore</span>
+                Back up current and restore
+              </button>
+</div>
+</div>
+</section>
+</div>
+<!-- COLLAPSIBLE DETAIL BOX BELOW -->
+<details class="group bg-surface-container-lowest rounded-lg border border-outline-variant overflow-hidden" open="">
+<summary class="px-4 py-2.5 bg-surface-container-low cursor-pointer flex items-center justify-between select-none list-none hover:bg-surface-container transition-colors duration-150">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-outline text-[16px] transition-transform duration-150 group-open:rotate-90" data-icon="chevron_right">chevron_right</span>
+<span class="text-headline-sm font-headline-sm text-on-surface">Restore result example</span>
+</div>
+<span class="text-caption-regular font-caption-regular text-outline">Simulation details</span>
+</summary>
+<div class="p-4 border-t border-outline-variant bg-surface-container-lowest flex flex-col gap-2">
+<div class="p-2.5 bg-surface-container rounded-lg border border-outline-variant font-code-sm text-code-sm text-on-surface flex items-center gap-2">
+<span class="material-symbols-outlined text-[16px] text-tertiary" data-icon="check_circle">check_circle</span>
+<span class="">“Snapshot restored to AIPro · Project Atlas.”</span>
+</div>
+<p class="text-body-default font-body-default text-on-surface-variant leading-relaxed">
+            Other agent/project locations stay as they were. Snapshot or replacement failure leaves the current target recoverable. This wireframe does not modify files.
+          </p>
+</div>
+</details>
+<!-- ARCHIVE METRICS & SYSTEM AUDIT STRIP -->
+<div class="mt-auto pt-3 border-t border-outline-variant/60 flex items-center justify-between text-caption-regular font-caption-regular text-outline">
+<div class="flex items-center gap-4">
+<span class="flex items-center gap-1">
+<span class="h-2 w-2 rounded-full bg-tertiary-container"></span>
+            Snapshot daemon: Active
+          </span>
+<span class="">Retention: 30 days</span>
+<span class="">Compression: gzip (level 6)</span>
+</div>
+<div class="flex items-center gap-2 font-code-sm text-[10px]">
+<span class="">SNAPSHOT_STORAGE_HASH: 9e88a1b2c4</span>
+</div>
+</div>
+</main>
+</div>
+
+
+</body></html>

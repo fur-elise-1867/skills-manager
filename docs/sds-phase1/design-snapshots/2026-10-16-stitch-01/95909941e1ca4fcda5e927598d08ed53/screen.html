@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=1440, initial-scale=1.0">
+  <title>W05 AIPro MCP check</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            brand: {
+              50: '#eff6ff',
+              100: '#dbeafe',
+              500: '#3b82f6',
+              600: '#1657b8',
+              700: '#134896',
+              800: '#103a75',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: #fafafa;
+      color: #0f172a;
+      margin: 0;
+      padding: 0;
+      -webkit-font-smoothing: antialiased;
+    }
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+      font-size: 18px;
+      line-height: 1;
+      display: inline-block;
+      vertical-align: middle;
+    }
+    .material-symbols-outlined.fill-1 {
+      font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+    }
+    /* Custom scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+  </style>
+</head>
+<body class="bg-[#fafafa] min-h-screen text-slate-800 flex flex-col selection:bg-blue-100 selection:text-blue-900">
+
+  <!-- Desktop App Window Top Bar -->
+  <header class="h-8 bg-white border-b border-slate-200 px-3 flex items-center justify-between text-xs text-slate-600 select-none sticky top-0 z-50">
+    <div class="flex items-center space-x-2">
+      <span class="material-symbols-outlined text-slate-500 text-sm">hub</span>
+      <span class="font-medium text-slate-700">Skills Manager — Samsung SDS</span>
+      <span class="text-slate-300">|</span>
+      <span class="text-slate-500 text-[11px]">v2.4.1-enterprise</span>
+    </div>
+    <div class="flex items-center space-x-2 text-slate-500 text-[11px]">
+      <span class="inline-block w-2 h-2 rounded-full bg-emerald-500"></span>
+      <span>Internal Store connected</span>
+      <span class="text-slate-300 mx-1">|</span>
+      <span class="text-slate-500">Project Atlas &gt; Install &gt; Jira Weekly Report</span>
+    </div>
+    <div class="flex items-center space-x-2 text-slate-400">
+      <button type="button" class="w-6 h-6 flex items-center justify-center hover:bg-slate-100 rounded text-slate-600 transition-colors" aria-label="Minimize">
+        <span class="material-symbols-outlined text-sm">remove</span>
+      </button>
+      <button type="button" class="w-6 h-6 flex items-center justify-center hover:bg-slate-100 rounded text-slate-600 transition-colors" aria-label="Maximize">
+        <span class="material-symbols-outlined text-sm">crop_square</span>
+      </button>
+      <button type="button" class="w-6 h-6 flex items-center justify-center hover:bg-red-50 hover:text-red-600 rounded text-slate-600 transition-colors" aria-label="Close">
+        <span class="material-symbols-outlined text-sm">close</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <div class="flex flex-1 min-h-[calc(100vh-32px)]">
+
+    <!-- Sidebar: exactly 225px width as requested -->
+    <aside class="sidebar w-[225px] flex-shrink-0 bg-white border-r border-slate-200 flex flex-col justify-between select-none" aria-label="App navigation">
+      <div class="flex flex-col">
+        <!-- Brand header -->
+        <div class="brand p-3 border-b border-slate-100 flex items-center space-x-2.5">
+          <div class="brandmark w-7 h-7 rounded bg-[#1657b8] text-white flex items-center justify-center font-bold text-sm shadow-sm flex-shrink-0">
+            S
+          </div>
+          <div class="leading-tight overflow-hidden">
+            <strong class="block text-xs font-semibold text-slate-900 truncate tracking-tight">Skills Manager</strong>
+            <small class="block text-[10px] font-medium text-slate-400 tracking-wider">SAMSUNG SDS</small>
+          </div>
+        </div>
+
+        <!-- Presets quick CTA button -->
+        <div class="p-2.5 pb-1">
+          <button class="w-full h-7 px-2 bg-slate-50 hover:bg-slate-100 active:bg-slate-200 border border-slate-200 text-slate-700 rounded text-xs font-medium flex items-center justify-center space-x-1.5 transition-colors">
+            <span class="material-symbols-outlined text-sm text-slate-500">add</span>
+            <span>New preset</span>
+          </button>
+        </div>
+
+        <!-- Navigation items list -->
+        <nav class="px-2 py-2 space-y-0.5 text-xs">
+          <!-- Primary section -->
+          <a class="navitem nav-dashboard flex items-center justify-between px-2.5 py-1.5 rounded text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors" href="#dashboard">
+            <div class="flex items-center space-x-2">
+              <span class="icon text-slate-400 text-sm">▦</span>
+              <span>Dashboard</span>
+            </div>
+          </a>
+          <a class="navitem nav-library flex items-center justify-between px-2.5 py-1.5 rounded text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors" href="#library">
+            <div class="flex items-center space-x-2">
+              <span class="icon text-slate-400 text-sm">▤</span>
+              <span>Library</span>
+            </div>
+            <span class="navcount text-[11px] font-medium text-slate-500 bg-slate-100 px-1.5 py-0.2 rounded">12</span>
+          </a>
+          <a class="navitem nav-store flex items-center justify-between px-2.5 py-1.5 rounded text-slate-700 bg-slate-100 font-medium transition-colors" href="#store">
+            <div class="flex items-center space-x-2">
+              <span class="icon text-[#1657b8] text-sm">↓</span>
+              <span class="text-[#1657b8]">Skills Store</span>
+            </div>
+          </a>
+          <a class="navitem nav-backup flex items-center justify-between px-2.5 py-1.5 rounded text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors" href="#backup">
+            <div class="flex items-center space-x-2">
+              <span class="icon text-slate-400 text-sm">◷</span>
+              <span>Backup</span>
+            </div>
+          </a>
+
+          <!-- Presets Section -->
+          <div class="pt-3 pb-1 px-2.5 text-[10px] font-semibold tracking-wider text-slate-400 uppercase">Presets</div>
+          <a class="navitem flex items-center justify-between px-2.5 py-1.5 rounded text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors" href="#workspace">
+            <div class="flex items-center space-x-2">
+              <span class="icon text-slate-400 text-xs">◇</span>
+              <span>PM Essentials</span>
+            </div>
+            <span class="navcount text-[11px] font-medium text-slate-500 bg-slate-100 px-1.5 py-0.2 rounded">3</span>
+          </a>
+
+          <!-- Global Workspace Section -->
+          <div class="pt-3 pb-1 px-2.5 text-[10px] font-semibold tracking-wider text-slate-400 uppercase">Global Workspace</div>
+          <a class="navitem flex items-center justify-between px-2.5 py-1.5 rounded text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors" href="#workspace">
+            <div class="flex items-center space-x-2">
+              <span class="icon text-slate-400 text-xs">◎</span>
+              <span>All Agents</span>
+            </div>
+          </a>
+          <!-- AIPro Agent item -->
+          <a class="navitem flex items-center justify-between px-2.5 py-1.5 rounded text-slate-900 bg-blue-50/60 font-medium border-l-2 border-[#1657b8]" href="#workspace">
+            <div class="flex items-center space-x-2">
+              <span class="agentdot aipro w-4 h-4 rounded bg-[#1657b8] text-white flex items-center justify-center text-[10px] font-bold">A</span>
+              <span>AIPro</span>
+            </div>
+            <span class="navcount text-[11px] font-medium text-blue-700 bg-blue-100/60 px-1.5 py-0.2 rounded">8</span>
+          </a>
+          <!-- Claude Agent item -->
+          <a class="navitem flex items-center justify-between px-2.5 py-1.5 rounded text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors" href="#workspace">
+            <div class="flex items-center space-x-2">
+              <span class="agentdot claude w-4 h-4 rounded bg-amber-600 text-white flex items-center justify-center text-[9px] font-bold">Cl</span>
+              <span>Claude</span>
+            </div>
+            <span class="navcount text-[11px] font-medium text-slate-500 bg-slate-100 px-1.5 py-0.2 rounded">4</span>
+          </a>
+          <!-- Gemini Agent item -->
+          <a class="navitem flex items-center justify-between px-2.5 py-1.5 rounded text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors" href="#workspace">
+            <div class="flex items-center space-x-2">
+              <span class="agentdot gemini w-4 h-4 rounded bg-purple-600 text-white flex items-center justify-center text-[10px] font-bold">G</span>
+              <span>Gemini</span>
+            </div>
+            <span class="navcount text-[11px] font-medium text-slate-500 bg-slate-100 px-1.5 py-0.2 rounded">3</span>
+          </a>
+          <!-- Codex Agent item -->
+          <a class="navitem flex items-center justify-between px-2.5 py-1.5 rounded text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors" href="#workspace">
+            <div class="flex items-center space-x-2">
+              <span class="agentdot codex w-4 h-4 rounded bg-slate-700 text-white flex items-center justify-center text-[9px] font-mono font-bold">Cx</span>
+              <span>Codex</span>
+            </div>
+            <span class="navcount text-[11px] font-medium text-slate-500 bg-slate-100 px-1.5 py-0.2 rounded">5</span>
+          </a>
+
+          <!-- Project Workspaces Section -->
+          <div class="pt-3 pb-1 px-2.5 text-[10px] font-semibold tracking-wider text-slate-400 uppercase">Project Workspaces</div>
+          <a class="navitem nav-workspace flex items-center justify-between px-2.5 py-1.5 rounded text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors" href="#workspace">
+            <div class="flex items-center space-x-2">
+              <span class="icon text-slate-400 text-xs">▱</span>
+              <span>Project Atlas</span>
+            </div>
+            <span class="navcount text-[11px] font-medium text-slate-500 bg-slate-100 px-1.5 py-0.2 rounded">3</span>
+          </a>
+          <a class="navitem flex items-center space-x-2 px-2.5 py-1.5 rounded text-slate-500 hover:text-slate-800 hover:bg-slate-50 transition-colors text-xs" href="#install">
+            <span class="icon text-slate-400 text-xs">＋</span>
+            <span>Add project</span>
+          </a>
+        </nav>
+      </div>
+
+      <!-- Sidebar footer -->
+      <div class="sidebarfoot border-t border-slate-200 p-2 space-y-1">
+        <a class="navitem nav-settings flex items-center space-x-2 px-2.5 py-1.5 rounded text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors text-xs" href="#settings">
+          <span class="icon text-slate-400 text-sm">⚙</span>
+          <span>Settings</span>
+        </a>
+        <div class="account flex items-center space-x-2.5 px-2.5 py-2 rounded-lg bg-slate-50 border border-slate-200/60 mt-1">
+          <span class="avatar w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-semibold flex-shrink-0">
+            E
+          </span>
+          <div class="text-[11px] leading-tight overflow-hidden">
+            <div class="font-medium text-slate-800 truncate">Example Employee</div>
+            <span class="muted text-slate-400 text-[10px] truncate block">Skills Store account</span>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Content Workspace -->
+    <main class="flex-1 overflow-y-auto px-8 py-6 max-w-[1215px]">
+      <section class="screen space-y-6" id="mcp" aria-labelledby="mcp-title">
+        
+        <!-- Screen Header -->
+        <div class="screenhead flex items-start justify-between pb-2 border-b border-slate-200">
+          <div>
+            <h1 id="mcp-title" class="text-xl font-bold text-slate-900 tracking-tight">AIPro needs an MCP configuration</h1>
+            <p class="muted small text-xs text-slate-500 mt-1 flex items-center space-x-1.5">
+              <span class="font-medium text-slate-700">Jira Weekly Report</span>
+              <span class="text-slate-300">•</span>
+              <span>Project Atlas</span>
+              <span class="text-slate-300">•</span>
+              <span class="inline-flex items-center text-blue-700 font-medium">
+                <span class="w-1.5 h-1.5 rounded-full bg-blue-600 mr-1.5"></span>
+                AIPro Target
+              </span>
+            </p>
+          </div>
+          <div class="flex items-center space-x-3">
+            <span class="tag amber inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-200">
+              <span class="w-1.5 h-1.5 rounded-full bg-amber-500 mr-1.5"></span>
+              1 requirement missing
+            </span>
+            <a href="#store" class="text-xs text-slate-500 hover:text-slate-800 border border-slate-200 px-2.5 py-1 rounded bg-white font-medium hover:bg-slate-50 transition-colors">
+              Cancel
+            </a>
+          </div>
+        </div>
+
+        <!-- Progress Stepper: Step 2 of 3 -->
+        <div class="steps flex items-center space-x-3 text-xs bg-white px-4 py-2.5 rounded-lg border border-slate-200">
+          <div class="flex items-center space-x-2 text-slate-400 font-normal">
+            <span class="w-5 h-5 rounded-full bg-slate-100 text-slate-500 border border-slate-200 flex items-center justify-center text-[11px] font-semibold">1</span>
+            <span>Choose location</span>
+          </div>
+          <span class="text-slate-300">›</span>
+          <div class="flex items-center space-x-2 text-[#1657b8] font-semibold">
+            <span class="w-5 h-5 rounded-full bg-[#1657b8] text-white flex items-center justify-center text-[11px] font-bold shadow-sm">2</span>
+            <b>Review requirements</b>
+          </div>
+          <span class="text-slate-300">›</span>
+          <div class="flex items-center space-x-2 text-slate-400 font-normal">
+            <span class="w-5 h-5 rounded-full bg-slate-100 text-slate-400 border border-slate-200 flex items-center justify-center text-[11px]">3</span>
+            <span>Install</span>
+          </div>
+        </div>
+
+        <div class="short space-y-5">
+          <!-- Warning Notice -->
+          <div class="notice warn bg-amber-50/80 border border-amber-200 rounded-lg p-4 text-xs text-amber-900 flex items-start space-x-3">
+            <span class="material-symbols-outlined text-amber-600 flex-shrink-0 mt-0.5">warning</span>
+            <div class="leading-relaxed">
+              <strong class="font-semibold text-amber-950 block text-sm mb-0.5">Jira MCP was not found.</strong>
+              You can configure it manually and check again, or install the skill now. The skill may not work fully until Jira MCP is configured.
+            </div>
+          </div>
+
+          <!-- Main Panel: Configuration Check -->
+          <div class="panel bg-white border border-slate-200 rounded-lg p-5 shadow-sm space-y-4">
+            <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+              <div>
+                <h3 class="text-sm font-semibold text-slate-900">AIPro configuration check</h3>
+                <p class="text-xs text-slate-500">Active configuration target and declared runtime prerequisites.</p>
+              </div>
+              <div class="path flex items-center space-x-1.5 px-2.5 py-1 bg-slate-50 border border-slate-200 rounded font-mono text-[11px] text-slate-700">
+                <span class="material-symbols-outlined text-slate-400 text-xs">folder_open</span>
+                <span>%USERPROFILE%\.aipro\mcp.json</span>
+              </div>
+            </div>
+
+            <!-- Table -->
+            <div class="overflow-hidden border border-slate-200 rounded-md">
+              <table class="w-full text-left text-xs">
+                <thead class="bg-slate-50/80 text-slate-500 border-b border-slate-200 font-medium">
+                  <tr>
+                    <th class="py-2.5 px-4 font-semibold text-slate-600">Required MCP</th>
+                    <th class="py-2.5 px-4 font-semibold text-slate-600">Configuration</th>
+                    <th class="py-2.5 px-4 font-semibold text-slate-600 text-right">Next step</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                  <tr class="hover:bg-slate-50/60 transition-colors">
+                    <td class="py-3 px-4">
+                      <div class="flex items-center space-x-2.5">
+                        <div class="w-7 h-7 rounded bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 font-bold text-xs">
+                          J
+                        </div>
+                        <div>
+                          <div class="font-medium text-slate-900">Jira MCP</div>
+                          <small class="text-slate-400 font-mono text-[10px]">jira-mcp</small>
+                        </div>
+                      </div>
+                    </td>
+                    <td class="py-3 px-4">
+                      <span class="tag amber inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-amber-100 text-amber-800 border border-amber-200">
+                        Missing
+                      </span>
+                    </td>
+                    <td class="py-3 px-4 text-right">
+                      <a href="#mcp-guide" class="text-[#1657b8] hover:text-blue-800 hover:underline font-medium inline-flex items-center space-x-1">
+                        <span>Open setup guide</span>
+                        <span class="material-symbols-outlined text-xs">arrow_outward</span>
+                      </a>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Annotation -->
+            <div class="flex items-start space-x-2 text-[11px] text-slate-500 pt-1">
+              <span class="material-symbols-outlined text-slate-400 text-sm mt-0.5">info</span>
+              <p class="annotation leading-normal">
+                Only configuration presence is checked. Connection, credentials and service availability are not checked.
+              </p>
+            </div>
+
+            <hr class="divider border-t border-slate-100 my-2">
+
+            <!-- Secondary Agent row (Claude) -->
+            <div class="splithead flex items-center justify-between pt-1">
+              <div class="icontext flex items-center space-x-2">
+                <span class="agentdot claude w-5 h-5 rounded bg-amber-600 text-white flex items-center justify-center text-[10px] font-bold">Cl</span>
+                <span class="text-xs font-medium text-slate-800">Claude</span>
+                <span class="text-slate-400 text-xs">— Alternative orchestrator</span>
+              </div>
+              <span class="muted small text-xs text-slate-400 bg-slate-50 px-2 py-0.5 rounded border border-slate-200 flex items-center space-x-1">
+                <span class="material-symbols-outlined text-xs text-slate-400">block</span>
+                <span>MCP check not supported</span>
+              </span>
+            </div>
+          </div>
+
+          <!-- Action Footer -->
+          <div class="footeractions flex items-center justify-between pt-1">
+            <a class="btn px-4 py-2 bg-white hover:bg-slate-50 text-slate-700 text-xs font-medium rounded-md border border-slate-300 transition-colors shadow-sm" href="#install">
+              Cancel
+            </a>
+            <div class="flex items-center space-x-3">
+              <a class="btn px-4 py-2 bg-white hover:bg-slate-50 text-slate-700 text-xs font-medium rounded-md border border-slate-300 transition-colors shadow-sm flex items-center space-x-1.5" href="#mcp-variants">
+                <span class="material-symbols-outlined text-xs text-slate-500">refresh</span>
+                <span>Check again</span>
+              </a>
+              <a class="btn primary px-5 py-2 bg-[#1657b8] hover:bg-blue-700 active:bg-blue-800 text-white text-xs font-medium rounded-md transition-colors shadow-sm flex items-center space-x-1" href="#result">
+                <span>Install anyway</span>
+                <span class="material-symbols-outlined text-xs">arrow_forward</span>
+              </a>
+            </div>
+          </div>
+
+          <!-- Accordion details: Setup guide destination -->
+          <details id="mcp-guide" class="group bg-white border border-slate-200 rounded-lg p-3 text-xs shadow-sm transition-all">
+            <summary class="font-medium text-slate-700 cursor-pointer flex items-center justify-between select-none hover:text-slate-900">
+              <div class="flex items-center space-x-2">
+                <span class="material-symbols-outlined text-slate-400 group-open:rotate-90 transition-transform">chevron_right</span>
+                <span>Setup guide destination</span>
+              </div>
+              <span class="text-[11px] text-slate-400">Internal Store doc</span>
+            </summary>
+            <div class="mt-3 pl-6 pr-2 pt-2 border-t border-slate-100 text-slate-600 leading-relaxed">
+              <p>The real app opens the internal guide supplied by Store. The employee configures AIPro manually; this app does not edit <code class="px-1 py-0.5 bg-slate-100 rounded text-slate-800 font-mono text-[11px]">mcp.json</code> or request MCP tokens.</p>
+            </div>
+          </details>
+
+          <!-- Accordion details: Alternative results after checking again -->
+          <details id="mcp-variants" open class="group bg-white border border-slate-200 rounded-lg p-4 text-xs shadow-sm space-y-3 transition-all">
+            <summary class="font-medium text-slate-800 cursor-pointer flex items-center justify-between select-none hover:text-slate-900 mb-2">
+              <div class="flex items-center space-x-2">
+                <span class="material-symbols-outlined text-slate-400 group-open:rotate-90 transition-transform">chevron_right</span>
+                <span class="font-semibold text-slate-800">Alternative results after checking again</span>
+              </div>
+              <span class="text-[11px] text-slate-400">Simulation states</span>
+            </summary>
+
+            <div class="stategrid grid grid-cols-2 gap-3 pt-1">
+              <!-- Success State Option -->
+              <div class="notice ok bg-emerald-50/70 border border-emerald-200 rounded-lg p-3.5 space-y-1 text-emerald-900">
+                <div class="flex items-center space-x-1.5 text-emerald-800 font-semibold text-xs">
+                  <span class="material-symbols-outlined text-emerald-600 text-sm">check_circle</span>
+                  <strong>Configuration found</strong>
+                </div>
+                <p class="text-[11px] text-emerald-800 leading-relaxed">
+                  <code class="font-mono font-medium text-emerald-900">jira-mcp</code> is configured and registered in AIPro profile.
+                </p>
+                <div class="pt-1.5">
+                  <a href="#result" class="text-xs font-semibold text-emerald-700 hover:text-emerald-900 hover:underline inline-flex items-center space-x-1">
+                    <span>Continue installation</span>
+                    <span>→</span>
+                  </a>
+                </div>
+              </div>
+
+              <!-- Error State Option -->
+              <div class="notice error bg-red-50/70 border border-red-200 rounded-lg p-3.5 space-y-1 text-red-900">
+                <div class="flex items-center space-x-1.5 text-red-800 font-semibold text-xs">
+                  <span class="material-symbols-outlined text-red-600 text-sm">error</span>
+                  <strong>Cannot verify configuration</strong>
+                </div>
+                <p class="text-[11px] text-red-800 leading-relaxed">
+                  <code class="font-mono font-medium text-red-900">mcp.json</code> could not be read. Check the file and try again. Install anyway remains available.
+                </p>
+                <div class="pt-1.5">
+                  <a href="#settings" class="text-xs font-medium text-red-700 hover:text-red-900 hover:underline inline-flex items-center space-x-1">
+                    <span class="material-symbols-outlined text-xs">build</span>
+                    <span>Check file permissions</span>
+                  </a>
+                </div>
+              </div>
+            </div>
+
+            <!-- State Metadata Specifications (Edge Cases) -->
+            <div class="mt-3 p-3 bg-slate-50/80 rounded-md border border-slate-200 text-[11px] text-slate-600 space-y-2">
+              <div class="font-medium text-slate-700 flex items-center space-x-1">
+                <span class="material-symbols-outlined text-xs text-slate-400">tune</span>
+                <span>State Metadata Specifications:</span>
+              </div>
+              <div class="grid grid-cols-3 gap-2">
+                <div class="p-2 bg-white rounded border border-slate-200">
+                  <div class="font-semibold text-slate-700">No requirements:</div>
+                  <div class="text-slate-500 font-mono text-[10px] mt-0.5">“No MCP required.”</div>
+                </div>
+                <div class="p-2 bg-white rounded border border-slate-200">
+                  <div class="font-semibold text-slate-700">Unknown metadata:</div>
+                  <div class="text-slate-500 font-mono text-[10px] mt-0.5">“MCP requirements have not been provided.”</div>
+                </div>
+                <div class="p-2 bg-white rounded border border-slate-200">
+                  <div class="font-semibold text-slate-700">File missing:</div>
+                  <div class="text-slate-500 font-mono text-[10px] mt-0.5">“AIPro MCP configuration was not found.”</div>
+                </div>
+              </div>
+            </div>
+          </details>
+
+        </div>
+      </section>
+    </main>
+  </div>
+
+</body>
+</html>

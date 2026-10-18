@@ -1,0 +1,567 @@
+<!DOCTYPE html><html class="h-full" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Skills Manager — Samsung SDS</title>
+<!-- Material Symbols Outlined -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect">
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<!-- Tailwind CSS v3 -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "primary-fixed-dim": "#afc6ff",
+            "surface-container-lowest": "#ffffff",
+            "surface-bright": "#f8f9ff",
+            "surface-variant": "#e1e2e8",
+            "on-secondary-fixed-variant": "#434750",
+            "primary-container": "#1657b8",
+            "surface-dim": "#d8dadf",
+            "on-primary-container": "#c2d3ff",
+            "background": "#f8f9ff",
+            "error-container": "#ffdad6",
+            "surface-container-high": "#e6e8ed",
+            "tertiary-fixed": "#96f5ca",
+            "outline-variant": "#c3c6d4",
+            "on-primary-fixed": "#001a43",
+            "on-tertiary-fixed-variant": "#005139",
+            "on-error-container": "#93000a",
+            "inverse-on-surface": "#eff0f6",
+            "tertiary-fixed-dim": "#7ad9af",
+            "on-secondary-fixed": "#171c24",
+            "on-primary-fixed-variant": "#004397",
+            "surface": "#f8f9ff",
+            "on-tertiary": "#ffffff",
+            "secondary-fixed-dim": "#c3c6d1",
+            "surface-tint": "#1c5abc",
+            "on-surface": "#191c20",
+            "on-error": "#ffffff",
+            "on-surface-variant": "#424752",
+            "surface-container": "#eceef3",
+            "on-secondary-container": "#60646e",
+            "surface-container-low": "#f2f3f9",
+            "tertiary-container": "#006849",
+            "secondary-fixed": "#dfe2ee",
+            "primary": "#004091",
+            "error": "#ba1a1a",
+            "on-tertiary-container": "#87e6bb",
+            "surface-container-highest": "#e1e2e8",
+            "tertiary": "#004e36",
+            "inverse-surface": "#2e3135",
+            "on-background": "#191c20",
+            "inverse-primary": "#afc6ff",
+            "primary-fixed": "#d8e2ff",
+            "secondary": "#5a5e68",
+            "on-tertiary-fixed": "#002115",
+            "secondary-container": "#dfe2ee",
+            "on-primary": "#ffffff",
+            "outline": "#737784",
+            "on-secondary": "#ffffff"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.125rem",
+            "lg": "0.25rem",
+            "xl": "0.5rem",
+            "full": "0.75rem"
+          },
+          "spacing": {
+            "margin": "1rem",
+            "space-md": "0.75rem",
+            "space-xl": "1.5rem",
+            "gutter": "1rem",
+            "space-sm": "0.5rem",
+            "space-xs": "0.25rem",
+            "space-lg": "1rem"
+          },
+          "fontFamily": {
+            "headline-md": ["Inter"],
+            "code-sm": ["JetBrains Mono"],
+            "caption-regular": ["Inter"],
+            "headline-lg": ["Inter"],
+            "caption-medium": ["Inter"],
+            "body-default": ["Inter"],
+            "titlebar-caption": ["Inter"],
+            "headline-sm": ["Inter"],
+            "body-medium": ["Inter"]
+          },
+          "fontSize": {
+            "headline-md": ["16px", { "lineHeight": "24px", "fontWeight": "600" }],
+            "code-sm": ["12px", { "lineHeight": "16px", "fontWeight": "400" }],
+            "caption-regular": ["11px", { "lineHeight": "16px", "fontWeight": "400" }],
+            "headline-lg": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+            "caption-medium": ["11px", { "lineHeight": "16px", "fontWeight": "500" }],
+            "body-default": ["13px", { "lineHeight": "18px", "fontWeight": "400" }],
+            "titlebar-caption": ["12px", { "lineHeight": "16px", "fontWeight": "500" }],
+            "headline-sm": ["14px", { "lineHeight": "20px", "fontWeight": "600" }],
+            "body-medium": ["13px", { "lineHeight": "18px", "fontWeight": "500" }]
+          }
+        }
+      }
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+      font-size: 16px;
+      line-height: 1;
+      display: inline-block;
+      vertical-align: middle;
+    }
+    /* Native desktop scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #c3c6d4;
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #737784;
+    }
+  </style>
+</head>
+<body class="bg-surface text-on-surface antialiased overflow-hidden select-none h-screen flex flex-col font-body-default text-body-default">
+<!-- ==================== TOP WINDOW TITLEBAR ==================== -->
+<header class="bg-surface-container text-on-surface docked full-width top-0 h-8 flex justify-between items-center w-full px-3 select-none border-b border-outline-variant z-50 shrink-0">
+<!-- Brand / Document Info -->
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[15px]" data-icon="memory">memory</span>
+<span class="text-titlebar-caption font-titlebar-caption text-on-surface font-semibold tracking-tight">AX Portal — Samsung SDS</span>
+<span class="text-caption-regular font-caption-regular text-outline border-l border-outline-variant pl-2 ml-1">v2.4.1-enterprise</span>
+</div>
+<!-- Center Document Window Hint -->
+<div class="hidden md:flex items-center gap-1.5 text-caption-regular font-caption-regular text-on-surface-variant">
+<span class="material-symbols-outlined text-[14px]" data-icon="desktop_windows">desktop_windows</span>
+<span class="">Workstation Node · Seoul IDC #4</span>
+</div>
+<!-- Platform Window Actions (Minimize, Maximize, Close) -->
+<div class="flex items-center h-full -mr-3">
+<button class="w-11 h-8 flex items-center justify-center hover:bg-surface-variant text-on-surface transition-colors duration-150" title="Minimize">
+<span class="material-symbols-outlined text-[15px]" data-icon="minimize">minimize</span>
+</button>
+<button class="w-11 h-8 flex items-center justify-center hover:bg-surface-variant text-on-surface transition-colors duration-150" title="Maximize">
+<span class="material-symbols-outlined text-[14px]" data-icon="crop_square">crop_square</span>
+</button>
+<button class="w-11 h-8 flex items-center justify-center hover:bg-[#ac3535] hover:text-surface-container-lowest text-on-surface transition-colors duration-150" title="Close">
+<span class="material-symbols-outlined text-[16px]" data-icon="close">close</span>
+</button>
+</div>
+</header>
+<!-- ==================== APP BODY FRAME ==================== -->
+<div class="flex flex-1 overflow-hidden relative">
+<!-- ==================== SIDE NAVBAR (225px) ==================== -->
+<aside class="w-[225px] h-[calc(100vh-32px)] fixed top-8 left-0 flex-col bg-surface-container-lowest border-r border-outline-variant z-40 select-none flex justify-between p-space-sm">
+<!-- Top Section: Brand Lockup & Catalog Nav -->
+<div class="flex flex-col gap-2 overflow-y-auto pr-1">
+<!-- Brand identity lockup -->
+<div class="px-2 pt-1 pb-2 border-b border-outline-variant">
+<div class="flex items-center gap-2">
+<div class="w-6 h-6 rounded bg-primary flex items-center justify-center text-surface-container-lowest font-bold text-[12px] tracking-wider">
+              SDS
+            </div>
+<div>
+<div class="text-headline-sm font-headline-sm text-primary font-bold leading-tight">AX Portal</div>
+<div class="text-[10px] font-semibold text-secondary tracking-wider uppercase">SAMSUNG SDS</div>
+</div>
+</div>
+</div>
+<!-- Primary Navigation Groups -->
+<div class="flex flex-col gap-0.5 mt-1">
+<div class="px-2 py-1 text-[10px] font-semibold tracking-wider text-outline uppercase">Platform</div>
+<a class="text-on-surface-variant font-normal rounded-lg px-2 py-1.5 flex items-center gap-2.5 hover:bg-surface-container hover:text-on-surface transition-colors duration-150 ease-in-out" href="#">
+<span class="material-symbols-outlined text-[16px] text-secondary" data-icon="dashboard">dashboard</span>
+<span class="">Dashboard</span>
+</a>
+<a class="text-on-surface-variant font-normal rounded-lg px-2 py-1.5 flex items-center gap-2.5 hover:bg-surface-container hover:text-on-surface transition-colors duration-150 ease-in-out" href="#">
+<span class="material-symbols-outlined text-[16px] text-secondary" data-icon="folder">folder</span>
+<span class="">Library</span>
+</a>
+<a class="text-on-surface-variant font-normal rounded-lg px-2 py-1.5 flex items-center gap-2.5 hover:bg-surface-container hover:text-on-surface transition-colors duration-150 ease-in-out" href="#">
+<span class="material-symbols-outlined text-[16px] text-secondary" data-icon="storefront">storefront</span>
+<span class="">Skills Store</span>
+</a>
+<a class="text-on-surface-variant font-normal rounded-lg px-2 py-1.5 flex items-center gap-2.5 hover:bg-surface-container hover:text-on-surface transition-colors duration-150 ease-in-out" href="#">
+<span class="material-symbols-outlined text-[16px] text-secondary" data-icon="backup">backup</span>
+<span class="">Backup</span>
+</a>
+<a class="text-on-surface-variant font-normal rounded-lg px-2 py-1.5 flex items-center gap-2.5 hover:bg-surface-container hover:text-on-surface transition-colors duration-150 ease-in-out" href="#">
+<span class="material-symbols-outlined text-[16px] text-secondary" data-icon="tune">tune</span>
+<span class="">PM Essentials</span>
+</a>
+</div>
+<!-- Agent Environments Navigation Group -->
+<div class="flex flex-col gap-0.5 mt-2">
+<div class="px-2 py-1 text-[10px] font-semibold tracking-wider text-outline uppercase">Agents &amp; Profiles</div>
+<a class="text-on-surface-variant font-normal rounded-lg px-2 py-1.5 flex items-center gap-2.5 hover:bg-surface-container hover:text-on-surface transition-colors duration-150 ease-in-out" href="#">
+<span class="material-symbols-outlined text-[16px] text-secondary" data-icon="smart_toy">smart_toy</span>
+<span class="">All Agents</span>
+</a>
+<a class="text-on-surface-variant font-normal rounded-lg px-2 py-1.5 flex items-center gap-2.5 hover:bg-surface-container hover:text-on-surface transition-colors duration-150 ease-in-out" href="#">
+<span class="w-2 h-2 rounded-full bg-[#1657b8] ml-1 mr-0.5"></span>
+<span class="">AIPro</span>
+</a>
+<a class="text-on-surface-variant font-normal rounded-lg px-2 py-1.5 flex items-center gap-2.5 hover:bg-surface-container hover:text-on-surface transition-colors duration-150 ease-in-out" href="#">
+<span class="w-2 h-2 rounded-full bg-[#b94b29] ml-1 mr-0.5"></span>
+<span class="">Claude</span>
+</a>
+<a class="text-on-surface-variant font-normal rounded-lg px-2 py-1.5 flex items-center gap-2.5 hover:bg-surface-container hover:text-on-surface transition-colors duration-150 ease-in-out" href="#">
+<span class="w-2 h-2 rounded-full bg-[#6a3ebd] ml-1 mr-0.5"></span>
+<span class="">Gemini</span>
+</a>
+<a class="text-on-surface-variant font-normal rounded-lg px-2 py-1.5 flex items-center gap-2.5 hover:bg-surface-container hover:text-on-surface transition-colors duration-150 ease-in-out" href="#">
+<span class="w-2 h-2 rounded-full bg-[#464a53] ml-1 mr-0.5"></span>
+<span class="">Codex</span>
+</a>
+<a class="text-on-surface-variant font-normal rounded-lg px-2 py-1.5 flex items-center gap-2.5 hover:bg-surface-container hover:text-on-surface transition-colors duration-150 ease-in-out" href="#">
+<span class="material-symbols-outlined text-[16px] text-secondary" data-icon="workspaces">workspaces</span>
+<span class="">Project Atlas</span>
+</a>
+</div>
+</div>
+<!-- Footer Navigation Section (Settings Selected) -->
+<div class="pt-2 border-t border-outline-variant flex flex-col gap-1">
+<!-- New preset CTA -->
+<button class="w-full h-7 mb-2 bg-surface-container text-on-surface border border-outline-variant hover:bg-surface-variant rounded-lg flex items-center justify-center gap-1.5 text-caption-medium font-caption-medium transition-colors duration-150">
+<span class="material-symbols-outlined text-[15px]" data-icon="add">add</span>
+<span class="">New preset</span>
+</button>
+<!-- Settings: ACTIVE NAVIGATION ITEM -->
+<a class="bg-secondary-container text-primary font-medium rounded-lg px-2 py-1.5 border-l-2 border-primary flex items-center gap-2.5 transition-colors duration-150 ease-in-out" href="#settings">
+<span class="material-symbols-outlined text-[16px] text-primary" data-icon="settings">settings</span>
+<span class="text-body-medium font-body-medium">Settings</span>
+</a>
+<!-- User profile item in footer -->
+<div class="text-on-surface-variant font-normal rounded-lg px-2 py-1.5 flex items-center justify-between hover:bg-surface-container transition-colors duration-150 cursor-pointer">
+<div class="flex items-center gap-2 truncate">
+<span class="material-symbols-outlined text-[18px] text-secondary" data-icon="account_circle">account_circle</span>
+<span class="truncate text-caption-medium font-caption-medium text-on-surface">Example Employee</span>
+</div>
+<span class="w-1.5 h-1.5 rounded-full bg-[#087b58]"></span>
+</div>
+</div>
+</aside>
+<!-- ==================== MAIN CONTENT CANVAS (Offset 225px) ==================== -->
+<main class="ml-[225px] flex-1 h-[calc(100vh-32px)] overflow-y-auto bg-surface p-space-xl">
+<div class="max-w-[1180px] mx-auto flex flex-col gap-space-lg">
+<!-- Screen Header -->
+<div class="flex items-center justify-between pb-3 border-b border-outline-variant">
+<div>
+<div class="text-caption-medium font-caption-medium text-secondary tracking-widest uppercase">
+              W12 · PREFERENCES &amp; CONNECTION
+            </div>
+<h1 class="text-headline-lg font-headline-lg text-on-surface mt-0.5 tracking-tight">
+              Settings
+            </h1>
+</div>
+<div class="flex items-center gap-2">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#edf4ff] text-[#1657b8] border border-[#c2d3ff] text-caption-medium font-caption-medium">
+<span class="w-1.5 h-1.5 rounded-full bg-[#1657b8]"></span>
+              SDS profile
+            </span>
+<span class="text-caption-regular font-caption-regular text-outline px-2 py-1 bg-surface-container rounded border border-outline-variant">
+              Tenant ID: KR-7702-ENT
+            </span>
+</div>
+</div>
+<!-- Two-Column Workspace Layout (Left 1.5fr, Right 1fr) -->
+<div class="grid grid-cols-1 lg:grid-cols-5 gap-space-lg items-start">
+<!-- LEFT COLUMN (1.5fr approx -> col-span-3) -->
+<div class="lg:col-span-3 flex flex-col gap-space-lg">
+<!-- Panel 1: General -->
+<section class="bg-surface-container-lowest border border-outline-variant rounded-lg p-space-lg">
+<div class="flex items-center justify-between pb-2 mb-3 border-b border-surface-container">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-secondary text-[18px]" data-icon="tune">tune</span>
+<h2 class="text-headline-sm font-headline-sm text-on-surface">General</h2>
+</div>
+<span class="text-caption-regular font-caption-regular text-outline">Client configuration</span>
+</div>
+<div class="space-y-3.5">
+<!-- Field: Language -->
+<div>
+<label class="block text-caption-medium font-caption-medium text-on-surface mb-1" for="pref-language">
+                    Language
+                  </label>
+<div class="relative">
+<select class="w-full h-8 px-2.5 pr-8 bg-surface-container-lowest border border-outline-variant rounded text-body-default font-body-default text-on-surface focus:border-primary-container focus:ring-1 focus:ring-primary-container outline-none transition-colors" id="pref-language">
+<option selected="">English — default</option>
+<option>Korean (한국어)</option>
+<option>Japanese (日本語)</option>
+</select>
+<span class="material-symbols-outlined pointer-events-none absolute right-2 top-2 text-secondary text-[16px]" data-icon="expand_more">expand_more</span>
+</div>
+</div>
+<!-- Field: Theme -->
+<div>
+<label class="block text-caption-medium font-caption-medium text-on-surface mb-1" for="pref-theme">
+                    Theme
+                  </label>
+<div class="relative">
+<select class="w-full h-8 px-2.5 pr-8 bg-surface-container-lowest border border-outline-variant rounded text-body-default font-body-default text-on-surface focus:border-primary-container focus:ring-1 focus:ring-primary-container outline-none transition-colors" id="pref-theme">
+<option selected="">System</option>
+<option>Light</option>
+<option>Dark</option>
+</select>
+<span class="material-symbols-outlined pointer-events-none absolute right-2 top-2 text-secondary text-[16px]" data-icon="expand_more">expand_more</span>
+</div>
+</div>
+<!-- Subtext -->
+<p class="text-caption-regular font-caption-regular text-secondary pt-1">
+                  Additional translation scope will be agreed separately.
+                </p>
+</div>
+</section>
+<!-- Panel 2: Skills Store connection -->
+<section class="bg-surface-container-lowest border border-outline-variant rounded-lg p-space-lg">
+<div class="flex items-center justify-between pb-2 mb-3 border-b border-surface-container">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-secondary text-[18px]" data-icon="hub">hub</span>
+<h2 class="text-headline-sm font-headline-sm text-on-surface">Skills Store connection</h2>
+</div>
+<span class="inline-flex items-center gap-1 text-[11px] font-medium text-[#087b58] bg-[#e8f6ef] px-1.5 py-0.5 rounded">
+<span class="material-symbols-outlined text-[13px]" data-icon="verified_user">verified_user</span>
+                  Enterprise SSO
+                </span>
+</div>
+<div class="space-y-3.5">
+<!-- Field: Store address -->
+<div>
+<label class="block text-caption-medium font-caption-medium text-on-surface mb-1" for="store-host">
+                    Store address
+                  </label>
+<div class="flex items-center gap-2">
+<div class="relative flex-1">
+<input class="w-full h-8 px-2.5 bg-surface-container border border-outline-variant rounded text-body-default font-code-sm text-secondary cursor-not-allowed select-text outline-none" id="store-host" readonly="" type="text" value="https://&lt;internal-store-host&gt;">
+<span class="material-symbols-outlined absolute right-2.5 top-2 text-outline text-[16px]" data-icon="lock">lock</span>
+</div>
+</div>
+</div>
+<!-- Subtext -->
+<p class="text-caption-regular font-caption-regular text-secondary">
+                  Configured by your company. Proxy and certificate settings follow the IT deployment profile.
+                </p>
+<!-- Notice box (green ok) -->
+<div class="rounded bg-[#e8f6ef] border border-[#b8e8d1] p-2.5 flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[#087b58] text-[18px]" data-icon="check_circle">check_circle</span>
+<span class="text-body-default font-body-medium text-[#087b58]">Connected · Signed in as Example Employee</span>
+</div>
+<span class="text-caption-regular font-code-sm text-[#087b58] opacity-80">TLS 1.3 / mTLS OK</span>
+</div>
+<!-- Actions row -->
+<div class="pt-1 flex items-center justify-between">
+<span class="text-caption-regular font-caption-regular text-outline">Session expires in 14 days</span>
+<!-- Button: Sign out (secondary button) -->
+<button class="h-8 px-3.5 bg-surface-container-lowest border border-outline-variant hover:bg-surface-container text-on-surface rounded text-body-medium font-body-medium transition-colors duration-150 flex items-center gap-1.5" type="button">
+<span class="material-symbols-outlined text-[16px] text-secondary" data-icon="logout">logout</span>
+<span class="">Sign out</span>
+</button>
+</div>
+</div>
+</section>
+<!-- Panel 3: Application updates -->
+<section class="bg-surface-container-lowest border border-outline-variant rounded-lg p-space-lg">
+<div class="flex items-center justify-between pb-2 mb-3 border-b border-surface-container">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-secondary text-[18px]" data-icon="system_update_alt">system_update_alt</span>
+<h2 class="text-headline-sm font-headline-sm text-on-surface">Application updates</h2>
+</div>
+<span class="text-caption-regular font-caption-regular text-outline">Channel: Production/Ring-0</span>
+</div>
+<div class="space-y-3">
+<!-- Subtext -->
+<p class="text-body-default font-body-default text-on-surface">
+                  Updates are distributed through the company network.
+                </p>
+<!-- Notice box -->
+<div class="rounded bg-[#edf4ff] border border-[#c2d3ff] p-3 flex items-start gap-2.5">
+<span class="material-symbols-outlined text-[#1657b8] text-[18px] mt-0.5" data-icon="info">info</span>
+<div class="flex-1">
+<div class="text-body-medium font-body-medium text-[#1657b8]">
+                      A new app version is available. Download the internal installer when you are ready.
+                    </div>
+<div class="text-caption-regular font-caption-regular text-secondary mt-0.5">
+                      Release v2.5.0-rc2 includes critical telemetry patches and Samsung SDS MCP connector updates.
+                    </div>
+</div>
+</div>
+<!-- Action Button -->
+<div class="pt-1 flex items-center justify-start">
+<button class="h-8 px-3.5 bg-surface-container-lowest border border-outline-variant hover:bg-surface-container text-on-surface rounded text-body-medium font-body-medium transition-colors duration-150 flex items-center gap-1.5" type="button">
+<span class="material-symbols-outlined text-[16px] text-secondary" data-icon="open_in_new">open_in_new</span>
+<span class="">View update details</span>
+</button>
+</div>
+</div>
+</section>
+</div>
+<!-- RIGHT COLUMN (1fr approx -> col-span-2) -->
+<div class="lg:col-span-2 flex flex-col gap-space-lg">
+<!-- Panel 4: Agent paths -->
+<section class="bg-surface-container-lowest border border-outline-variant rounded-lg p-space-lg">
+<div class="flex items-center justify-between pb-2 mb-2 border-b border-surface-container">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-secondary text-[18px]" data-icon="folder_open">folder_open</span>
+<h2 class="text-headline-sm font-headline-sm text-on-surface">Agent paths</h2>
+</div>
+<span class="text-caption-medium font-caption-medium text-outline">4 mounted</span>
+</div>
+<!-- Subtext -->
+<p class="text-caption-regular font-caption-regular text-secondary mb-3">
+                Global skills locations. Project paths are relative to the selected project.
+              </p>
+<!-- Key-value definition list -->
+<div class="border border-outline-variant rounded overflow-hidden mb-3">
+<!-- Header -->
+<div class="bg-surface-container-low px-3 py-1.5 border-b border-outline-variant flex justify-between text-[11px] font-semibold text-secondary uppercase tracking-wider">
+<span class="">Agent Target</span>
+<span class="">Local Filesystem Root</span>
+</div>
+<!-- Item 1: AIPro -->
+<div class="px-3 py-2 border-b border-outline-variant/60 flex items-center justify-between hover:bg-[#edf4ff]/50 transition-colors">
+<div class="flex items-center gap-1.5">
+<span class="w-2 h-2 rounded-full bg-[#1657b8]"></span>
+<span class="text-body-medium font-body-medium text-on-surface">AIPro</span>
+</div>
+<code class="text-code-sm font-code-sm text-secondary bg-surface-container px-1.5 py-0.5 rounded">~/.aipro/skills</code>
+</div>
+<!-- Item 2: Claude -->
+<div class="px-3 py-2 border-b border-outline-variant/60 flex items-center justify-between hover:bg-[#edf4ff]/50 transition-colors">
+<div class="flex items-center gap-1.5">
+<span class="w-2 h-2 rounded-full bg-[#b94b29]"></span>
+<span class="text-body-medium font-body-medium text-on-surface">Claude</span>
+</div>
+<code class="text-code-sm font-code-sm text-secondary bg-surface-container px-1.5 py-0.5 rounded">~/.claude/skills</code>
+</div>
+<!-- Item 3: Gemini -->
+<div class="px-3 py-2 border-b border-outline-variant/60 flex items-center justify-between hover:bg-[#edf4ff]/50 transition-colors">
+<div class="flex items-center gap-1.5">
+<span class="w-2 h-2 rounded-full bg-[#6a3ebd]"></span>
+<span class="text-body-medium font-body-medium text-on-surface">Gemini</span>
+</div>
+<code class="text-code-sm font-code-sm text-secondary bg-surface-container px-1.5 py-0.5 rounded">~/.gemini/skills</code>
+</div>
+<!-- Item 4: Codex -->
+<div class="px-3 py-2 flex items-center justify-between hover:bg-[#edf4ff]/50 transition-colors">
+<div class="flex items-center gap-1.5">
+<span class="w-2 h-2 rounded-full bg-[#464a53]"></span>
+<span class="text-body-medium font-body-medium text-on-surface">Codex</span>
+</div>
+<code class="text-code-sm font-code-sm text-secondary bg-surface-container px-1.5 py-0.5 rounded">~/.codex/skills</code>
+</div>
+</div>
+<!-- Button: Configure paths… -->
+<button class="w-full h-8 px-3 bg-surface-container-lowest border border-outline-variant hover:bg-surface-container text-on-surface rounded text-body-medium font-body-medium transition-colors duration-150 flex items-center justify-center gap-1.5" type="button">
+<span class="material-symbols-outlined text-[15px] text-secondary" data-icon="settings_ethernet">settings_ethernet</span>
+<span class="">Configure paths…</span>
+</button>
+</section>
+<!-- Panel 5: AIPro MCP -->
+<section class="bg-surface-container-lowest border border-outline-variant rounded-lg p-space-lg">
+<div class="flex items-center justify-between pb-2 mb-3 border-b border-surface-container">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-secondary text-[18px]" data-icon="terminal">terminal</span>
+<h2 class="text-headline-sm font-headline-sm text-on-surface">AIPro MCP</h2>
+</div>
+<span class="inline-flex items-center gap-1 text-[11px] font-medium text-[#1657b8] bg-[#edf4ff] px-1.5 py-0.5 rounded">
+                  Standard Schema v1.1
+                </span>
+</div>
+<div class="space-y-2.5">
+<label class="block text-caption-medium font-caption-medium text-secondary">
+                  Active Configuration Descriptor
+                </label>
+<!-- Path block -->
+<div class="p-2.5 bg-surface-container-low border border-outline-variant rounded font-code-sm text-code-sm text-on-surface flex items-center justify-between group">
+<span class="select-all tracking-tight font-medium text-primary">%USERPROFILE%\.aipro\mcp.json</span>
+<button class="text-secondary hover:text-on-surface opacity-60 group-hover:opacity-100 transition-opacity" title="Copy path" type="button">
+<span class="material-symbols-outlined text-[15px]" data-icon="content_copy">content_copy</span>
+</button>
+</div>
+<!-- Subtext -->
+<p class="text-caption-regular font-caption-regular text-secondary">
+                  Configuration is read locally. Tokens and file contents are not uploaded.
+                </p>
+</div>
+</section>
+<!-- Panel 6: Activity -->
+<section class="bg-surface-container-lowest border border-outline-variant rounded-lg p-space-lg">
+<div class="flex items-center justify-between pb-2 mb-3 border-b border-surface-container">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-secondary text-[18px]" data-icon="history">history</span>
+<h2 class="text-headline-sm font-headline-sm text-on-surface">Activity</h2>
+</div>
+<span class="text-caption-regular font-caption-regular text-outline">Realtime sync</span>
+</div>
+<!-- Subtext Event Card -->
+<div class="p-2.5 bg-surface-bright rounded border border-outline-variant/70 mb-3">
+<div class="flex items-start gap-2">
+<span class="material-symbols-outlined text-[#087b58] text-[16px] mt-0.5" data-icon="sync_saved_locally">sync_saved_locally</span>
+<div>
+<div class="text-body-medium font-body-medium text-on-surface">
+                      09:42 · Updated Jira Weekly Report
+                    </div>
+<div class="text-caption-regular font-caption-regular text-secondary mt-0.5">
+                      AIPro · Project Atlas · Snapshot saved
+                    </div>
+</div>
+</div>
+</div>
+<!-- Collapsible detail box: 'View activity / Export logs' -->
+<details class="group border border-outline-variant rounded bg-surface-container-lowest">
+<summary class="list-none p-2.5 flex items-center justify-between cursor-pointer text-caption-medium font-caption-medium text-on-surface hover:bg-surface-container-low transition-colors select-none">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-secondary text-[16px]" data-icon="receipt_long">receipt_long</span>
+<span class="">View activity / Export logs</span>
+</div>
+<span class="material-symbols-outlined text-secondary text-[16px] transition-transform duration-200 group-open:rotate-180" data-icon="keyboard_arrow_down">keyboard_arrow_down</span>
+</summary>
+<div class="px-2.5 pb-2.5 pt-1 border-t border-outline-variant/60 text-caption-regular font-caption-regular text-secondary space-y-2">
+<p class="">
+                    Audit logs record skill execution timestamps, parameter checksums, and token consumption aggregates. Stored locally under user AppData for 30 rolling days.
+                  </p>
+<div class="flex items-center gap-2 pt-1">
+<button class="h-7 px-2.5 bg-surface-container border border-outline-variant hover:bg-surface-variant text-on-surface rounded text-caption-medium font-caption-medium transition-colors flex items-center gap-1" type="button">
+<span class="material-symbols-outlined text-[13px]" data-icon="file_download">file_download</span>
+<span class="">Export JSON</span>
+</button>
+<button class="h-7 px-2.5 bg-surface-container border border-outline-variant hover:bg-surface-variant text-on-surface rounded text-caption-medium font-caption-medium transition-colors flex items-center gap-1" type="button">
+<span class="material-symbols-outlined text-[13px]" data-icon="visibility">visibility</span>
+<span class="">Full Audit Viewer</span>
+</button>
+</div>
+</div>
+</details>
+</section>
+</div>
+</div>
+<!-- System Footer Information -->
+<footer class="mt-4 pt-4 border-t border-outline-variant flex flex-wrap items-center justify-between text-caption-regular font-caption-regular text-outline gap-2">
+<div class="flex items-center gap-3">
+<span class="">Client ID: SDS-DESKTOP-9081</span>
+<span class="">•</span>
+<span class="">Policy: Global Enterprise Admin</span>
+<span class="">•</span>
+<span class="">Last Sync: Today 09:42:18</span>
+</div>
+<div class="">
+            Samsung SDS Co., Ltd. All rights reserved.
+          </div>
+</footer>
+</div>
+</main>
+</div>
+
+
+</body></html>

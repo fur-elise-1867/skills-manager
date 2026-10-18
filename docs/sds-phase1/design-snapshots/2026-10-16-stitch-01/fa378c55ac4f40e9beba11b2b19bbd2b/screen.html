@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+
+<html class="h-full" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Skills Manager — Samsung SDS</title>
+<!-- Material Symbols Outlined font -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Google Fonts Inter & JetBrains Mono -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS v3 with Plugins -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "on-surface": "#191c20",
+            "on-secondary-fixed": "#171c24",
+            "on-secondary": "#ffffff",
+            "secondary-container": "#dfe2ee",
+            "surface-variant": "#e1e2e8",
+            "surface-container-high": "#e6e8ed",
+            "outline": "#737784",
+            "on-tertiary-fixed-variant": "#005139",
+            "on-error-container": "#93000a",
+            "surface-container-highest": "#e1e2e8",
+            "surface-bright": "#f8f9ff",
+            "primary-fixed-dim": "#afc6ff",
+            "outline-variant": "#c3c6d4",
+            "surface-container-lowest": "#ffffff",
+            "primary-fixed": "#d8e2ff",
+            "tertiary-fixed-dim": "#7ad9af",
+            "on-secondary-container": "#60646e",
+            "on-primary-fixed-variant": "#004397",
+            "inverse-primary": "#afc6ff",
+            "on-primary-fixed": "#001a43",
+            "secondary": "#5a5e68",
+            "on-tertiary-fixed": "#002115",
+            "on-primary": "#ffffff",
+            "background": "#f8f9ff",
+            "surface-dim": "#d8dadf",
+            "error-container": "#ffdad6",
+            "inverse-surface": "#2e3135",
+            "primary": "#004091",
+            "error": "#ba1a1a",
+            "on-background": "#191c20",
+            "on-tertiary": "#ffffff",
+            "primary-container": "#1657b8",
+            "on-error": "#ffffff",
+            "surface": "#f8f9ff",
+            "surface-container-low": "#f2f3f9",
+            "on-tertiary-container": "#87e6bb",
+            "inverse-on-surface": "#eff0f6",
+            "tertiary-fixed": "#96f5ca",
+            "tertiary": "#004e36",
+            "surface-tint": "#1c5abc",
+            "surface-container": "#eceef3",
+            "secondary-fixed": "#dfe2ee",
+            "on-secondary-fixed-variant": "#434750",
+            "secondary-fixed-dim": "#c3c6d1",
+            "on-surface-variant": "#424752",
+            "on-primary-container": "#c2d3ff",
+            "tertiary-container": "#006849"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.125rem",
+            "lg": "0.25rem",
+            "xl": "0.5rem",
+            "full": "0.75rem"
+          },
+          "spacing": {
+            "space-md": "0.75rem",
+            "margin": "1rem",
+            "space-xl": "1.5rem",
+            "space-xs": "0.25rem",
+            "space-lg": "1rem",
+            "gutter": "1rem",
+            "space-sm": "0.5rem"
+          },
+          "fontFamily": {
+            "headline-sm": ["Inter"],
+            "headline-lg": ["Inter"],
+            "code-sm": ["JetBrains Mono"],
+            "caption-regular": ["Inter"],
+            "body-default": ["Inter"],
+            "caption-medium": ["Inter"],
+            "titlebar-caption": ["Inter"],
+            "body-medium": ["Inter"],
+            "headline-md": ["Inter"]
+          },
+          "fontSize": {
+            "headline-sm": ["14px", { "lineHeight": "20px", "fontWeight": "600" }],
+            "headline-lg": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+            "code-sm": ["12px", { "lineHeight": "16px", "fontWeight": "400" }],
+            "caption-regular": ["11px", { "lineHeight": "16px", "fontWeight": "400" }],
+            "body-default": ["13px", { "lineHeight": "18px", "fontWeight": "400" }],
+            "caption-medium": ["11px", { "lineHeight": "16px", "fontWeight": "500" }],
+            "titlebar-caption": ["12px", { "lineHeight": "16px", "fontWeight": "500" }],
+            "body-medium": ["13px", { "lineHeight": "18px", "fontWeight": "500" }],
+            "headline-md": ["16px", { "lineHeight": "24px", "fontWeight": "600" }]
+          }
+        }
+      }
+    };
+  </script>
+</head>
+<body class="bg-background text-on-surface h-full font-body-default text-body-default antialiased overflow-hidden select-none">
+<!-- Desktop App Chrome Titlebar -->
+<header class="bg-surface-container dark:bg-surface-container-high text-on-surface dark:text-inverse-on-surface docked full-width top-0 h-8 border-b border-outline-variant dark:border-outline flat no shadows flex justify-between items-center w-full px-3 select-none z-50">
+<!-- Brand / Titlebar Caption Left -->
+<div class="flex items-center gap-2">
+<span class="w-3.5 h-3.5 rounded bg-primary-container text-on-primary flex items-center justify-center font-headline-sm text-[9px] font-bold tracking-tight">S</span>
+<span class="text-titlebar-caption font-titlebar-caption text-on-surface font-semibold tracking-tight">Skills Manager — Samsung SDS</span>
+</div>
+<!-- Center Context Path Breadcrumb -->
+<div class="hidden md:flex items-center gap-1.5 text-titlebar-caption font-titlebar-caption text-on-surface-variant font-medium">
+<span>Project Atlas</span>
+<span class="text-outline text-[10px]">/</span>
+<span>Install</span>
+<span class="text-outline text-[10px]">/</span>
+<span class="text-on-surface font-semibold">Jira Weekly Report</span>
+</div>
+<!-- Window Controls Trio -->
+<div class="flex items-center h-full -mr-3">
+<button aria-label="Minimize" class="h-8 w-11 inline-flex items-center justify-center text-on-surface-variant hover:bg-surface-variant transition-colors duration-150" title="Minimize">
+<span class="material-symbols-outlined text-[15px]">minimize</span>
+</button>
+<button aria-label="Maximize" class="h-8 w-11 inline-flex items-center justify-center text-on-surface-variant hover:bg-surface-variant transition-colors duration-150" title="Maximize">
+<span class="material-symbols-outlined text-[13px]">crop_square</span>
+</button>
+<button aria-label="Close" class="h-8 w-11 inline-flex items-center justify-center text-on-surface-variant hover:bg-[#ac3535] hover:text-white transition-colors duration-150" title="Close">
+<span class="material-symbols-outlined text-[15px]">close</span>
+</button>
+</div>
+</header>
+<!-- Application Shell Body -->
+<div class="flex w-full h-[calc(100vh-32px)] overflow-hidden">
+<!-- Fixed Side Navigation Bar (225px) -->
+<aside class="w-[225px] h-full flex flex-col justify-between p-space-sm border-r border-outline-variant bg-surface-container-lowest shrink-0 select-none">
+<!-- Upper Section -->
+<div class="flex flex-col gap-3">
+<!-- Brand Info Header -->
+<div class="flex items-center gap-2.5 px-2 py-1.5">
+<div class="w-7 h-7 rounded-lg bg-primary-container flex items-center justify-center text-white font-headline-sm font-bold shadow-xs">
+            S
+          </div>
+<div class="flex flex-col leading-tight">
+<span class="font-headline-sm text-headline-sm text-primary font-bold tracking-tight">Skills Manager</span>
+<span class="font-caption-regular text-[10px] text-on-surface-variant tracking-wider uppercase font-semibold">SAMSUNG SDS</span>
+</div>
+</div>
+<!-- + New preset CTA button -->
+<button class="w-full flex items-center justify-center gap-1.5 bg-surface-container-low hover:bg-surface-variant text-on-surface border border-outline-variant rounded-lg px-2 py-1.5 transition-colors duration-150 text-caption-medium font-caption-medium">
+<span class="material-symbols-outlined text-[16px] text-primary">add</span>
+<span>New preset</span>
+</button>
+<!-- Primary System Tabs -->
+<nav class="flex flex-col gap-0.5">
+<a class="text-on-surface-variant font-normal rounded-lg px-2 py-1.5 flex items-center justify-between hover:bg-surface-container hover:text-on-surface transition-colors duration-150 ease-in-out" href="#">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">dashboard</span>
+<span class="font-body-default text-body-default">Dashboard</span>
+</div>
+</a>
+<!-- Active Destination: Library -->
+<a class="bg-secondary-container text-primary font-medium rounded-lg px-2 py-1.5 border-l-2 border-primary flex items-center justify-between" href="#">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">folder</span>
+<span class="font-body-medium text-body-medium font-semibold">Library</span>
+</div>
+<span class="text-caption-regular font-caption-medium bg-surface-container-lowest text-primary px-1.5 py-0.2 rounded-full border border-outline-variant text-[10px]">12</span>
+</a>
+<a class="text-on-surface-variant font-normal rounded-lg px-2 py-1.5 flex items-center justify-between hover:bg-surface-container hover:text-on-surface transition-colors duration-150 ease-in-out" href="#">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">storefront</span>
+<span class="font-body-default text-body-default">Skills Store</span>
+</div>
+</a>
+<a class="text-on-surface-variant font-normal rounded-lg px-2 py-1.5 flex items-center justify-between hover:bg-surface-container hover:text-on-surface transition-colors duration-150 ease-in-out" href="#">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">backup</span>
+<span class="font-body-default text-body-default">Backup</span>
+</div>
+</a>
+</nav>
+<!-- Divider & Section Header -->
+<div class="pt-2">
+<div class="px-2 pb-1.5 text-[10px] font-semibold tracking-wider text-outline uppercase font-caption-medium">
+            Environments
+          </div>
+<nav class="flex flex-col gap-0.5">
+<a class="text-on-surface-variant font-normal rounded-lg px-2 py-1 flex items-center justify-between hover:bg-surface-container hover:text-on-surface transition-colors duration-150" href="#">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[16px]">tune</span>
+<span class="text-caption-medium font-caption-medium">PM Essentials</span>
+</div>
+</a>
+<a class="text-on-surface-variant font-normal rounded-lg px-2 py-1 flex items-center justify-between hover:bg-surface-container hover:text-on-surface transition-colors duration-150" href="#">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[16px]">smart_toy</span>
+<span class="text-caption-medium font-caption-medium">All Agents</span>
+</div>
+</a>
+<a class="text-on-surface-variant font-normal rounded-lg px-2 py-1 flex items-center justify-between hover:bg-surface-container hover:text-on-surface transition-colors duration-150" href="#">
+<div class="flex items-center gap-2">
+<span class="w-1.5 h-1.5 rounded-full bg-[#1657b8]"></span>
+<span class="text-caption-medium font-caption-medium">AIPro</span>
+</div>
+<span class="text-[10px] font-caption-medium bg-surface-container-high text-on-surface-variant px-1 rounded">8</span>
+</a>
+<a class="text-on-surface-variant font-normal rounded-lg px-2 py-1 flex items-center justify-between hover:bg-surface-container hover:text-on-surface transition-colors duration-150" href="#">
+<div class="flex items-center gap-2">
+<span class="w-1.5 h-1.5 rounded-full bg-[#b94b29]"></span>
+<span class="text-caption-medium font-caption-medium">Claude</span>
+</div>
+<span class="text-[10px] font-caption-medium bg-surface-container-high text-on-surface-variant px-1 rounded">4</span>
+</a>
+<a class="text-on-surface-variant font-normal rounded-lg px-2 py-1 flex items-center justify-between hover:bg-surface-container hover:text-on-surface transition-colors duration-150" href="#">
+<div class="flex items-center gap-2">
+<span class="w-1.5 h-1.5 rounded-full bg-[#6a3ebd]"></span>
+<span class="text-caption-medium font-caption-medium">Gemini</span>
+</div>
+<span class="text-[10px] font-caption-medium bg-surface-container-high text-on-surface-variant px-1 rounded">3</span>
+</a>
+<a class="text-on-surface-variant font-normal rounded-lg px-2 py-1 flex items-center justify-between hover:bg-surface-container hover:text-on-surface transition-colors duration-150" href="#">
+<div class="flex items-center gap-2">
+<span class="w-1.5 h-1.5 rounded-full bg-[#464a53]"></span>
+<span class="text-caption-medium font-caption-medium">Codex</span>
+</div>
+<span class="text-[10px] font-caption-medium bg-surface-container-high text-on-surface-variant px-1 rounded">5</span>
+</a>
+<a class="text-primary font-medium bg-surface-container-low rounded-lg px-2 py-1 flex items-center justify-between hover:bg-surface-container transition-colors duration-150" href="#">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[16px] text-primary">workspaces</span>
+<span class="text-caption-medium font-caption-medium font-semibold">Project Atlas</span>
+</div>
+</a>
+</nav>
+</div>
+</div>
+<!-- Footer User Info & Settings -->
+<div class="pt-2 border-t border-outline-variant flex flex-col gap-1">
+<a class="text-on-surface-variant font-normal rounded-lg px-2 py-1 flex items-center gap-2 hover:bg-surface-container hover:text-on-surface transition-colors duration-150" href="#">
+<span class="material-symbols-outlined text-[18px]">settings</span>
+<span class="font-body-default text-body-default">Settings</span>
+</a>
+<div class="flex items-center gap-2.5 px-2 py-1.5 mt-0.5 rounded-lg bg-surface-container-low border border-outline-variant">
+<div class="w-6 h-6 rounded-full bg-primary-container text-white flex items-center justify-center font-bold text-[11px] shrink-0">
+            E
+          </div>
+<div class="flex flex-col min-w-0">
+<span class="text-caption-medium font-caption-medium text-on-surface truncate font-semibold">Example Employee</span>
+<span class="text-[10px] text-on-surface-variant truncate font-caption-regular">Cloud Architect</span>
+</div>
+</div>
+</div>
+</aside>
+<!-- Main Content Canvas Area (#fafafa) -->
+<main class="flex-1 bg-[#fafafa] overflow-y-auto px-8 py-8 flex flex-col">
+<div class="max-w-[1040px] w-full mx-auto">
+<!-- Header & Breadcrumb Context -->
+<div class="flex items-start justify-between mb-6">
+<div class="flex flex-col gap-1">
+<div class="flex items-center gap-1.5 text-caption-medium font-caption-medium text-on-surface-variant">
+<span>Project Atlas</span>
+<span class="text-outline text-[11px]">›</span>
+<span>Install</span>
+<span class="text-outline text-[11px]">›</span>
+<span class="text-on-surface font-semibold">Jira Weekly Report</span>
+</div>
+<h1 class="font-headline-lg text-2xl font-bold text-on-surface tracking-tight mt-1">
+              1 installed · 1 needs attention
+            </h1>
+<p class="font-body-default text-body-default text-on-surface-variant">
+              Jira Weekly Report 1.2.0 · Project Atlas
+            </p>
+</div>
+<!-- Top-Right Status Badge (Partially completed) -->
+<div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#fff5e4] border border-[#f3d99e] text-[#92580b] font-caption-medium text-caption-medium">
+<span class="w-1.5 h-1.5 rounded-full bg-[#92580b]"></span>
+<span>Partially completed</span>
+</div>
+</div>
+<!-- Package Prepared Panel (White card Level 1) -->
+<section class="bg-surface-container-lowest border border-outline-variant rounded-lg p-5 mb-4 shadow-none">
+<!-- Card Header Row -->
+<div class="flex items-center justify-between mb-3">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[20px] text-on-surface">inventory_2</span>
+<h2 class="font-headline-md text-headline-sm font-semibold text-on-surface">Package prepared</h2>
+</div>
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-[#e8f6ef] text-[#087b58] border border-[#b2e2cc]">
+<span class="material-symbols-outlined text-[14px]">check</span>
+<span>Complete</span>
+</span>
+</div>
+<!-- Solid Blue Progress Bar -->
+<div class="w-full bg-surface-container-high h-1.5 rounded overflow-hidden">
+<div class="bg-primary-container h-full rounded w-full"></div>
+</div>
+<!-- Step Pipeline Note -->
+<div class="text-[12px] font-body-default text-on-surface-variant mt-2.5 mb-4 flex items-center gap-1">
+<span class="text-[#087b58] font-semibold">✓</span>
+<span>Downloaded</span>
+<span class="text-outline mx-1">→</span>
+<span>checksum verified</span>
+<span class="text-outline mx-1">→</span>
+<span>extracted</span>
+<span class="text-outline mx-1">→</span>
+<span class="text-on-surface font-medium">deployed to selected targets</span>
+</div>
+<!-- Divider -->
+<hr class="border-t border-outline-variant mb-4"/>
+<!-- Target Installation Status Table -->
+<div class="w-full">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="border-b border-outline-variant text-[11px] font-semibold text-outline tracking-wider uppercase">
+<th class="pb-2 font-caption-medium w-[45%]">Target</th>
+<th class="pb-2 font-caption-medium w-[35%]">Result</th>
+<th class="pb-2 font-caption-medium w-[20%] text-right">Action</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant">
+<!-- Row 1: AIPro (Success with warning) -->
+<tr class="hover:bg-surface-container-low transition-colors duration-150">
+<td class="py-3 pr-4 align-top">
+<div class="flex items-start gap-2.5">
+<div class="inline-flex items-center justify-center w-6 h-6 rounded bg-[#edf4ff] text-[#1657b8] border border-[#c2d7fc] font-headline-sm text-xs font-semibold shrink-0 mt-0.5">
+                        A
+                      </div>
+<div class="flex flex-col">
+<span class="font-body-medium text-body-medium font-semibold text-on-surface">AIPro · Project Atlas</span>
+<span class="font-code-sm text-[11px] text-on-surface-variant font-mono mt-0.5">.aipro\skills\jira-weekly-report</span>
+</div>
+</div>
+</td>
+<td class="py-3 px-4 align-top">
+<div class="flex flex-col items-start gap-1">
+<span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-medium bg-[#e8f6ef] text-[#087b58] border border-[#b2e2cc]">
+<span class="w-1.5 h-1.5 rounded-full bg-[#087b58]"></span>
+<span>Installed</span>
+</span>
+<span class="text-[11px] text-[#92580b] font-caption-medium flex items-center gap-1">
+<span class="material-symbols-outlined text-[13px] text-[#92580b]">warning</span>
+<span>MCP configuration still missing</span>
+</span>
+</div>
+</td>
+<td class="py-3 pl-4 align-top text-right">
+<a class="inline-flex items-center font-body-medium text-caption-medium text-primary-container hover:underline font-semibold transition-colors duration-150" href="#">
+                      Check MCP
+                    </a>
+</td>
+</tr>
+<!-- Row 2: Claude (Failed) -->
+<tr class="hover:bg-surface-container-low transition-colors duration-150">
+<td class="py-3 pr-4 align-top">
+<div class="flex items-start gap-2.5">
+<div class="inline-flex items-center justify-center w-6 h-6 rounded bg-[#faede8] text-[#b94b29] border border-[#f5cdbf] font-headline-sm text-xs font-semibold shrink-0 mt-0.5">
+                        Cl
+                      </div>
+<div class="flex flex-col">
+<span class="font-body-medium text-body-medium font-semibold text-on-surface">Claude · Project Atlas</span>
+<span class="font-code-sm text-[11px] text-on-surface-variant font-mono mt-0.5">.claude\skills\jira-weekly-report</span>
+</div>
+</div>
+</td>
+<td class="py-3 px-4 align-top">
+<div class="flex flex-col items-start gap-1">
+<span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-medium bg-[#fff0f0] text-[#ac3535] border border-[#f8c6c6]">
+<span class="w-1.5 h-1.5 rounded-full bg-[#ac3535]"></span>
+<span>Could not install</span>
+</span>
+<span class="text-[11px] text-[#ac3535] font-caption-medium flex items-center gap-1">
+<span class="material-symbols-outlined text-[13px] text-[#ac3535]">error</span>
+<span>No write access to the folder</span>
+</span>
+</div>
+</td>
+<td class="py-3 pl-4 align-top text-right">
+<a class="inline-flex items-center font-body-medium text-caption-medium text-primary-container hover:underline font-semibold transition-colors duration-150" href="#">
+                      Review and retry
+                    </a>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<!-- Information Notice Box (Soft light blue container) -->
+<div class="bg-[#edf4ff] border border-[#c2d7fc] rounded-lg p-3.5 mb-5 flex items-start gap-3">
+<div class="w-5 h-5 rounded-full bg-primary-container text-white flex items-center justify-center shrink-0 mt-0.5">
+<span class="material-symbols-outlined text-[14px]">info</span>
+</div>
+<p class="font-body-default text-body-default text-on-surface leading-snug">
+            The skill is saved in Library. Fix the failed destination and retry that target. AIPro's successful installation is kept.
+          </p>
+</div>
+<!-- Footer Action Buttons -->
+<div class="flex justify-between items-center mb-6">
+<button class="border border-outline-variant bg-surface-container-lowest hover:bg-surface-container text-on-surface px-4 py-2 rounded-lg font-caption-medium text-body-default transition-colors duration-150 shadow-xs flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[16px] text-on-surface-variant">open_in_new</span>
+<span>Open workspace</span>
+</button>
+<button class="bg-primary-container hover:bg-[#124491] text-white px-5 py-2 rounded-lg font-caption-medium text-body-default transition-colors duration-150 shadow-xs flex items-center gap-1.5">
+<span>View Library</span>
+<span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+</button>
+</div>
+<!-- Collapsible Details Accordion Panel -->
+<section class="bg-surface-container-lowest border border-outline-variant rounded-lg p-4 shadow-none">
+<details class="group" open="">
+<summary class="flex items-center justify-between cursor-pointer list-none select-none">
+<div class="flex items-center gap-2 text-on-surface">
+<span class="material-symbols-outlined text-[18px] text-on-surface-variant group-open:rotate-90 transition-transform duration-150">chevron_right</span>
+<span class="font-headline-sm text-body-medium font-semibold">In-progress and failure variants</span>
+</div>
+<span class="text-[11px] font-caption-medium font-medium px-2 py-0.5 rounded bg-surface-container text-on-surface-variant border border-outline-variant">
+                Technical Specification
+              </span>
+</summary>
+<div class="mt-3 pt-3 border-t border-outline-variant text-caption-regular text-body-default text-on-surface-variant leading-relaxed">
+              While working: show the current step, byte progress when available, and Cancel. Checksum mismatch, damaged archive, multiple skill roots or missing SKILL.md stops installation before target replacement. If cancelled during replacement, finish recovery before confirming cancellation.
+            </div>
+</details>
+</section>
+</div>
+</main>
+</div>
+</body></html>
