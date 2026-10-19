@@ -15,20 +15,26 @@ beforeEach(()=>{vi.mocked(invoke).mockImplementation(async command=>{
     throw new Error(`Unexpected command ${command}`);
 });});
 
-test("shows independent cache and target status locally, searches paths and previews verified text",async()=>{
-    render(<LibraryPage/>);
+test("shows independent cache and target status locally, searches paths and does not expose deferred preview or install controls",async()=>{
+    render(<LibraryPage onInstall={vi.fn()} onCachedInstall={vi.fn()}/>);
     await screen.findByRole("heading",{name:"jira-weekly-report"});
     expect(screen.getByText(item.deployments[0].target.path)).toBeInTheDocument();
     expect(screen.getByText("Installed",{selector:"span"})).toBeInTheDocument();
     expect(screen.getByText(/MCP at installation: Missing/)).toBeInTheDocument();
+
+    expect(screen.queryByRole("button",{name:/Preview/i})).not.toBeInTheDocument();
+    expect(screen.queryByRole("button",{name:/Install skill/i})).not.toBeInTheDocument();
+    expect(screen.queryByRole("button",{name:/Use cached copy/i})).not.toBeInTheDocument();
+    expect(screen.queryByRole("button",{name:/Refresh Library/i})).not.toBeInTheDocument();
+    expect(screen.queryByRole("button",{name:/^All$/i})).not.toBeInTheDocument();
+    expect(screen.queryByRole("button",{name:/^Installed$/i})).not.toBeInTheDocument();
+    expect(screen.queryByRole("button",{name:/^Available$/i})).not.toBeInTheDocument();
+
     fireEvent.change(screen.getByRole("searchbox",{name:"Search Library"}),{target:{value:"not-in-library"}});
     expect(screen.getByText("No matching releases.")).toBeInTheDocument();
     fireEvent.change(screen.getByRole("searchbox",{name:"Search Library"}),{target:{value:"Synthetic"}});
-    fireEvent.click(screen.getByRole("button",{name:"Preview jira-weekly-report 1.2.0"}));
-    expect(await screen.findByText("Local skill")).toBeInTheDocument();
-    expect(document.querySelector("img")).toBeNull();
-    expect(screen.queryByRole("link",{name:"External"})).not.toBeInTheDocument();
-    expect(vi.mocked(invoke).mock.calls.map(([command])=>command)).toEqual(["sds_library","sds_library_preview"]);
+    expect(screen.getByText("jira-weekly-report")).toBeInTheDocument();
+    expect(vi.mocked(invoke).mock.calls.map(([command])=>command)).toEqual(["sds_library"]);
 });
 
 test("reveals only the selected backend deployment ID and copies its displayed path on click",async()=>{
@@ -52,11 +58,12 @@ test("an unreadable Library is an error rather than an empty result and supports
     expect(await screen.findByRole("heading",{name:"jira-weekly-report"})).toBeInTheDocument();
 });
 
-test("cache problems do not erase modified or missing target records",async()=>{
+test("cache problems do not erase modified or missing target records and keeps delete disabled when destinations exist",async()=>{
     vi.mocked(invoke).mockResolvedValue([{...item,cacheStatus:"corrupt",deployments:[{...item.deployments[0],status:"modified",reason:"Local contents have changed."},{...item.deployments[0],id:"missing",status:"missing",target:{...item.deployments[0].target,path:"C:\\Synthetic\\another-target"},reason:"The installed folder is missing."}]}] as never);
     render(<LibraryPage/>);
     expect(await screen.findByText("Cache needs attention")).toBeInTheDocument();
     expect(screen.getByText("Local changes")).toBeInTheDocument();
     expect(screen.getByText("Missing folder")).toBeInTheDocument();
-    expect(screen.getByRole("button",{name:"Preview jira-weekly-report 1.2.0"})).toBeDisabled();
+    expect(screen.getByRole("button",{name:"Delete from Library"})).toBeDisabled();
+    expect(screen.queryByRole("button",{name:/Preview/i})).not.toBeInTheDocument();
 });

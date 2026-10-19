@@ -13,19 +13,25 @@ beforeEach(()=>{vi.mocked(invoke).mockImplementation(async command=>{
   throw new Error(`Unexpected ${command}`);
 });});
 
-test("offline cached install is explicit, shows provenance and never invokes ordinary Store install",async()=>{
-  const install=vi.fn(),cached=vi.fn();render(<LibraryPage onInstall={install} onCachedInstall={cached} session={{status:"offline",user:{id:"account-one",displayName:"Employee"}}} profileId="profile-one"/>);
-  fireEvent.click(await screen.findByRole("button",{name:"Use cached copy"}));
-  expect(cached).toHaveBeenCalledWith("release-key");expect(install).not.toHaveBeenCalled();
+test("offline session shows provenance, keeps offline banner and local delete, and does not expose deferred install buttons",async()=>{
+  const install=vi.fn(),cached=vi.fn();
+  render(<LibraryPage onInstall={install} onCachedInstall={cached} session={{status:"offline",user:{id:"account-one",displayName:"Employee"}}} profileId="profile-one"/>);
+  await screen.findByRole("heading",{name:"jira-weekly-report"});
+  expect(screen.queryByRole("button",{name:"Use cached copy"})).not.toBeInTheDocument();
+  expect(screen.queryByRole("button",{name:"Install skill"})).not.toBeInTheDocument();
+  expect(screen.queryByRole("button",{name:"Preview"})).not.toBeInTheDocument();
+  expect(screen.getByRole("button",{name:"Delete from Library"})).toBeInTheDocument();
   expect(screen.getByText(/Current Store permissions are unknown/)).toBeInTheDocument();
   expect(screen.getByText(/2026-10-17T00:00:00Z/)).toBeInTheDocument();
   expect(invoke).not.toHaveBeenCalledWith("sds_prepare_install",expect.anything());
 });
 
-test.each(["expired","signedOut"] as const)("%s cannot deploy cached releases but keeps local maintenance",async status=>{
+test.each(["expired","signedOut"] as const)("%s session keeps offline banner and local maintenance without exposing deferred install",async status=>{
   render(<LibraryPage onInstall={vi.fn()} onCachedInstall={vi.fn()} session={{status,user:null}} profileId="profile-one"/>);
   await screen.findByRole("heading",{name:"jira-weekly-report"});
-  expect(screen.getByRole("button",{name:"Use cached copy"})).toBeDisabled();
+  expect(screen.queryByRole("button",{name:"Use cached copy"})).not.toBeInTheDocument();
+  expect(screen.queryByRole("button",{name:"Install skill"})).not.toBeInTheDocument();
+  expect(screen.getByRole("button",{name:"Delete from Library"})).toBeInTheDocument();
   expect(screen.getByText(/Sign in to deploy/)).toBeInTheDocument();
 });
 
@@ -40,7 +46,7 @@ test("cache deletion has a separate reviewed command and does not remove a targe
   fireEvent.click(await screen.findByRole("button",{name:"Delete from Library"}));
   await screen.findByRole("dialog",{name:"Delete downloaded copy"});
   expect(invoke).not.toHaveBeenCalledWith("sds_execute_cache_delete",expect.anything());
-  fireEvent.click(await screen.findByRole("button",{name:"Delete cached files"}));
+  fireEvent.click(screen.getByRole("button",{name:"Delete cached files"}));
   await waitFor(()=>expect(invoke).toHaveBeenCalledWith("sds_execute_cache_delete",{planId:"delete-plan"}));
   expect(vi.mocked(invoke).mock.calls.some(([name])=>name==="sds_prepare_remove")).toBe(false);
 });
