@@ -1,6 +1,6 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "SDS Skills Manager",
+  "productName": "AX Portal",
   "mainBinaryName": "sds-skills-manager",
   "identifier": "com.sds.skillsmanager.desktop",
   "build": {
@@ -9,7 +9,7 @@
     "beforeDevCommand": "npm run dev:sds"
   },
   "app": {
-    "windows": [{ "label": "main", "title": "SDS Skills Manager", "width": 1440, "height": 860, "minWidth": 1100, "minHeight": 640, "resizable": true, "visible": true, "decorations": true }],
+    "windows": [{ "label": "main", "title": "AX Portal", "width": 1440, "height": 860, "minWidth": 1100, "minHeight": 640, "resizable": true, "visible": true, "decorations": true }],
     "security": {
       "capabilities": ["sds"],
       "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src ipc: http://ipc.localhost"

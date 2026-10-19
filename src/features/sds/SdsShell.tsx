@@ -26,9 +26,8 @@ export default function SdsShell({ profile }: { profile: ProfileInfo }) {
   const settings = page === "settings" || page === "store" && account.connection === null;
   return <div className="sds-app">
     <a className="sds-skip" href="#sds-main">Skip to content</a>
-    <header className="sds-titlebar"><Box size={15} aria-hidden="true" /><span>SDS Skills Manager</span><span className="sds-environment">{profile.environment === "development" ? "Local development" : "Internal"}{profile.fixtureMode ? " · Fixtures" : ""}</span></header>
     <aside className="sds-sidebar">
-      <div className="sds-brand"><span className="sds-brand-mark">SDS</span><div><strong>Skills Manager</strong><small>Your internal workspace</small></div></div>
+      <div className="sds-brand"><span className="sds-brand-mark"><img src="/ax-portal/icon.png" alt="" onError={(e)=>{e.currentTarget.style.display="none";}} /><span>AX</span></span><div><strong>AX Portal</strong><small>Your internal workspace</small></div></div>
       <nav aria-label="Main navigation">
         <p className="sds-nav-group">SKILLS</p>
         <button disabled={!account.connection} onClick={() => setPage("store")} aria-current={page==="store" && !settings ? "page" : undefined} title={!account.connection ? "Configure your Store connection first" : undefined}><Box size={16} aria-hidden="true" />Skills Store</button>
@@ -37,7 +36,10 @@ export default function SdsShell({ profile }: { profile: ProfileInfo }) {
         <p className="sds-nav-group">PREFERENCES</p>
         <button onClick={() => setPage("settings")} aria-current={settings ? "page" : undefined}><Settings size={16} aria-hidden="true" />Settings</button>
       </nav>
-      <div className="sds-sidebar-footer"><span className="sds-status-dot" />{account.session?.user?.displayName ?? "AIPro workspace"}</div>
+      <div className="sds-sidebar-footer">
+        <div className="sds-sidebar-footer-user"><span className="sds-status-dot" />{account.session?.user?.displayName ?? "AIPro workspace"}</div>
+        <span className="sds-environment">{profile.environment === "development" ? "Local development" : "Internal"}{profile.fixtureMode ? " · Fixtures" : ""}</span>
+      </div>
       {account.session?.user && <button onClick={() => { void account.logout(); }}>Sign out</button>}
     </aside>
     <main id="sds-main" className="sds-main" tabIndex={-1}>

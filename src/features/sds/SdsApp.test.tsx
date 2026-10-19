@@ -105,3 +105,12 @@ test("rejects_backend_environment_and_fixture_mismatch", async () => {
   render(<SdsApp />);
   expect(await screen.findByRole("alert")).toHaveTextContent("Desktop profile mismatch");
 });
+
+test("renders AX Portal brand and removes internal titlebar from DOM", async () => {
+  render(<SdsApp />);
+  await screen.findByRole("navigation");
+  expect(document.querySelector(".sds-titlebar")).toBeNull();
+  expect(screen.getByText("AX Portal")).toBeInTheDocument();
+  expect(screen.getByText("Internal")).toBeInTheDocument();
+});
+
