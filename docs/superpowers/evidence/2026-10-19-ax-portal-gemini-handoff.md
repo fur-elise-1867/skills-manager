@@ -7,7 +7,7 @@
 - **Branch:** `gemini/sds-uat-ui`
 - **Base HEAD:** `47ac5dd967e2754ece84c827837e7f28d01ba237`
 - **Review 1 HEAD:** `e84f2a1` (Reviewed by CodeX)
-- **Review 2 base HEAD:** `89cc048` (Remediated CodeX Review 1 findings)
+- **Review 2 implementation HEAD:** `330a80f` (`fix(sds): close AX Portal review gaps`)
 
 ---
 
@@ -18,7 +18,7 @@ This report documents the completion of packages **G0 through G5** and the **Cod
 2. **Desktop Shell Rebranding & Titlebar Removal (G3):** Completely eliminated the redundant internal titlebar `<header className="sds-titlebar">` and its associated 32px CSS grid row (`grid-template-rows: 1fr`), while preserving standard OS native window frames and controls. Replaced all occurrences of "SDS Desktop" with "AX Portal" across the sidebar, window title, document title, and package configuration.
 3. **Logo & Asset Suite (G4):** Sourced and generated high-resolution AX Portal branding assets (`logo.png` 512x512, `icon.png` 256x256, `favicon.png` 32x32, and native desktop bundle icons up to 512x512, plus multi-frame `icon.ico`). Integrated favicon dynamically in `main.tsx` and wired bundle icons in `tauri.sds.conf.json`.
 4. **Verification & Native Live Smoke (G5):** Ran the full verification suite (TypeScript compilation, Vite build, upstream build, ESLint, Node test runner, Cargo check, Vitest, Cargo unit tests) and executed a live integration test against the running Spring Boot Store on port 8080.
-5. **Review Remediation (G6):** Remediated all CodeX findings: isolated desktop fallback strictly to HTTP 500 compatibility errors (never masking 401/403/404); deduplicated mapping logic; transformed SDS HTML build output to "AX Portal" title and favicon; committed master asset `icon-source.png` and regenerated all PNGs and multi-res `icon.ico` with clean transparent alpha outside the squircle card; enforced environment credentials in live tests; built native binary and committed native UAT screenshots into `docs/superpowers/evidence/ax-portal/`. All acceptance criteria (AC1–AC8) are met.
+5. **Review Remediation (G6):** Isolated desktop fallback strictly to HTTP 500 compatibility errors (never masking 401/403/404); deduplicated mapping logic; transformed SDS HTML build output to "AX Portal" title and favicon; committed master asset `icon-source.png` and regenerated all PNGs and multi-res `icon.ico` with clean transparent alpha outside the squircle card; enforced environment credentials in live tests; built native binary and committed native UAT screenshots into `docs/superpowers/evidence/ax-portal/`. Follow-up remediation at `330a80f` adds isolated bundle verification, 401/503 no-fallback coverage, and the CSS minimum-window correction. AC3 remains pending a fresh native capture.
 
 ---
 
@@ -119,6 +119,7 @@ The listed `dist-sds/**` worktree changes are no longer present and were never c
 | **G5 Live Test** | Completed | `760827d` | `test(sds): add live store search integration test`<br>Added native live test `live_store_search_and_detail_with_web_fallback` running against live backend on port 8080 |
 | **G5 Handoff Doc** | Completed | `e84f2a1` | `docs(sds): record AX Portal verification and live evidence`<br>Handoff report for CodeX Review 1 |
 | **G6 Remediation** | Completed | `89cc048` | `fix(sds): remediate CodeX review findings for AX Portal`<br>Isolated desktop 500 fallback, 403/404 regression tests, deduplicated metadata mapper, Vite SDS HTML branding plugin, committed master icon with squircle alpha, live credential enforcement, and committed native UAT screenshots |
+| **Review 2 follow-up** | Completed | `330a80f` | `fix(sds): close AX Portal review gaps`<br>Builds bundle evidence in an isolated temp directory, redacts credentials, adds 401/503 no-Web-fallback coverage, and removes the CSS root minimum that caused the 1100×640 horizontal scrollbar |
 
 ---
 
@@ -132,7 +133,7 @@ The listed `dist-sds/**` worktree changes are no longer present and were never c
 | **AC4** | **Rebranding to "AX Portal" consistent across shell** | **PASS** | - Sidebar header displays "AX Portal" (`.sds-sidebar-brand-title`).<br>- Window title in `tauri.sds.conf.json` set to `"AX Portal"`.<br>- `package.productName` in `tauri.sds.conf.json` set to `"AX Portal"`.<br>- `main.tsx` dynamically sets `document.title = 'AX Portal'` in SDS mode.<br>- Vite plugin `sdsHtmlPlugin` transforms `dist-sds/index.html` at build time to `<title>AX Portal</title>` and `<link rel="icon" href="/ax-portal/favicon.png">`. Verified via `scripts/sds-bundle.test.mjs`.<br>- Upstream build (`index.html`) retains unmodified "Skills Manager".<br>- Brand metadata documented in `assets/ax-portal/branding.md`. |
 | **AC5** | **Complete AX Portal logo & desktop icon set** | **PASS** | - Committed master asset `src-tauri/icons/ax-portal/icon-source.png` (1024x1024, 32bpp ARGB with transparent background outside squircle card, corner radius ~168px).<br>- Public web assets: `public/ax-portal/logo.png` (512x512), `public/ax-portal/icon.png` (256x256), `public/ax-portal/favicon.png` (32x32).<br>- Native bundle icons: `src-tauri/icons/ax-portal/` (`32x32.png`, `64x64.png`, `128x128.png`, `128x128@2x.png`, `icon.png` 512x512) and multi-resolution `icon.ico` (16, 24, 32, 48, 64, 128, 256) all featuring 32bpp ARGB alpha transparency.<br>- `scripts/generate-ax-icons.ps1` accepts `-SourcePath` parameter defaulting to repo master asset, and automatically masks opaque inputs. Verified via `scripts/sds-bundle.test.mjs`. |
 | **AC6** | **Technical identities & upstream separation preserved** | **PASS** | - Technical bundle identifier remains `"com.sds.skillsmanager.desktop"`.<br>- Storage roots and profile names remain `SDS/SkillsManager` and `sds`.<br>- Upstream files (`tauri.conf.json`, `src/App.tsx`, etc.) untouched.<br>- Upstream production build (`npm run build`) succeeds cleanly with exit code 0. |
-| **AC7** | **Verification suite passes with recorded evidence** | **PASS** | - `npm run build:sds`: Exit 0 (186 kB index, 227 kB SdsApp)<br>- `npm run build`: Exit 0 (upstream build intact)<br>- `npm run lint`: Exit 0 (121 UI files checked)<br>- `node --test scripts/sds*.test.mjs`: Exit 0 (14 passed, including HTML transform & asset presence tests)<br>- `npm run sds:check -- --environment development`: Exit 0 (Cargo check passed)<br>- `npm run test:sds`: Exit 0 (19 test files, 66 passed)<br>- `cargo test ... sds::tests::catalog`: Exit 0 (12 passed, 2 ignored live tests).<br>- Native debug build: `npm run sds:build -- --environment development --debug --no-bundle`: Exit 0 (built `sds-skills-manager.exe`). |
+| **AC7** | **Verification suite passes with recorded evidence** | **PASS, except AC3 native recheck** | - Follow-up verification at `330a80f`: `npm run lint` exit 0; Node SDS suite 15 passed; `npm run test:sds` 19 files / 66 tests passed; catalog Rust tests 13 passed / 2 ignored; `npm run sds:check -- --environment development` exit 0.<br>- The Node suite builds the SDS frontend to a temporary directory and validates its HTML there, so it does not mutate user-owned `dist-sds/**` output.<br>- Native debug build evidence remains historical; a fresh native window capture is required before AC3 is PASS. |
 | **AC8** | **Strict scoping, zero DB/BE edits, honest handoff** | **PASS** | - Zero edits to `skills-store` backend or PostgreSQL database.<br>- Live test in `catalog.rs` strictly enforces environment variables (`SDS_PROVIDER_EMAIL` and `SDS_PROVIDER_PASSWORD`) with `.expect(...)`; no hardcoded credentials in repo.<br>- Commits organized into atomic scopes (`fix(sds)`, `feat(sds)`, `test(sds)`, `docs(sds)`).<br>- Stopping at final remediation commit for Codex review. |
 
 ---
@@ -307,7 +308,7 @@ To independently reproduce and verify this worktree:
 ---
 
 ## 8. Blockers, Non-Goals & Integrity Notes
-- **No Blockers:** All tasks under G0–G6 completed successfully. All CodeX Review 1 findings remediated.
+- **Native UAT pending:** The CSS correction for the 1100×640 horizontal scrollbar is covered by source and automated build checks, but this non-GUI follow-up did not produce a new native screenshot. Re-run the native minimum-window UAT before marking AC3 complete.
 - **Backend & Database Untouched:** The PostgreSQL database and Spring Boot backend were treated as strictly read-only.
 - **Capability Honesty:** The Web Store API does not provide binary release artifacts or package hashes. Accordingly, `can_download` is explicitly set to `false`, and `latest_release` is `None`. The client does not fabricate mock download links or hashes.
 - **Stopping at Final HEAD:** In accordance with the instructions, no push to remote has been performed, and no merge into main has been executed. The branch is preserved at final HEAD for Codex's independent review.
