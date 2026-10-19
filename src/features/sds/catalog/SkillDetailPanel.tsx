@@ -5,6 +5,7 @@ import { getSkillDetail } from "../api";
 import type { Release, SkillDetail } from "../contracts";
 import { storeErrorMessage } from "../errors";
 import { useSdsSession } from "../session/context";
+import { sanitizeDescription } from "./sanitizeDescription";
 
 export function Compatibility({ agents }: {agents:string[] | null | undefined}) {
   return <span className="sds-compatibility">{agents == null ? "Compatibility not declared" : agents.length ? `Declared compatibility: ${agents.map((agent) => ({aipro:"AIPro",claude_code:"Claude Code",gemini_cli:"Gemini CLI",codex:"Codex"})[agent] ?? agent).join(", ")}` : "No compatible agents declared"}</span>;
@@ -29,6 +30,8 @@ export default function SkillDetailPanel({skillId,onBack,onInstall}:{skillId:str
   const current = result.key === key ? result : undefined;
   const detail = current?.detail;
   const release = detail?.latestRelease;
+  const description = detail?.summary.description ?? "";
+  const richDescription = /<\/?[a-z][^>]*>/i.test(description);
   return <section className="sds-detail">
     <button className="sds-text-button" aria-label="Back to results" onClick={onBack}>← Back to results</button>
     {!current || !current.detail && !current.error ? <p role="status">Loading skill details…</p>
@@ -36,7 +39,9 @@ export default function SkillDetailPanel({skillId,onBack,onInstall}:{skillId:str
       : detail && <>
         <div className="sds-detail-heading"><div><h2>{detail.summary.name}</h2><p>{detail.summary.creator.displayName}</p></div><span className="sds-badge">{release ? release.version : "No published release"}</span></div>
         <div className="sds-detail-columns"><div className="sds-detail-content">
-          <article className="sds-markdown"><ReactMarkdown skipHtml remarkPlugins={[remarkGfm]} components={{img:()=>null,a:({children})=><span>{children}</span>}}>{detail.summary.description}</ReactMarkdown>
+          <article className="sds-markdown">{richDescription
+            ? <div dangerouslySetInnerHTML={{__html:sanitizeDescription(description)}} />
+            : <ReactMarkdown skipHtml remarkPlugins={[remarkGfm]} components={{img:()=>null,a:({children})=><span>{children}</span>}}>{description}</ReactMarkdown>}
             {release && <section className="sds-detail-notes"><h3>Release notes</h3><p>{release.changelog || "No release notes provided."}</p></section>}
             <div className="sds-detail-compatibility"><Compatibility agents={release ? release.compatibleAgents : detail.summary.compatibleAgents} /></div>
           </article>

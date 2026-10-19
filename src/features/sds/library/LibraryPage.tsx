@@ -55,7 +55,7 @@ export default function LibraryPage({onRemove,session,profileId,onRetryConnectio
         <p className="sds-library-release">Release {item.release.id} · {item.release.package.format.toUpperCase()}</p>
         <p className="sds-library-release">{item.deployments.length ? `${item.deployments.length} recorded ${item.deployments.length===1?"destination":"destinations"}` : "No installed destinations"}</p>
         <div className="sds-library-actions">
-          <button className="sds-text-button" disabled={item.deployments.length>0} title={item.deployments.length?"Installed destinations still reference this release":undefined} onClick={()=>setDeleting(item)}>Delete from Library</button>
+          <button className="sds-text-button" onClick={()=>setDeleting(item)}>Delete from Library</button>
         </div>
         <p className="sds-library-release">Cached {item.cachedAt} · Source profile {item.profileId}</p>
         <button className="sds-text-button" onClick={()=>setLocationsId(item.id)} aria-pressed={locations?.id===item.id}>View destinations →</button>

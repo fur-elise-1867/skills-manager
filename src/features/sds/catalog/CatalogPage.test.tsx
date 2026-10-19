@@ -24,6 +24,15 @@ beforeEach(() => {
 });
 
 test("browses the server catalog and detail without inventing compatibility or loading remote Markdown", async () => {
+  vi.mocked(invoke).mockImplementation(async (command) => {
+    if (command === "sds_catalog_taxonomy") return taxonomy.data as never;
+    if (command === "sds_catalog_search") return catalog.data as never;
+    if (command === "sds_skill_detail") {
+      const {latestRelease,storePageUrl,...summary} = detail.data;
+      return {summary:{...summary,description:'<p>Safe <strong>Description</strong><img src="https://example.invalid/image.png"><a href="javascript:alert(1)">blocked</a></p>',latestRelease:{id:latestRelease.id,sequence:latestRelease.sequence,version:latestRelease.version}},latestRelease,storePageUrl} as never;
+    }
+    throw new Error(`Unexpected command ${command}`);
+  });
   render(tree());
   await screen.findByRole("button",{name:"View Jira Weekly Report"});
   expect(screen.getByText("Compatibility not declared")).toBeInTheDocument();
@@ -34,6 +43,8 @@ test("browses the server catalog and detail without inventing compatibility or l
   expect(await screen.findByText("jira-mcp")).toBeInTheDocument();
   expect(document.querySelector("img")).toBeNull();
   expect(document.querySelector('a[href^="javascript:"]')).toBeNull();
+  expect(screen.getByText("Description")).toBeInTheDocument();
+  expect(screen.queryByText("blocked")).not.toBeInTheDocument();
   expect(screen.getByText("Add blocked-task summary.")).toBeInTheDocument();
   fireEvent.click(screen.getByRole("button",{name:"Back to results"}));
   expect(screen.getByRole("button",{name:"View Jira Weekly Report"})).toBeInTheDocument();

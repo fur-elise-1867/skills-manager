@@ -78,7 +78,7 @@ fn pending_publication_during_cleanup(boundary: CacheBoundary) {
     assert_eq!(publication.unwrap_err().code, "OPERATION_BUSY");
     assert_eq!(deletion.unwrap().state, OperationState::Completed);
     assert!(repository.load_operation(&pending.id).is_err());
-    assert!(repository.list_library().unwrap().is_empty());
+    assert_eq!(repository.list_library().unwrap().len(), 1);
     assert!(!repository.root().join("releases").join(&key).exists());
     assert!(!repository
         .root()
@@ -180,9 +180,9 @@ fn prepared_cache_publication_keeps_its_existing_lock_without_reentering_it() {
         );
         if fresh_release {
             assert!(cached.artifact.root.join("SKILL.md").is_file());
-            assert_eq!(repository.list_library().unwrap().len(), 1);
+            assert_eq!(repository.list_library().unwrap().len(), 2);
         } else {
-            assert!(repository.list_library().unwrap().is_empty());
+            assert_eq!(repository.list_library().unwrap().len(), 1);
         }
     }
 }
@@ -216,7 +216,7 @@ fn cache_publication_is_refused_while_cleanup_owns_the_lock() {
         .unwrap();
     assert!(attempted);
     assert_eq!(result.state, OperationState::Completed);
-    assert!(repository.list_library().unwrap().is_empty());
+    assert_eq!(repository.list_library().unwrap().len(), 1);
 }
 
 #[test]
@@ -343,7 +343,7 @@ fn interrupted_cache_rename_blocks_new_references_until_recovery() {
     );
     assert!(other.load_operation(&pending.id).is_err());
     cache_cleanup::recover_pending(&repository).unwrap();
-    assert!(repository.list_library().unwrap().is_empty());
+    assert_eq!(repository.list_library().unwrap().len(), 1);
     assert!(!repository
         .root()
         .join("releases")

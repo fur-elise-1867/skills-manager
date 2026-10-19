@@ -297,10 +297,13 @@ async fn cache_missing_after_snapshot_restore_store_install_downloads_verified_c
     let p = install(&op, Default::default()).await;
     let baseline = fingerprint_tree(&p.target.path).unwrap().1;
     let key = repo.deployments().unwrap()[0].release_key.clone();
+    let delete = op.prepare_cache_delete(key.clone()).await.unwrap();
     assert_eq!(
-        op.prepare_cache_delete(key.clone()).await.unwrap_err().code,
-        "RELEASE_IN_USE"
+        op.execute_cache_delete(delete.id).await.unwrap().state,
+        OperationState::Completed
     );
+    assert_eq!(repo.list_library().unwrap().len(), 1);
+    assert!(!repo.root().join("releases").join(&key).exists());
     std::fs::write(p.target.path.join("SKILL.md"), "# edited").unwrap();
     let edited = fingerprint_tree(&p.target.path).unwrap().1;
     let blocked = op
@@ -330,12 +333,6 @@ async fn cache_missing_after_snapshot_restore_store_install_downloads_verified_c
     let snapshots = SnapshotService::new(repo.clone());
     let snapshot = snapshots.list().unwrap().pop().unwrap();
     assert_eq!(snapshot.content_fingerprint, edited);
-    let delete = op.prepare_cache_delete(key.clone()).await.unwrap();
-    assert_eq!(
-        op.execute_cache_delete(delete.id).await.unwrap().state,
-        OperationState::Completed
-    );
-    assert!(repo.list_library().unwrap().is_empty());
     snapshots.verify(&snapshot.id).unwrap();
     let restore = op.prepare_restore(&snapshot.id, &p.id, true).await.unwrap();
     assert_eq!(
@@ -467,7 +464,7 @@ fn cache_cleanup_restarts_after_each_boundary_without_deleting_newly_published_c
         let repo = Repository::open(&data).unwrap();
         cache_cleanup::recover_pending(&repo).unwrap();
         cache_cleanup::recover_pending(&repo).unwrap();
-        assert!(repo.list_library().unwrap().is_empty(), "{boundary:?}");
+        assert_eq!(repo.list_library().unwrap().len(), 1, "{boundary:?}");
     }
 }
 #[tokio::test]
@@ -872,7 +869,7 @@ fn cache_cleanup_survives_actual_process_exit_at_every_durable_boundary() {
         let repo = Repository::open(&t.path().join("sds")).unwrap();
         for _ in 0..2 {
             cache_cleanup::recover_pending(&repo).unwrap();
-            assert!(repo.list_library().unwrap().is_empty(), "{boundary}");
+            assert_eq!(repo.list_library().unwrap().len(), 1, "{boundary}");
         }
     }
 }

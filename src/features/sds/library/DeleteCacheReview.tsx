@@ -12,10 +12,10 @@ export default function DeleteCacheReview({item,onClose,onCompleted}:{item:Libra
   const running=result && !terminal(result)?result.operationId:null;
   useEffect(()=>{if(!running)return;let active=true,inFlight=false;async function poll(){if(inFlight)return;inFlight=true;try{const next=await getOperationStatus(running!);if(active){setResult(next);setError("");}}catch(failure){if(active)setError(storeErrorMessage(failure));}finally{inFlight=false;}}void poll();const timer=setInterval(()=>{void poll();},500);return()=>{active=false;clearInterval(timer);};},[running]);
   useEffect(()=>{if(result?.state==="completed")complete.current();},[result]);
-  async function confirm(){if(!plan || executed.current)return;executed.current=true;setBusy(true);try{setResult(await executeCacheDelete(plan.id));}catch(failure){setError(storeErrorMessage(failure));}finally{setBusy(false);}}
+  async function confirm(){if(!plan || executed.current)return;executed.current=true;setBusy(true);try{setResult(await executeCacheDelete(plan.id));}catch(failure){executed.current=false;setError(storeErrorMessage(failure));}finally{setBusy(false);}}
   const locked=busy || !!running;
   return <Dialog title="Delete downloaded copy" onClose={onClose} busy={locked}>
-    <p>{item.release.installName} · {item.release.version}</p><p>This deletes only the downloaded Library cache. Self-contained snapshots are kept. Native reference checks block deletion while deployments or pending operations use this release.</p>
+    <p>{item.release.installName} · {item.release.version}</p><p>This deletes only the downloaded Library cache. Installed destinations and self-contained snapshots are kept. Native reference checks block deletion only while a pending operation uses this release.</p>
     {!plan && !error && <p role="status">Checking release references…</p>}
     {error && <p className="sds-error" role="alert">{error}</p>}
     {running && <p role="status">Deleting cached files…</p>}

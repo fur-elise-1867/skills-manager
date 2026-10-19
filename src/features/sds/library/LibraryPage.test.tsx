@@ -58,12 +58,12 @@ test("an unreadable Library is an error rather than an empty result and supports
     expect(await screen.findByRole("heading",{name:"jira-weekly-report"})).toBeInTheDocument();
 });
 
-test("cache problems do not erase modified or missing target records and keeps delete disabled when destinations exist",async()=>{
+test("cache problems do not erase modified or missing target records and allows deleting the downloaded copy",async()=>{
     vi.mocked(invoke).mockResolvedValue([{...item,cacheStatus:"corrupt",deployments:[{...item.deployments[0],status:"modified",reason:"Local contents have changed."},{...item.deployments[0],id:"missing",status:"missing",target:{...item.deployments[0].target,path:"C:\\Synthetic\\another-target"},reason:"The installed folder is missing."}]}] as never);
     render(<LibraryPage/>);
     expect(await screen.findByText("Cache needs attention")).toBeInTheDocument();
     expect(screen.getByText("Local changes")).toBeInTheDocument();
     expect(screen.getByText("Missing folder")).toBeInTheDocument();
-    expect(screen.getByRole("button",{name:"Delete from Library"})).toBeDisabled();
+    expect(screen.getByRole("button",{name:"Delete from Library"})).toBeEnabled();
     expect(screen.queryByRole("button",{name:/Preview/i})).not.toBeInTheDocument();
 });

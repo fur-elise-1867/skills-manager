@@ -34,13 +34,6 @@ pub(crate) enum CacheBoundary {
     AfterCleanup,
 }
 fn references(repository: &Repository, key: &str) -> Result<bool, SdsError> {
-    if repository
-        .deployments()?
-        .iter()
-        .any(|d| d.release_key == key)
-    {
-        return Ok(true);
-    }
     let c = repository.connection.lock().map_err(|_| review())?;
     let mut q = c
         .prepare("SELECT frozen_json,result_json,intent_json IS NOT NULL OR EXISTS(SELECT 1 FROM replacement_intents r WHERE r.operation_id=operations.operation_id AND r.committed<>2) FROM operations")
@@ -101,7 +94,7 @@ pub(crate) fn ensure_reference_allowed(repository: &Repository, key: &str) -> Re
 fn in_use() -> SdsError {
     SdsError::new(
         "RELEASE_IN_USE",
-        "A deployment or pending operation still uses this release.",
+        "A pending operation still uses this release.",
         false,
     )
 }
@@ -272,11 +265,9 @@ fn execute_inner(
             [&saved.plan.release_key],
         )
         .map_err(|_| review())?;
-        tx.execute(
-            "DELETE FROM releases WHERE cache_key=?1",
-            [&saved.plan.release_key],
-        )
-        .map_err(|_| review())?;
+        // Keep the release row after its verified bytes are removed. Deployments,
+        // snapshots, and Library history use its immutable metadata to remain
+        // traceable; `cached_release` treats the absent tree as a cache miss.
         tx.execute("UPDATE cache_cleanup SET committed=1 WHERE id=?1", [id])
             .map_err(|_| review())?;
         tx.commit().map_err(|_| review())?;
