@@ -25,6 +25,7 @@ pub mod repository;
 pub mod runtime;
 pub mod session;
 pub mod store_client;
+pub mod store_web;
 pub mod targets;
 
 #[tauri::command]

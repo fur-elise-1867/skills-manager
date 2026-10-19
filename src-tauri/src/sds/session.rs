@@ -287,7 +287,7 @@ impl SessionService {
         Ok(())
     }
     pub async fn request(&self, request: HttpRequest) -> Result<HttpResponse, SdsError> {
-        self.request_inner(None, request, None).await
+        self.request_inner(None, request, None, true).await
     }
 
     pub async fn scope(&self) -> Result<(StoreProfile, SessionContext), SdsError> {
@@ -316,7 +316,17 @@ impl SessionService {
         context: &SessionContext,
         request: HttpRequest,
     ) -> Result<HttpResponse, SdsError> {
-        self.request_inner(Some(context), request, None).await
+        self.request_inner(Some(context), request, None, true).await
+    }
+    pub async fn request_raw_for(
+        &self,
+        context: &SessionContext,
+        request: HttpRequest,
+    ) -> Result<HttpResponse, SdsError> {
+        self.request_inner(Some(context), request, None, false).await
+    }
+    pub async fn mark_offline_for(&self, context: &SessionContext) {
+        self.mark_offline(context.generation).await;
     }
     /// Linearize a short filesystem/DB publication against logout and profile replacement.
     /// The action must not await, copy content, or call back into this service.
@@ -401,7 +411,7 @@ impl SessionService {
         request: HttpRequest,
         sink: &mut super::store_client::DownloadSink<'_>,
     ) -> Result<(), SdsError> {
-        self.request_inner(Some(context), request, Some(sink))
+        self.request_inner(Some(context), request, Some(sink), true)
             .await
             .map(|_| ())
     }
@@ -410,6 +420,7 @@ impl SessionService {
         context: Option<&SessionContext>,
         mut request: HttpRequest,
         mut sink: Option<&mut super::store_client::DownloadSink<'_>>,
+        fail_on_http_error: bool,
     ) -> Result<HttpResponse, SdsError> {
         let (profile, generation, revision, access) = {
             let state = self.state.lock().await;
@@ -455,16 +466,23 @@ impl SessionService {
                 return Err(http_error(401, false));
             }
         }
-        if response.status >= 500 {
-            self.mark_offline(generation).await;
-        } else {
+        if fail_on_http_error {
+            if response.status >= 500 {
+                self.mark_offline(generation).await;
+            } else {
+                let mut state = self.state.lock().await;
+                if state.generation == generation {
+                    state.status = SessionStatus::Authenticated;
+                }
+            }
+            if !(200..300).contains(&response.status) {
+                return Err(http_error(response.status, false));
+            }
+        } else if (200..300).contains(&response.status) {
             let mut state = self.state.lock().await;
             if state.generation == generation {
                 state.status = SessionStatus::Authenticated;
             }
-        }
-        if !(200..300).contains(&response.status) {
-            return Err(http_error(response.status, false));
         }
         Ok(response)
     }
@@ -693,7 +711,7 @@ fn stale_context() -> SdsError {
         false,
     )
 }
-fn http_error(status: u16, login: bool) -> SdsError {
+pub(crate) fn http_error(status: u16, login: bool) -> SdsError {
     match status {
         401 if login => SdsError::new("AUTH_FAILED", "Email or password was not accepted", false),
         401 => SdsError::new("SESSION_EXPIRED", "Your Store session has expired", false),

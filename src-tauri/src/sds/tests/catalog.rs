@@ -402,6 +402,100 @@ async fn a_late_catalog_response_is_rejected_after_account_generation_changes() 
     assert_eq!(request.await.unwrap().unwrap_err().code, "REVIEW_REQUIRED");
 }
 
+fn web_fixture(name: &str) -> serde_json::Value {
+    serde_json::from_str(match name {
+        "catalog" => include_str!("../../../../contracts/store-web/v1/fixtures/catalog.json"),
+        "detail" => include_str!("../../../../contracts/store-web/v1/fixtures/detail.json"),
+        _ => include_str!("../../../../contracts/store-web/v1/fixtures/taxonomy.json"),
+    })
+    .unwrap()
+}
+
+#[tokio::test]
+async fn web_store_fallback_when_desktop_endpoints_return_500() {
+    let requested_paths = Arc::new(Mutex::new(Vec::new()));
+    let observed = requested_paths.clone();
+    let server = TestServer::start(move |request| {
+        let observed = observed.clone();
+        async move {
+            observed.lock().unwrap().push(request.path.clone());
+            let pure_path = request.path.split('?').next().unwrap_or(&request.path);
+            if pure_path.ends_with("/auth/login") {
+                return Response::json(200, fixture("login"));
+            }
+            if pure_path.contains("/desktop/") {
+                return Response::json(
+                    500,
+                    serde_json::json!({
+                        "success": false,
+                        "errorCode": "INTERNAL_ERROR",
+                        "message": "Internal error occurred"
+                    }),
+                );
+            }
+            if pure_path.ends_with("/skills/taxonomy") {
+                return Response::json(200, web_fixture("taxonomy"));
+            }
+            if pure_path.ends_with("/skills") {
+                return Response::json(200, web_fixture("catalog"));
+            }
+            if pure_path.contains("/skills/") {
+                return Response::json(200, web_fixture("detail"));
+            }
+            Response::json(
+                404,
+                serde_json::json!({"success":false,"errorCode":"NOT_FOUND","message":"Not found"}),
+            )
+        }
+    })
+    .await;
+
+    let (session, client) = client(&server).await;
+
+    let taxonomy = client
+        .taxonomy()
+        .await
+        .expect("taxonomy should fall back to web store");
+    assert!(!taxonomy.sources.is_empty());
+    assert_eq!(taxonomy.sources[0].id, "1");
+    assert_eq!(taxonomy.sources[0].label, "Quality");
+
+    assert_eq!(
+        session.status().await.unwrap().status,
+        crate::sds::contracts::SessionStatus::Authenticated
+    );
+
+    let page = client
+        .search(CatalogQuery {
+            q: "test".into(),
+            source_id: Some("1".into()),
+            ..Default::default()
+        })
+        .await
+        .expect("search should fall back to web store");
+    assert_eq!(page.items.len(), 1);
+    let item = &page.items[0];
+    assert_eq!(item.metadata.id, "35");
+    assert_eq!(item.metadata.name, "Jira Weekly Report");
+    assert!(!item.metadata.can_download);
+    assert!(item.latest_release.is_none());
+
+    let detail = client
+        .detail("35")
+        .await
+        .expect("detail should fall back to web store");
+    assert_eq!(detail.summary.metadata.id, "35");
+    assert_eq!(detail.summary.metadata.name, "Jira Weekly Report");
+    assert!(!detail.summary.metadata.can_download);
+    assert!(detail.latest_release.is_none());
+
+    let paths = requested_paths.lock().unwrap().clone();
+    assert!(paths.iter().any(|p| p.contains("/desktop/taxonomy")));
+    assert!(paths.iter().any(|p| p.contains("/skills/taxonomy")));
+    assert!(paths.iter().any(|p| p.contains("/skills")));
+    assert!(paths.iter().any(|p| p.contains("/skills/35")));
+}
+
 #[tokio::test]
 #[cfg(debug_assertions)]
 async fn debug_fixture_services_are_loopback_locked_ephemeral_and_do_not_persist_credentials() {

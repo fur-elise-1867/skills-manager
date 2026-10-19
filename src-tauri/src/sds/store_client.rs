@@ -257,10 +257,15 @@ fn unsafe_path(value: &str) -> bool {
 
 pub fn validate_protected_url(base: &str, url: &Url) -> Result<(), SdsError> {
     let base = Url::parse(base).map_err(|_| SdsError::invalid("Invalid Store URL"))?;
-    let prefix = format!("{}/api/v1/desktop/", base.path().trim_end_matches('/'));
+    let base_path = base.path().trim_end_matches('/');
+    let desktop_prefix = format!("{}/api/v1/desktop/", base_path);
+    let skills_prefix = format!("{}/api/v1/skills", base_path);
+    let url_path = url.path();
+    let is_desktop = url_path.starts_with(&desktop_prefix);
+    let is_skills = url_path == skills_prefix || url_path.starts_with(&format!("{}/", skills_prefix));
     if base.origin() != url.origin()
-        || !url.path().starts_with(&prefix)
-        || unsafe_path(url.path())
+        || !(is_desktop || is_skills)
+        || unsafe_path(url_path)
         || !url.username().is_empty()
         || url.password().is_some()
         || url.fragment().is_some()
@@ -273,18 +278,31 @@ pub fn validate_protected_url(base: &str, url: &Url) -> Result<(), SdsError> {
 }
 
 use super::contracts::{
-    CatalogQuery, Page, Release, SkillDetail, SkillMetadata, SkillSummary, Taxonomy,
+    CatalogQuery, Page, Release, SkillDetail, SkillMetadata, SkillSummary, Taxonomy, StoreProfile,
 };
 use super::session::SessionService;
 use serde::Deserialize;
 use std::sync::Arc;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ApiMode {
+    Auto,
+    Desktop,
+    Web,
+}
+
 pub struct StoreClient {
     session: Arc<SessionService>,
+    api_mode: std::sync::atomic::AtomicU8,
+    mode_generation: std::sync::atomic::AtomicU64,
 }
 impl StoreClient {
     pub fn new(session: Arc<SessionService>) -> Self {
-        Self { session }
+        Self {
+            session,
+            api_mode: std::sync::atomic::AtomicU8::new(0),
+            mode_generation: std::sync::atomic::AtomicU64::new(0),
+        }
     }
     #[cfg(feature = "sds")]
     pub async fn check_updates(
@@ -414,8 +432,88 @@ impl StoreClient {
             })
             .await
     }
+    fn current_mode(&self, generation: u64) -> ApiMode {
+        if self.mode_generation.load(std::sync::atomic::Ordering::Acquire) != generation {
+            return ApiMode::Auto;
+        }
+        match self.api_mode.load(std::sync::atomic::Ordering::Acquire) {
+            1 => ApiMode::Desktop,
+            2 => ApiMode::Web,
+            _ => ApiMode::Auto,
+        }
+    }
+    fn set_mode(&self, generation: u64, mode: ApiMode) {
+        let val = match mode {
+            ApiMode::Auto => 0,
+            ApiMode::Desktop => 1,
+            ApiMode::Web => 2,
+        };
+        self.api_mode.store(val, std::sync::atomic::Ordering::Release);
+        self.mode_generation.store(generation, std::sync::atomic::Ordering::Release);
+    }
     pub async fn taxonomy(&self) -> Result<Taxonomy, SdsError> {
-        self.get(&["taxonomy"], None).await
+        let (profile, context) = self.session.scope().await?;
+        let mode = self.current_mode(context.generation);
+        if mode == ApiMode::Web {
+            return self.web_taxonomy(&profile, &context).await;
+        }
+        if mode == ApiMode::Desktop {
+            return self.get_for(&context, &["taxonomy"], None).await;
+        }
+        let desktop_url = join_api(&profile.base_url, "api/v1/desktop/taxonomy")?;
+        let response = self
+            .session
+            .request_raw_for(&context, HttpRequest::get(desktop_url))
+            .await?;
+        if (200..300).contains(&response.status) {
+            #[derive(Deserialize)]
+            struct Envelope {
+                success: bool,
+                data: Taxonomy,
+            }
+            let envelope: Envelope =
+                serde_json::from_slice(&response.body).map_err(|_| catalog_response_error())?;
+            if !envelope.success {
+                return Err(catalog_response_error());
+            }
+            self.set_mode(context.generation, ApiMode::Desktop);
+            return Ok(envelope.data);
+        }
+        let web_result = self.web_taxonomy(&profile, &context).await;
+        if web_result.is_ok() {
+            self.set_mode(context.generation, ApiMode::Web);
+        } else if response.status >= 500 {
+            self.session.mark_offline_for(&context).await;
+        }
+        web_result
+    }
+    async fn web_taxonomy(
+        &self,
+        profile: &StoreProfile,
+        context: &super::contracts::SessionContext,
+    ) -> Result<Taxonomy, SdsError> {
+        let url = join_api(&profile.base_url, "api/v1/skills/taxonomy")?;
+        let response = self
+            .session
+            .request_raw_for(context, HttpRequest::get(url))
+            .await?;
+        if !(200..300).contains(&response.status) {
+            if response.status >= 500 {
+                self.session.mark_offline_for(context).await;
+            }
+            return Err(super::session::http_error(response.status, false));
+        }
+        #[derive(Deserialize)]
+        struct Envelope {
+            success: bool,
+            data: super::store_web::WebTaxonomyData,
+        }
+        let envelope: Envelope =
+            serde_json::from_slice(&response.body).map_err(|_| catalog_response_error())?;
+        if !envelope.success {
+            return Err(catalog_response_error());
+        }
+        Ok(super::store_web::map_web_taxonomy(&envelope.data))
     }
     pub async fn search(&self, mut query: CatalogQuery) -> Result<Page<SkillSummary>, SdsError> {
         query.q = query.q.trim().to_string();
@@ -437,7 +535,106 @@ impl StoreClient {
                 false,
             ));
         }
-        let page: Page<SkillSummary> = self.get(&["skills"], Some(&query)).await?;
+        let (profile, context) = self.session.scope().await?;
+        let mode = self.current_mode(context.generation);
+        if mode == ApiMode::Web {
+            return self.web_search(&profile, &context, &query).await;
+        }
+        if mode == ApiMode::Desktop {
+            let page: Page<SkillSummary> = self.get_for(&context, &["skills"], Some(&query)).await?;
+            self.validate_page(&page, &query)?;
+            return Ok(page);
+        }
+        let desktop_url = self.desktop_search_url(&profile, &query)?;
+        let response = self
+            .session
+            .request_raw_for(&context, HttpRequest::get(desktop_url))
+            .await?;
+        if (200..300).contains(&response.status) {
+            #[derive(Deserialize)]
+            struct Envelope {
+                success: bool,
+                data: Page<SkillSummary>,
+            }
+            let envelope: Envelope =
+                serde_json::from_slice(&response.body).map_err(|_| catalog_response_error())?;
+            if !envelope.success {
+                return Err(catalog_response_error());
+            }
+            let page = envelope.data;
+            self.validate_page(&page, &query)?;
+            self.set_mode(context.generation, ApiMode::Desktop);
+            return Ok(page);
+        }
+        let web_result = self.web_search(&profile, &context, &query).await;
+        if web_result.is_ok() {
+            self.set_mode(context.generation, ApiMode::Web);
+        } else if response.status >= 500 {
+            self.session.mark_offline_for(&context).await;
+        }
+        web_result
+    }
+    fn desktop_search_url(&self, profile: &StoreProfile, query: &CatalogQuery) -> Result<Url, SdsError> {
+        let mut url = join_api(&profile.base_url, "api/v1/desktop/skills")?;
+        {
+            let mut pairs = url.query_pairs_mut();
+            pairs
+                .append_pair("q", &query.q)
+                .append_pair("mode", query.mode.as_str());
+            if let Some(source) = &query.source_id {
+                pairs.append_pair("sourceId", source);
+            }
+            pairs
+                .append_pair("page", &query.page.to_string())
+                .append_pair("pageSize", &query.page_size.to_string());
+        }
+        Ok(url)
+    }
+    async fn web_search(
+        &self,
+        profile: &StoreProfile,
+        context: &super::contracts::SessionContext,
+        query: &CatalogQuery,
+    ) -> Result<Page<SkillSummary>, SdsError> {
+        let mut url = join_api(&profile.base_url, "api/v1/skills")?;
+        {
+            let mut pairs = url.query_pairs_mut();
+            pairs
+                .append_pair("page", &query.page.to_string())
+                .append_pair("pageSize", &query.page_size.to_string());
+            if !query.q.is_empty() {
+                pairs.append_pair("skillName", &query.q);
+            }
+            if let Some(source) = &query.source_id {
+                let cat_id = super::store_web::map_source_id_to_category_id(source);
+                pairs.append_pair("categoryIds", &cat_id);
+            }
+        }
+        let response = self
+            .session
+            .request_raw_for(context, HttpRequest::get(url))
+            .await?;
+        if !(200..300).contains(&response.status) {
+            if response.status >= 500 {
+                self.session.mark_offline_for(context).await;
+            }
+            return Err(super::session::http_error(response.status, false));
+        }
+        #[derive(Deserialize)]
+        struct Envelope {
+            success: bool,
+            data: super::store_web::WebSkillSearchResult,
+        }
+        let envelope: Envelope =
+            serde_json::from_slice(&response.body).map_err(|_| catalog_response_error())?;
+        if !envelope.success {
+            return Err(catalog_response_error());
+        }
+        let page = super::store_web::map_web_search_page(envelope.data);
+        self.validate_page(&page, query)?;
+        Ok(page)
+    }
+    fn validate_page(&self, page: &Page<SkillSummary>, query: &CatalogQuery) -> Result<(), SdsError> {
         if page.page != query.page
             || page.page_size != query.page_size
             || page.items.len() > query.page_size as usize
@@ -449,13 +646,89 @@ impl StoreClient {
         {
             return Err(catalog_response_error());
         }
-        Ok(page)
+        Ok(())
     }
     pub async fn detail(&self, skill_id: &str) -> Result<SkillDetail, SdsError> {
         let (_, context) = self.session.scope().await?;
         self.detail_for(&context, skill_id).await
     }
     pub async fn detail_for(
+        &self,
+        context: &super::contracts::SessionContext,
+        skill_id: &str,
+    ) -> Result<SkillDetail, SdsError> {
+        if skill_id.is_empty()
+            || skill_id.len() > 256
+            || skill_id.contains(['/', '\\'])
+            || skill_id.chars().any(char::is_control)
+        {
+            return Err(SdsError::new(
+                "INVALID_REQUEST",
+                "Invalid Store content identifier",
+                false,
+            ));
+        }
+        let (profile, _) = self.session.scope().await?;
+        let mode = self.current_mode(context.generation);
+        if mode == ApiMode::Web {
+            return self.web_detail(&profile, context, skill_id).await;
+        }
+        if mode == ApiMode::Desktop {
+            return self.desktop_detail(context, skill_id).await;
+        }
+        let desktop_url = join_api(&profile.base_url, &format!("api/v1/desktop/skills/{}", skill_id))?;
+        let response = self
+            .session
+            .request_raw_for(context, HttpRequest::get(desktop_url))
+            .await?;
+        if (200..300).contains(&response.status) {
+            #[derive(Deserialize)]
+            #[serde(rename_all = "camelCase")]
+            struct WireDetail {
+                #[serde(flatten)]
+                metadata: SkillMetadata,
+                store_page_url: Option<String>,
+                latest_release: Option<Release>,
+            }
+            #[derive(Deserialize)]
+            struct Envelope {
+                success: bool,
+                data: WireDetail,
+            }
+            let envelope: Envelope =
+                serde_json::from_slice(&response.body).map_err(|_| catalog_response_error())?;
+            if !envelope.success {
+                return Err(catalog_response_error());
+            }
+            let detail = envelope.data;
+            if detail.metadata.id != skill_id
+                || detail.metadata.name.trim().is_empty()
+                || detail
+                    .latest_release
+                    .as_ref()
+                    .is_some_and(|release| release.skill_id != skill_id)
+            {
+                return Err(catalog_response_error());
+            }
+            self.set_mode(context.generation, ApiMode::Desktop);
+            return Ok(SkillDetail {
+                summary: SkillSummary {
+                    metadata: detail.metadata,
+                    latest_release: detail.latest_release.as_ref().map(Release::reference),
+                },
+                store_page_url: detail.store_page_url,
+                latest_release: detail.latest_release,
+            });
+        }
+        let web_result = self.web_detail(&profile, context, skill_id).await;
+        if web_result.is_ok() {
+            self.set_mode(context.generation, ApiMode::Web);
+        } else if response.status >= 500 {
+            self.session.mark_offline_for(context).await;
+        }
+        web_result
+    }
+    async fn desktop_detail(
         &self,
         context: &super::contracts::SessionContext,
         skill_id: &str,
@@ -487,6 +760,39 @@ impl StoreClient {
             latest_release: detail.latest_release,
         })
     }
+    async fn web_detail(
+        &self,
+        profile: &StoreProfile,
+        context: &super::contracts::SessionContext,
+        skill_id: &str,
+    ) -> Result<SkillDetail, SdsError> {
+        let url = join_api(&profile.base_url, &format!("api/v1/skills/{}", skill_id))?;
+        let response = self
+            .session
+            .request_raw_for(context, HttpRequest::get(url))
+            .await?;
+        if !(200..300).contains(&response.status) {
+            if response.status >= 500 {
+                self.session.mark_offline_for(context).await;
+            }
+            return Err(super::session::http_error(response.status, false));
+        }
+        #[derive(Deserialize)]
+        struct Envelope {
+            success: bool,
+            data: super::store_web::WebSkillDetail,
+        }
+        let envelope: Envelope =
+            serde_json::from_slice(&response.body).map_err(|_| catalog_response_error())?;
+        if !envelope.success {
+            return Err(catalog_response_error());
+        }
+        let detail = super::store_web::map_web_skill_detail(envelope.data, Some(&profile.base_url));
+        if detail.summary.metadata.id != skill_id || detail.summary.metadata.name.trim().is_empty() {
+            return Err(catalog_response_error());
+        }
+        Ok(detail)
+    }
     pub async fn release(&self, skill_id: &str, release_id: &str) -> Result<Release, SdsError> {
         let (_, context) = self.session.scope().await?;
         self.release_for(&context, skill_id, release_id).await
@@ -504,14 +810,6 @@ impl StoreClient {
             return Err(catalog_response_error());
         }
         Ok(release)
-    }
-    async fn get<T: serde::de::DeserializeOwned>(
-        &self,
-        segments: &[&str],
-        query: Option<&CatalogQuery>,
-    ) -> Result<T, SdsError> {
-        let (_, context) = self.session.scope().await?;
-        self.get_for(&context, segments, query).await
     }
     async fn get_for<T: serde::de::DeserializeOwned>(
         &self,
