@@ -77,6 +77,53 @@ async fn live_pilot_gateway_downloads_and_prepares_zip_and_sevenzip() {
     assert_eq!(fingerprints[0], fingerprints[1]);
     session.logout().await.unwrap();
 }
+
+#[tokio::test]
+#[ignore = "requires running live Store at http://127.0.0.1:8080/skm"]
+async fn live_store_search_and_detail_with_web_fallback() {
+    let email = std::env::var("SDS_PROVIDER_EMAIL").unwrap_or_else(|_| "admin@gmail.com".into());
+    let password = std::env::var("SDS_PROVIDER_PASSWORD").unwrap_or_else(|_| "Password".into());
+    let session = Arc::new(SessionService::new(
+        Environment::Development,
+        Some(StoreProfile::new("http://127.0.0.1:8080/skm", Environment::Development).unwrap()),
+        Arc::new(ReqwestTransport::new().unwrap()),
+        Arc::new(VolatileVault),
+    ));
+    session.login(&email, &password).await.unwrap();
+    let client = StoreClient::new(session.clone());
+    let taxonomy = client.taxonomy().await.unwrap();
+    println!("Live taxonomy sources: {:?}", taxonomy.sources);
+    assert!(!taxonomy.sources.is_empty());
+
+    let page = client
+        .search(CatalogQuery {
+            q: "".into(),
+            ..Default::default()
+        })
+        .await
+        .unwrap();
+    println!("Live catalog search page 1 total_items: {}", page.total_items);
+    assert!(!page.items.is_empty());
+    let first = &page.items[0];
+    println!("Live first item: id={}, name={}", first.metadata.id, first.metadata.name);
+
+    let detail = client.detail(&first.metadata.id).await.unwrap();
+    println!("Live detail: id={}, name={}", detail.summary.metadata.id, detail.summary.metadata.name);
+    assert_eq!(detail.summary.metadata.id, first.metadata.id);
+
+    let search_res = client
+        .search(CatalogQuery {
+            q: first.metadata.name.clone(),
+            ..Default::default()
+        })
+        .await
+        .unwrap();
+    println!("Search by name '{}' returned {} items", first.metadata.name, search_res.items.len());
+    assert!(!search_res.items.is_empty());
+
+    session.logout().await.unwrap();
+}
+
 fn fixture(name: &str) -> serde_json::Value {
     serde_json::from_str(match name {
         "login" => include_str!("../../../../contracts/sds-desktop/v1/fixtures/auth-login.json"),
