@@ -81,8 +81,10 @@ async fn live_pilot_gateway_downloads_and_prepares_zip_and_sevenzip() {
 #[tokio::test]
 #[ignore = "requires running live Store at http://127.0.0.1:8080/skm"]
 async fn live_store_search_and_detail_with_web_fallback() {
-    let email = std::env::var("SDS_PROVIDER_EMAIL").unwrap_or_else(|_| "admin@gmail.com".into());
-    let password = std::env::var("SDS_PROVIDER_PASSWORD").unwrap_or_else(|_| "Password".into());
+    let email = std::env::var("SDS_PROVIDER_EMAIL")
+        .expect("SDS_PROVIDER_EMAIL must be set for live store tests");
+    let password = std::env::var("SDS_PROVIDER_PASSWORD")
+        .expect("SDS_PROVIDER_PASSWORD must be set for live store tests");
     let session = Arc::new(SessionService::new(
         Environment::Development,
         Some(StoreProfile::new("http://127.0.0.1:8080/skm", Environment::Development).unwrap()),
@@ -541,6 +543,132 @@ async fn web_store_fallback_when_desktop_endpoints_return_500() {
     assert!(paths.iter().any(|p| p.contains("/skills/taxonomy")));
     assert!(paths.iter().any(|p| p.contains("/skills")));
     assert!(paths.iter().any(|p| p.contains("/skills/35")));
+}
+
+#[tokio::test]
+async fn desktop_endpoint_403_returns_access_denied_without_web_fallback() {
+    let requested_paths = Arc::new(Mutex::new(Vec::new()));
+    let observed = requested_paths.clone();
+    let server = TestServer::start(move |request| {
+        let observed = observed.clone();
+        async move {
+            observed.lock().unwrap().push(request.path.clone());
+            let pure_path = request.path.split('?').next().unwrap_or(&request.path);
+            if pure_path.ends_with("/auth/login") {
+                return Response::json(200, fixture("login"));
+            }
+            if pure_path.contains("/desktop/") {
+                return Response::json(
+                    403,
+                    serde_json::json!({
+                        "success": false,
+                        "errorCode": "FORBIDDEN",
+                        "message": "Access denied to desktop endpoint"
+                    }),
+                );
+            }
+            if pure_path.ends_with("/skills/taxonomy") {
+                return Response::json(200, web_fixture("taxonomy"));
+            }
+            if pure_path.ends_with("/skills") {
+                return Response::json(200, web_fixture("catalog"));
+            }
+            if pure_path.contains("/skills/") {
+                return Response::json(200, web_fixture("detail"));
+            }
+            Response::json(
+                404,
+                serde_json::json!({"success":false,"errorCode":"NOT_FOUND","message":"Not found"}),
+            )
+        }
+    })
+    .await;
+
+    let (_session, client) = client(&server).await;
+
+    let tax_err = client.taxonomy().await.expect_err("taxonomy must fail on 403");
+    assert_eq!(tax_err.code, "ACCESS_DENIED");
+
+    let search_err = client
+        .search(CatalogQuery {
+            q: "test".into(),
+            ..Default::default()
+        })
+        .await
+        .expect_err("search must fail on 403");
+    assert_eq!(search_err.code, "ACCESS_DENIED");
+
+    let detail_err = client.detail("35").await.expect_err("detail must fail on 403");
+    assert_eq!(detail_err.code, "ACCESS_DENIED");
+
+    let paths = requested_paths.lock().unwrap().clone();
+    assert!(paths.iter().any(|p| p.contains("/desktop/taxonomy")));
+    assert!(paths.iter().any(|p| p.contains("/desktop/skills")));
+    assert!(paths.iter().any(|p| p.contains("/desktop/skills/35")));
+    assert!(paths.iter().all(|p| p.contains("/auth/login") || p.contains("/desktop/")));
+}
+
+#[tokio::test]
+async fn desktop_endpoint_404_returns_not_found_without_web_fallback() {
+    let requested_paths = Arc::new(Mutex::new(Vec::new()));
+    let observed = requested_paths.clone();
+    let server = TestServer::start(move |request| {
+        let observed = observed.clone();
+        async move {
+            observed.lock().unwrap().push(request.path.clone());
+            let pure_path = request.path.split('?').next().unwrap_or(&request.path);
+            if pure_path.ends_with("/auth/login") {
+                return Response::json(200, fixture("login"));
+            }
+            if pure_path.contains("/desktop/") {
+                return Response::json(
+                    404,
+                    serde_json::json!({
+                        "success": false,
+                        "errorCode": "NOT_FOUND",
+                        "message": "Desktop endpoint not found"
+                    }),
+                );
+            }
+            if pure_path.ends_with("/skills/taxonomy") {
+                return Response::json(200, web_fixture("taxonomy"));
+            }
+            if pure_path.ends_with("/skills") {
+                return Response::json(200, web_fixture("catalog"));
+            }
+            if pure_path.contains("/skills/") {
+                return Response::json(200, web_fixture("detail"));
+            }
+            Response::json(
+                404,
+                serde_json::json!({"success":false,"errorCode":"NOT_FOUND","message":"Not found"}),
+            )
+        }
+    })
+    .await;
+
+    let (_session, client) = client(&server).await;
+
+    let tax_err = client.taxonomy().await.expect_err("taxonomy must fail on 404");
+    assert_eq!(tax_err.code, "NOT_FOUND");
+
+    let search_err = client
+        .search(CatalogQuery {
+            q: "test".into(),
+            ..Default::default()
+        })
+        .await
+        .expect_err("search must fail on 404");
+    assert_eq!(search_err.code, "NOT_FOUND");
+
+    let detail_err = client.detail("35").await.expect_err("detail must fail on 404");
+    assert_eq!(detail_err.code, "NOT_FOUND");
+
+    let paths = requested_paths.lock().unwrap().clone();
+    assert!(paths.iter().any(|p| p.contains("/desktop/taxonomy")));
+    assert!(paths.iter().any(|p| p.contains("/desktop/skills")));
+    assert!(paths.iter().any(|p| p.contains("/desktop/skills/35")));
+    assert!(paths.iter().all(|p| p.contains("/auth/login") || p.contains("/desktop/")));
 }
 
 #[tokio::test]

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync, readdirSync } from 'node:fs';
+import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import path from 'node:path';
 
 function containsCommand(bundle, command) {
@@ -28,3 +28,33 @@ test('SDS production bundle includes only its own entry and IPC boundary', () =>
     assert.equal(containsCommand(bundle, upstreamCommand), false, `upstream command in SDS bundle: ${upstreamCommand}`);
   }
 });
+
+test('SDS production build output transforms HTML branding to AX Portal and favicon', () => {
+  const distDir = process.env.SDS_BUNDLE_DIR ?? 'dist-sds';
+  const htmlPath = path.join(distDir, 'index.html');
+  const html = readFileSync(htmlPath, 'utf8');
+  assert.ok(html.includes('<title>AX Portal</title>'), 'index.html should have title AX Portal');
+  assert.ok(html.includes('/ax-portal/favicon.png'), 'index.html should have AX Portal favicon');
+  assert.equal(html.includes('<title>Skills Manager</title>'), false, 'index.html must not contain legacy title');
+  assert.equal(html.includes('/vite.svg'), false, 'index.html must not contain vite.svg favicon');
+});
+
+test('AX Portal branding assets and icon master exist in repository', () => {
+  const root = process.cwd();
+  const requiredFiles = [
+    'public/ax-portal/logo.png',
+    'public/ax-portal/icon.png',
+    'public/ax-portal/favicon.png',
+    'src-tauri/icons/ax-portal/icon-source.png',
+    'src-tauri/icons/ax-portal/icon.png',
+    'src-tauri/icons/ax-portal/128x128@2x.png',
+    'src-tauri/icons/ax-portal/128x128.png',
+    'src-tauri/icons/ax-portal/64x64.png',
+    'src-tauri/icons/ax-portal/32x32.png',
+    'src-tauri/icons/ax-portal/icon.ico',
+  ];
+  for (const rel of requiredFiles) {
+    assert.ok(existsSync(path.join(root, rel)), `Missing required asset: ${rel}`);
+  }
+});
+

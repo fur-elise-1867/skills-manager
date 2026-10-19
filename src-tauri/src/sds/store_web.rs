@@ -155,42 +155,68 @@ pub fn map_web_taxonomy(data: &WebTaxonomyData) -> Taxonomy {
     }
 }
 
+pub fn build_skill_metadata(
+    id_val: &serde_json::Value,
+    name: String,
+    raw_desc: Option<&str>,
+    revision: u64,
+    creator_id_val: Option<&serde_json::Value>,
+    creator_name: Option<String>,
+    created_at: Option<String>,
+    updated_at: Option<String>,
+    roles: Vec<String>,
+    categories: &[serde_json::Value],
+    tags: Vec<String>,
+) -> SkillMetadata {
+    let id = json_id_to_string(id_val);
+    let creator_id = creator_id_val
+        .map(json_id_to_string)
+        .unwrap_or_else(|| "0".into());
+    let creator_name = creator_name.unwrap_or_else(|| "Store User".into());
+    let cat_names = extract_names(categories);
+    let description = clean_html_description(raw_desc.unwrap_or(""));
+    let updated_at = updated_at
+        .or(created_at)
+        .unwrap_or_else(|| chrono::Utc::now().to_rfc3339());
+    SkillMetadata {
+        id,
+        name,
+        description,
+        metadata_revision: revision,
+        roles,
+        tags,
+        category_ids: cat_names.clone(),
+        source_ids: cat_names,
+        creator: UserView {
+            id: creator_id,
+            display_name: creator_name,
+        },
+        compatible_agents: None,
+        can_download: false,
+        updated_at,
+    }
+}
+
 pub fn map_web_search_page(web: WebSkillSearchResult) -> Page<SkillSummary> {
     let items = web
         .items
         .into_iter()
         .map(|item| {
-            let id = json_id_to_string(&item.id);
-            let creator_id = item
-                .creator_id
-                .as_ref()
-                .map(json_id_to_string)
-                .unwrap_or_else(|| "0".into());
-            let creator_name = item.creator_name.unwrap_or_else(|| "Store User".into());
-            let cat_names = extract_names(&item.categories);
-            let description = clean_html_description(item.description.as_deref().unwrap_or(""));
-            let updated_at = item
-                .updated_at
-                .or(item.created_at)
-                .unwrap_or_else(|| chrono::Utc::now().to_rfc3339());
+            let metadata = build_skill_metadata(
+                &item.id,
+                item.name,
+                item.description.as_deref(),
+                1,
+                item.creator_id.as_ref(),
+                item.creator_name,
+                item.created_at,
+                item.updated_at,
+                item.roles,
+                &item.categories,
+                item.hashtags,
+            );
             SkillSummary {
-                metadata: SkillMetadata {
-                    id,
-                    name: item.name,
-                    description,
-                    metadata_revision: 1,
-                    roles: item.roles,
-                    tags: item.hashtags,
-                    category_ids: cat_names.clone(),
-                    source_ids: cat_names,
-                    creator: UserView {
-                        id: creator_id,
-                        display_name: creator_name,
-                    },
-                    compatible_agents: None,
-                    can_download: false,
-                    updated_at,
-                },
+                metadata,
                 latest_release: None,
             }
         })
@@ -205,38 +231,23 @@ pub fn map_web_search_page(web: WebSkillSearchResult) -> Page<SkillSummary> {
 
 pub fn map_web_skill_detail(detail: WebSkillDetail, base_url: Option<&str>) -> SkillDetail {
     let id = json_id_to_string(&detail.id);
-    let creator_id = detail
-        .creator_id
-        .as_ref()
-        .map(json_id_to_string)
-        .unwrap_or_else(|| "0".into());
-    let creator_name = detail.creator_name.unwrap_or_else(|| "Store User".into());
-    let cat_names = extract_names(&detail.categories);
-    let description = clean_html_description(detail.description.as_deref().unwrap_or(""));
-    let updated_at = detail
-        .updated_at
-        .or(detail.created_at)
-        .unwrap_or_else(|| chrono::Utc::now().to_rfc3339());
+    let metadata = build_skill_metadata(
+        &detail.id,
+        detail.name,
+        detail.description.as_deref(),
+        detail.version.unwrap_or(1),
+        detail.creator_id.as_ref(),
+        detail.creator_name,
+        detail.created_at,
+        detail.updated_at,
+        detail.roles,
+        &detail.categories,
+        detail.hashtags,
+    );
     let store_page_url = base_url.map(|base| format!("{}/skills/{}", base.trim_end_matches('/'), id));
     SkillDetail {
         summary: SkillSummary {
-            metadata: SkillMetadata {
-                id,
-                name: detail.name,
-                description,
-                metadata_revision: detail.version.unwrap_or(1),
-                roles: detail.roles,
-                tags: detail.hashtags,
-                category_ids: cat_names.clone(),
-                source_ids: cat_names,
-                creator: UserView {
-                    id: creator_id,
-                    display_name: creator_name,
-                },
-                compatible_agents: None,
-                can_download: false,
-                updated_at,
-            },
+            metadata,
             latest_release: None,
         },
         store_page_url,
