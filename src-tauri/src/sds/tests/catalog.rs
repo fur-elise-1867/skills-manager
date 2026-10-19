@@ -672,6 +672,46 @@ async fn desktop_endpoint_404_returns_not_found_without_web_fallback() {
 }
 
 #[tokio::test]
+async fn desktop_401_and_503_never_request_working_web_catalog_routes() {
+    for (status, expected) in [(401, "SESSION_EXPIRED"), (503, "STORE_UNAVAILABLE")] {
+        let requested_paths = Arc::new(Mutex::new(Vec::new()));
+        let observed = requested_paths.clone();
+        let server = TestServer::start(move |request| {
+            let observed = observed.clone();
+            async move {
+                observed.lock().unwrap().push(request.path.clone());
+                let pure_path = request.path.split('?').next().unwrap_or(&request.path);
+                if pure_path.ends_with("/auth/login") {
+                    return Response::json(200, fixture("login"));
+                }
+                if pure_path.contains("/desktop/") {
+                    return Response::json(
+                        status,
+                        serde_json::json!({"success":false,"message":"desktop failure"}),
+                    );
+                }
+                if pure_path.ends_with("/skills/taxonomy") {
+                    return Response::json(200, web_fixture("taxonomy"));
+                }
+                if pure_path.ends_with("/skills") {
+                    return Response::json(200, web_fixture("catalog"));
+                }
+                Response::json(404, serde_json::json!({"success":false}))
+            }
+        })
+        .await;
+
+        let (_session, client) = client(&server).await;
+        let error = client.search(CatalogQuery::default()).await.unwrap_err();
+        assert_eq!(error.code, expected);
+
+        let paths = requested_paths.lock().unwrap().clone();
+        assert!(paths.iter().any(|path| path.contains("/desktop/skills")));
+        assert!(paths.iter().all(|path| !path.contains("/api/v1/skills")));
+    }
+}
+
+#[tokio::test]
 #[cfg(debug_assertions)]
 async fn debug_fixture_services_are_loopback_locked_ephemeral_and_do_not_persist_credentials() {
     use crate::sds::commands::SdsServices;

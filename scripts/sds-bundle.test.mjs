@@ -1,7 +1,26 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync, readdirSync, existsSync } from 'node:fs';
+import { readFileSync, readdirSync, existsSync, mkdtempSync, rmSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import os from 'node:os';
 import path from 'node:path';
+
+const root = process.cwd();
+const temporaryBundleDir = process.env.SDS_BUNDLE_DIR ? null : mkdtempSync(path.join(os.tmpdir(), 'ax-portal-sds-'));
+const bundleDir = process.env.SDS_BUNDLE_DIR ?? temporaryBundleDir;
+
+if (temporaryBundleDir) {
+  const vite = path.join(root, 'node_modules', 'vite', 'bin', 'vite.js');
+  const build = spawnSync(process.execPath, [vite, 'build', '--mode', 'sds', '--outDir', temporaryBundleDir], {
+    cwd: root,
+    encoding: 'utf8',
+  });
+  assert.equal(build.status, 0, `SDS Vite build failed:\n${build.stderr}`);
+}
+
+process.on('exit', () => {
+  if (temporaryBundleDir) rmSync(temporaryBundleDir, { recursive: true, force: true });
+});
 
 function containsCommand(bundle, command) {
   return ['"', "'", '`'].some((quote) => bundle.includes(`${quote}${command}${quote}`));
@@ -15,7 +34,7 @@ test('command boundary distinguishes SDS names from forbidden upstream commands'
 });
 
 test('SDS production bundle includes only its own entry and IPC boundary', () => {
-  const assets = path.join(process.env.SDS_BUNDLE_DIR ?? 'dist-sds','assets');
+  const assets = path.join(bundleDir, 'assets');
   const scripts = readdirSync(assets).filter((file) => file.endsWith('.js'));
   const bundle = scripts.map((file) => readFileSync(path.join(assets,file), 'utf8')).join('\n');
   assert.ok(bundle.includes('runtime_profile'), 'SDS runtime handshake missing from bundle');
@@ -30,8 +49,7 @@ test('SDS production bundle includes only its own entry and IPC boundary', () =>
 });
 
 test('SDS production build output transforms HTML branding to AX Portal and favicon', () => {
-  const distDir = process.env.SDS_BUNDLE_DIR ?? 'dist-sds';
-  const htmlPath = path.join(distDir, 'index.html');
+  const htmlPath = path.join(bundleDir, 'index.html');
   const html = readFileSync(htmlPath, 'utf8');
   assert.ok(html.includes('<title>AX Portal</title>'), 'index.html should have title AX Portal');
   assert.ok(html.includes('/ax-portal/favicon.png'), 'index.html should have AX Portal favicon');
@@ -40,7 +58,6 @@ test('SDS production build output transforms HTML branding to AX Portal and favi
 });
 
 test('AX Portal branding assets and icon master exist in repository', () => {
-  const root = process.cwd();
   const requiredFiles = [
     'public/ax-portal/logo.png',
     'public/ax-portal/icon.png',
@@ -56,5 +73,17 @@ test('AX Portal branding assets and icon master exist in repository', () => {
   for (const rel of requiredFiles) {
     assert.ok(existsSync(path.join(root, rel)), `Missing required asset: ${rel}`);
   }
+});
+
+test('SDS root fits within the native minimum-window client area', () => {
+  const css = readFileSync(path.join(root, 'src', 'features', 'sds', 'sds.css'), 'utf8');
+  assert.match(css, /\.sds-app\s*\{\s*min-width:\s*0;\s*min-height:\s*0;\s*\}/);
+  assert.doesNotMatch(css, /\.sds-app\s*\{\s*min-width:\s*1100px/);
+});
+
+test('AX Portal handoff never records live credential values', () => {
+  const handoff = readFileSync(path.join(root, 'docs', 'superpowers', 'evidence', '2026-10-19-ax-portal-gemini-handoff.md'), 'utf8');
+  assert.doesNotMatch(handoff, /SDS_PROVIDER_(?:EMAIL|PASSWORD)\s*=\s*["'][^"']+["']/);
+  assert.doesNotMatch(handoff, /admin@gmail\.com|Password/);
 });
 

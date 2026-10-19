@@ -35,7 +35,7 @@
 body { margin: 0; }
 button, input { font: inherit; }
 .sds-app { height: 100vh; display: grid; grid-template: minmax(0, 1fr) / 225px minmax(0, 1fr); font-size: 13px; line-height: 18px; }
-.sds-app { min-width: 1100px; min-height: 640px; }
+.sds-app { min-width: 0; min-height: 0; }
 .sds-install-review.sds-wide-review { width: min(920px, calc(100vw - 64px)); max-width: 920px; }
 .sds-workspace, .sds-snapshots { padding-top: 20px; }
 .sds-workspace select { display: block; width: 100%; max-width: 720px; min-height: 36px; margin: 8px 0 14px; padding: 6px 10px; color: var(--sds-text); background: var(--sds-surface); border: 1px solid var(--sds-border); border-radius: var(--sds-radius); }
