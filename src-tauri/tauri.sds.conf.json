@@ -16,5 +16,16 @@
     }
   },
   "plugins": { "updater": null },
-  "bundle": { "createUpdaterArtifacts": false, "targets": ["nsis"], "windows": { "webviewInstallMode": { "type": "skip" } } }
+  "bundle": {
+    "createUpdaterArtifacts": false,
+    "targets": ["nsis"],
+    "icon": [
+      "icons/ax-portal/32x32.png",
+      "icons/ax-portal/128x128.png",
+      "icons/ax-portal/128x128@2x.png",
+      "icons/ax-portal/icon.png",
+      "icons/ax-portal/icon.ico"
+    ],
+    "windows": { "webviewInstallMode": { "type": "skip" } }
+  }
 }

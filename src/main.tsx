@@ -4,6 +4,11 @@ import { getRuntimeProfile } from "./features/sds/api";
 import { assertRuntimeProfile } from "./runtimeProfile";
 
 if (import.meta.env.VITE_APP_PROFILE === "sds") {
+  document.title = "AX Portal";
+  const link = document.querySelector<HTMLLinkElement>("link[rel~='icon']");
+  if (link) {
+    link.href = "/ax-portal/favicon.png";
+  }
   const { default: SdsApp } = await import("./features/sds/SdsApp");
   createRoot(document.getElementById("root")!).render(<StrictMode><SdsApp /></StrictMode>);
 } else {
