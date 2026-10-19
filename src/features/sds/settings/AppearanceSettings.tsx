@@ -3,6 +3,7 @@ import { SdsThemeContext } from "../theme";
 
 export default function AppearanceSettings(): ReactElement {
   const { theme, toggle } = useContext(SdsThemeContext);
+  const themeActionLabel = theme === "light" ? "Switch to dark theme" : "Switch to light theme";
   return (
     <section className="sds-welcome" aria-labelledby="sds-appearance-title">
       <h2 id="sds-appearance-title">Appearance</h2>
@@ -12,9 +13,9 @@ export default function AppearanceSettings(): ReactElement {
           type="button"
           className="sds-secondary-button"
           onClick={toggle}
-          aria-label={theme === "light" ? "Switch to dark theme" : "Switch to light theme"}
+          aria-label={themeActionLabel}
         >
-          {theme === "light" ? "Switch to dark theme" : "Switch to light theme"}
+          {themeActionLabel}
         </button>
       </div>
     </section>

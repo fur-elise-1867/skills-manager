@@ -63,6 +63,21 @@ test("install picker toggles between Global and Project, requiring a valid proje
   expect(onSelect).toHaveBeenCalledWith({agentKey:"aipro",workspaceId:"global"});
 });
 
+test("cancelling project folder selection leaves the current project selection unchanged",async()=>{
+  vi.mocked(open).mockResolvedValue(null);
+  const onSelect=vi.fn();
+  render(<WorkspacePage onSelect={onSelect} onCancel={vi.fn()}/>);
+  fireEvent.click(screen.getByRole("radio",{name:"Project"}));
+  const selector=await screen.findByLabelText("Registered project");
+  fireEvent.change(selector,{target:{value:"atlas"}});
+  fireEvent.click(screen.getByRole("button",{name:"Add project folder"}));
+  await waitFor(()=>expect(open).toHaveBeenCalledTimes(1));
+  expect(invoke).not.toHaveBeenCalledWith("sds_add_workspace",expect.anything());
+  expect(selector).toHaveValue("atlas");
+  expect(screen.getByRole("button",{name:"Add project folder"})).toBeEnabled();
+  expect(onSelect).not.toHaveBeenCalled();
+});
+
 test("chooses a registered project before preparing a reviewed install and sends no destination path",async()=>{
   render(<OperationFlow chooseTarget request={{kind:"install",skillId:"skill-123",releaseId:"rel-003"}} onClose={vi.fn()} onCompleted={vi.fn()}/>);
   fireEvent.click(await screen.findByLabelText("Project"));

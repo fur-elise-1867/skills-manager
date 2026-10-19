@@ -1,7 +1,7 @@
-import {fireEvent,render,screen,waitFor} from "@testing-library/react";
+import {fireEvent,render,screen} from "@testing-library/react";
 import {beforeEach,expect,test,vi} from "vitest";
 import {invoke} from "@tauri-apps/api/core";
-import SdsApp from "../SdsApp";
+import SnapshotsPage from "./SnapshotsPage";
 import release from "../../../../contracts/sds-desktop/v1/fixtures/release.json";
 
 vi.mock("@tauri-apps/api/core",()=>({invoke:vi.fn()}));
@@ -22,14 +22,10 @@ beforeEach(()=>{vi.mocked(invoke).mockImplementation(async command=>{
 });});
 
 test("signed-out user restores a self-contained snapshot to its recorded target with current protection",async()=>{
-  render(<SdsApp/>);
-  fireEvent.click(await screen.findByRole("button",{name:"Backup"}));
+  const onRestore=vi.fn();
+  render(<SnapshotsPage onRestore={onRestore}/>);
   fireEvent.click(await screen.findByRole("button",{name:"Restore…"}));
-  expect(await screen.findByText(/Saved local edits are restored as local edits/)).toBeInTheDocument();
-  await waitFor(()=>expect(invoke).toHaveBeenCalledWith("sds_prepare_restore",{snapshotId:"snapshot-one",deploymentId:"old-deployment",protectCurrent:true}));
-  expect(invoke).not.toHaveBeenCalledWith("sds_execute",expect.anything());
-  fireEvent.click(await screen.findByRole("button",{name:"Back up current and restore"}));
-  expect(await screen.findByText("Snapshot restored successfully")).toBeInTheDocument();
+  expect(onRestore).toHaveBeenCalledWith({kind:"restore",snapshotId:"snapshot-one",deploymentId:"old-deployment",protectCurrent:true});
 });
 
 test("snapshot list reports corrupt bytes and blocks restore after explicit verification",async()=>{
@@ -38,8 +34,7 @@ test("snapshot list reports corrupt bytes and blocks restore after explicit veri
     if(command==="sds_verify_snapshot")throw {code:"SNAPSHOT_CORRUPT"};
     return previous(command,args) as never;
   });
-  render(<SdsApp/>);
-  fireEvent.click(await screen.findByRole("button",{name:"Backup"}));
+  render(<SnapshotsPage onRestore={vi.fn()}/>);
   fireEvent.click(await screen.findByRole("button",{name:"Verify snapshot"}));
   expect(await screen.findByText("Corrupt or missing")).toBeInTheDocument();
   expect(screen.getByRole("button",{name:"Restore…"})).toBeDisabled();

@@ -26,7 +26,7 @@ export default function SdsShell({ profile }: { profile: ProfileInfo }) {
   const settings = page === "settings" || page === "store" && account.connection === null;
   return <div className="sds-app">
     <a className="sds-skip" href="#sds-main">Skip to content</a>
-    <header className="sds-titlebar"><Box size={15} aria-hidden="true" /><span role="heading" aria-level={2}>SDS Skills Manager</span><span className="sds-environment">{profile.environment === "development" ? "Local development" : "Internal"}{profile.fixtureMode ? " · Fixtures" : ""}</span></header>
+    <header className="sds-titlebar"><Box size={15} aria-hidden="true" /><span>SDS Skills Manager</span><span className="sds-environment">{profile.environment === "development" ? "Local development" : "Internal"}{profile.fixtureMode ? " · Fixtures" : ""}</span></header>
     <aside className="sds-sidebar">
       <div className="sds-brand"><span className="sds-brand-mark">SDS</span><div><strong>Skills Manager</strong><small>Your internal workspace</small></div></div>
       <nav aria-label="Main navigation">
