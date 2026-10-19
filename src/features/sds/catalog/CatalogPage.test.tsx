@@ -28,7 +28,7 @@ test("browses the server catalog and detail without inventing compatibility or l
   await screen.findByRole("button",{name:"View Jira Weekly Report"});
   expect(screen.getByText("Compatibility not declared")).toBeInTheDocument();
   expect(screen.queryByText("Installed")).not.toBeInTheDocument();
-  expect(screen.getByRole("button",{name:"Local Install"})).toBeDisabled();
+  expect(screen.queryByRole("button",{name:"Local Install"})).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole("button",{name:"View Jira Weekly Report"}));
   await screen.findByRole("heading",{name:"Jira Weekly Report"});
   expect(await screen.findByText("jira-mcp")).toBeInTheDocument();

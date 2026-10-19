@@ -28,7 +28,7 @@ export default function CatalogPage({onInstall}:{onInstall?:(release:Release)=>v
   const retry = () => setRevision(revision+1);
   if (selected) return <SkillDetailPanel skillId={selected} onBack={()=>setSelected(undefined)} onInstall={onInstall} />;
   return <section className="sds-catalog" aria-label="Skills catalog">
-    <div className="sds-store-tabs"><span aria-current="page">Store</span><button disabled title="Available in a later release">Local Install</button></div>
+    <div className="sds-store-tabs"><span aria-current="page">Store</span></div>
     <div className="sds-catalog-toolbar">
       <div className="sds-catalog-modes" aria-label="Catalog mode">{(taxonomy?.catalogModes ?? [{id:"all_time" as const,label:"All Time",available:true}]).map((mode)=><button key={mode.id} aria-pressed={query.mode === mode.id} disabled={!mode.available} title={mode.available ? undefined : "This mode is not available"} onClick={()=>setQuery({...query,mode:mode.id,page:1})}>{mode.label}</button>)}</div>
       <form role="search" onSubmit={(event)=>{event.preventDefault();setQuery((current)=>({...current,q:draft.trim(),page:1}));}}><label className="sds-visually-hidden" htmlFor="sds-catalog-search">Search skills</label><input id="sds-catalog-search" placeholder="Search skills by name or description…" value={draft} onChange={(event)=>setDraft(event.target.value)} /><button type="submit">Search</button></form>

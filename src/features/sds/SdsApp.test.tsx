@@ -8,6 +8,8 @@ import catalog from "../../../contracts/sds-desktop/v1/fixtures/catalog.json";
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn() }));
 
 beforeEach(() => {
+  localStorage.clear();
+  delete document.documentElement.dataset.sdsTheme;
   vi.mocked(invoke).mockImplementation(async (command) => {
     if (command === "runtime_profile") return { kind: "sds", environment: "internal", fixtureMode: false } as never;
     if (command === "sds_get_connection") return null as never;
@@ -69,9 +71,23 @@ test("renders_keyboard_accessible_shell", async () => {
   expect(skip).toHaveFocus();
   expect(screen.getByRole("button", { name: "Skills Store" })).toBeDisabled();
   expect(screen.getByRole("button", { name: "Library" })).toBeEnabled();
-  fireEvent.click(screen.getByRole("button", { name: "Switch to dark theme" }));
+  expect(screen.getByRole("button", { name: "Workspaces" })).toBeEnabled();
+  expect(screen.getByRole("button", { name: "Settings" })).toBeEnabled();
+
+  // Navigation must NOT have Backup or sidebar theme switch
+  expect(screen.queryByRole("button", { name: "Backup" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Dark theme" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Light theme" })).not.toBeInTheDocument();
+
+  // Settings contains Appearance with accessible toggle
+  const themeToggle = await screen.findByRole("button", { name: "Switch to dark theme" });
+  expect(themeToggle).toBeInTheDocument();
+  fireEvent.click(themeToggle);
   await waitFor(() => expect(localStorage.getItem("sds.theme")).toBe("dark"));
-  expect(localStorage.getItem("theme")).toBeNull();
+  expect(document.documentElement.dataset.sdsTheme).toBe("dark");
+
+  // Activity logs must NOT be in Settings
+  expect(screen.queryByRole("heading", { name: "Activity logs" })).not.toBeInTheDocument();
 });
 
 test("opens local Library without a Store connection or signed-in session",async()=>{
